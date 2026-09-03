@@ -947,15 +947,14 @@ $('#tkForm').onsubmit=async e=>{
  localStorage.setItem('kt_eng',engineer);localStorage.setItem('kt_cus',customer);
 
  const isEdit=!!editingNo;
- const btn=$('#btnSubmit');btn.disabled=true;btn.innerHTML=`<span class="spinner"></span><span>${isEdit?'Đang cập nhật...':'Đang gửi...'}</span>`;
- let ok=false,no=editingNo||'—';
- if(CFG.url){
-   const body=isEdit?{...payload,action:'edit',no:editingNo,...(isAdminUnlocked?{adminPassword:ADMIN_PASSWORD}:{})}:payload;
-   try{const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
-     const j=await res.json();if(j.ok){ok=true;no=j.no||no}else toast(j.error||'Máy chủ báo lỗi',true);}
-   catch(err){toast(isEdit?'Không cập nhật được. Kiểm tra mạng / link.':'Không gửi được. Kiểm tra mạng / link.',true)}
- }else ok=true;
- if(ok && isEdit){
+ const no=editingNo||'—';
+
+ /* Hiện "thành công" NGAY LẬP TỨC — không bắt đứng nhìn màn hình chờ máy chủ
+    phản hồi (Apps Script + đồng bộ Sheet backup có thể mất vài giây). Việc
+    gửi thật chạy NGẦM phía sau; nếu thất bại thật sự (mất mạng, máy chủ lỗi)
+    sẽ có toast lỗi hiện ra SAU đó để biết mà gửi lại — đây không phải gửi
+    nhanh hơn thật, chỉ là không phải chờ nhìn vòng xoay. */
+ if(isEdit){
    const rec=mgrData.find(r=>String(r.no)===String(no)); if(rec) Object.assign(rec,payload);
    const hist=JSON.parse(localStorage.getItem(LS_HIST)||'[]');
    const hrec=hist.find(r=>String(r.no)===String(no)); if(hrec) Object.assign(hrec,payload);
@@ -964,14 +963,26 @@ $('#tkForm').onsubmit=async e=>{
    renderManager(); renderDashboard();
    if($('#view-history').classList.contains('active')) renderHistory();
    cancelEdit();
- } else if(ok){
+ } else {
    const rec={...payload,no,thoiGian:new Date().toISOString(),_local:!CFG.url};
    const h=JSON.parse(localStorage.getItem(LS_HIST)||'[]');h.unshift(rec);localStorage.setItem(LS_HIST,JSON.stringify(h.slice(0,120)));
-   toast(CFG.url?`✅ Đã lưu phiếu #${no} vào Sheet!`:'✅ Đã lưu (thử nghiệm)');
+   toast(CFG.url?'✅ Đã gửi phiếu!':'✅ Đã lưu (thử nghiệm)');
    $('#f_issue').value='';$('#f_remark').value='';
    setDateValue(new Date().toISOString().slice(0,10));
  }
- btn.disabled=false;submitBtnIdle();
+ submitBtnIdle();
+
+ if(!CFG.url) return; // chế độ thử nghiệm — không có máy chủ để gửi thật
+
+ const body=isEdit?{...payload,action:'edit',no:editingNo,...(isAdminUnlocked?{adminPassword:ADMIN_PASSWORD}:{})}:payload;
+ try{
+   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
+   const j=await res.json();
+   if(!j.ok) toast(`⚠️ Gửi ${isEdit?'cập nhật':''} phiếu${isEdit?` #${no}`:''} thất bại: ${j.error||'máy chủ báo lỗi'} — thử gửi lại`,true);
+   else if(!isEdit) silentRefreshData(); // đồng bộ lại đúng số No thật + dữ liệu mới nhất từ server
+ }catch(err){
+   toast(`⚠️ Không gửi được phiếu${isEdit?` #${no}`:''} (mất mạng) — thử gửi lại`,true);
+ }
 };
 
 /* card */
