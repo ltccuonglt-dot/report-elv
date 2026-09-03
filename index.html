@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Report ELV" />
 <title>Report ELV</title>
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237c2d8f'/%3E%3Cpath d='M63 30a13 13 0 0 1-17 17L34 59a6 6 0 0 1-9-9l12-12a13 13 0 0 1 17-17l-8 8 5 9 9 5z' fill='white'/%3E%3C/svg%3E" />
+<link rel="manifest" href="./manifest.json" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
@@ -306,6 +307,9 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     <div>
       <h1>Report ELV</h1>
     </div>
+    <button class="icon-btn" id="btnInstallApp" aria-label="Cài đặt ứng dụng" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+    </button>
     <button class="icon-btn" id="btnSettings" aria-label="Cài đặt">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
@@ -505,6 +509,14 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 </div>
 
 <div class="toast" id="toast"><span id="toastMsg"></span></div>
+
+<div class="modal" id="installGuideModal">
+  <div class="sheet">
+    <h2>Cài đặt ứng dụng</h2>
+    <p class="desc" id="installGuideText">Đang kiểm tra thiết bị...</p>
+    <button class="btn btn-ghost" id="btnCloseInstallGuide">Đã hiểu</button>
+  </div>
+</div>
 
 <div class="modal" id="adminGateModal">
   <div class="sheet">
@@ -1223,6 +1235,34 @@ function tryUnlock(){if($('#admin_pin').value===ADMIN_PASSWORD){isAdminUnlocked=
  else toast('Sai mật khẩu quản trị',true)}
 $('#btnAdminUnlock').onclick=tryUnlock;
 $('#admin_pin').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock()});
+
+/* ===== Cài đặt ứng dụng lên máy (PWA) — hoạt động trên Android/Windows/Mac
+   (Chrome, Edge) qua hộp thoại cài đặt thật; trên iOS Safari không cho phép
+   trình duyệt tự bật hộp thoại này nên hiện hướng dẫn "Thêm vào Màn hình chính"
+   bằng tay. Ẩn hẳn nút nếu app đã đang chạy dưới dạng đã cài (standalone). */
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
+const btnInstall=$('#btnInstallApp');
+const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
+const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+let deferredInstallPrompt=null;
+window.addEventListener('beforeinstallprompt',(e)=>{ e.preventDefault(); deferredInstallPrompt=e; if(!isStandalone()) btnInstall.style.display='grid'; });
+window.addEventListener('appinstalled',()=>{ btnInstall.style.display='none'; deferredInstallPrompt=null; });
+if(!isStandalone() && isIOS()) btnInstall.style.display='grid'; // iOS không có beforeinstallprompt → luôn hiện nút để hướng dẫn tay
+btnInstall.onclick=async()=>{
+ if(deferredInstallPrompt){
+   deferredInstallPrompt.prompt();
+   await deferredInstallPrompt.userChoice;
+   deferredInstallPrompt=null;
+ } else if(isIOS()){
+   $('#installGuideText').innerHTML='Trên iPhone/iPad, Safari không cho cài tự động. Làm theo các bước:<br><br>1️⃣ Bấm nút <b>Chia sẻ</b> (hình vuông có mũi tên ↑) ở thanh dưới trình duyệt.<br>2️⃣ Cuộn xuống, chọn <b>"Thêm vào MH chính"</b> (Add to Home Screen).<br>3️⃣ Bấm <b>Thêm</b> ở góc trên — xong! App sẽ có icon riêng như app thật.';
+   $('#installGuideModal').classList.add('show');
+ } else {
+   $('#installGuideText').innerHTML='Trình duyệt này chưa hỗ trợ cài đặt tự động (hoặc app đã được cài rồi).<br><br>Bạn có thể mở menu trình duyệt (⋮ hoặc ···) và tìm mục <b>"Cài đặt ứng dụng"</b> / <b>"Add to Home screen"</b>.';
+   $('#installGuideModal').classList.add('show');
+ }
+};
+$('#btnCloseInstallGuide').onclick=()=>$('#installGuideModal').classList.remove('show');
+$('#installGuideModal').onclick=e=>{if(e.target===$('#installGuideModal'))$('#installGuideModal').classList.remove('show')};
 
 /* settings */
 const modal=$('#settingsModal');
