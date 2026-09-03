@@ -91,7 +91,10 @@ label.field:last-child{margin-bottom:0}
 
 input[type=text],input[type=date],textarea,select{width:100%;font-family:var(--font);font-size:15px;color:var(--ink);background:var(--surface-2);border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:12px 13px;transition:border-color .15s,box-shadow .15s}
 input.masked{-webkit-text-security:disc;text-security:disc}
-/* iOS Safari tự canh giữa chữ ngày-tháng trong input[type=date], khác với các ô còn lại (canh trái) — ép lại cho đồng bộ giao diện */
+/* iOS Safari tự canh giữa chữ ngày-tháng trong input[type=date], khác với các ô còn lại (canh trái).
+   -webkit-appearance:none tắt kiểu hiển thị mặc định của Safari (chỉ phần khung/chữ, bàn phím lịch bấm vào vẫn mở bình thường)
+   để ô này theo đúng padding/canh lề như các ô input khác — cách này ổn định hơn chỉ dùng pseudo-element bên dưới. */
+input[type=date]{-webkit-appearance:none;appearance:none;text-align:left;min-height:46px}
 input[type=date]::-webkit-date-and-time-value{text-align:left}
 textarea{resize:vertical;min-height:70px;line-height:1.45}
 input:focus,textarea:focus,select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
@@ -277,6 +280,15 @@ table.rpt tr.weekend-row .dow-tag{color:var(--danger)}
 .mini-date{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:9px 10px;font-weight:600;font-size:12.5px;font-family:var(--font);flex:none;width:140px}
 .mini-date:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
 .mini-btn svg{width:16px;height:16px}
+/* Nút Xuất Excel nổi ở góc phải cuối màn hình (trên thanh nav dưới) — dễ bấm bằng ngón cái, không chiếm chỗ trong toolbar */
+.fab-export{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom) + 78px);z-index:19;width:52px;height:52px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--brand),var(--brand-strong));color:#fff;box-shadow:0 8px 20px -6px var(--brand);display:grid;place-items:center;cursor:pointer}
+.fab-export svg{width:22px;height:22px}
+.fab-export:active{transform:scale(.94)}
+/* Nút Cài đặt ứng dụng (PWA) — luôn hiện ở mọi màn hình, nằm cạnh nút Xuất Excel khi cả 2 cùng hiện (màn Quản lý);
+   màu xanh info khác với màu tím Xuất Excel để phân biệt 2 nút. */
+.fab-install{position:fixed;right:84px;bottom:calc(env(safe-area-inset-bottom) + 78px);z-index:19;width:52px;height:52px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--info),#1d4ed8);color:#fff;box-shadow:0 8px 20px -6px var(--info);display:grid;place-items:center;cursor:pointer}
+.fab-install svg{width:22px;height:22px}
+.fab-install:active{transform:scale(.94)}
 
 nav.tabs{position:sticky;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);display:flex;padding:8px 8px calc(env(safe-area-inset-bottom) + 8px);gap:4px}
 nav.tabs button{flex:1;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-size:11px;font-weight:600;padding:6px 2px;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:.15s}
@@ -310,9 +322,6 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     <div>
       <h1>Report ELV</h1>
     </div>
-    <button class="icon-btn" id="btnInstallApp" aria-label="Cài đặt ứng dụng" style="display:none">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-    </button>
     <button class="icon-btn" id="btnSettings" aria-label="Cài đặt">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
@@ -485,7 +494,6 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       </div>
       <div class="toolbar">
         <input type="text" id="mgrSearch" placeholder="🔍 Tìm sự cố, kỹ sư..." />
-        <button class="mini-btn" id="btnExport" title="Xuất Excel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></button>
         <button class="mini-btn" id="btnRefresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
       </div>
       <div class="stats" id="mgrStats"></div>
@@ -493,6 +501,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <div class="card" id="mgrCharts" style="margin-bottom:14px"></div>
       <div class="section-title" id="mgrListTitle">Danh sách phiếu</div>
       <div id="managerList"></div>
+      <button type="button" class="fab-export" id="btnExport" title="Xuất Excel" aria-label="Xuất Excel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></button>
     </section>
   </main>
 
@@ -502,6 +511,9 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     <button data-tab="dashboard"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 12V3a9 9 0 0 1 9 9h-9z"/></svg></span>Dashboard</button>
     <button data-tab="manager"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="7"/><rect x="12" y="6" width="3" height="11"/><rect x="17" y="13" width="3" height="4"/></svg></span>Quản lý</button>
   </nav>
+  <button type="button" class="fab-install" id="btnInstallApp" aria-label="Cài đặt ứng dụng" title="Cài đặt ứng dụng" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+  </button>
 </div>
 
 <div class="toast" id="toast"><span id="toastMsg"></span></div>
