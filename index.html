@@ -432,11 +432,10 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     <!-- ===== LỊCH SỬ ===== -->
     <section id="view-history" class="view">
       <div class="ymw-filter" id="histYMW">
-        <button type="button" class="chip on" id="histToday">Ngày</button>
-        <select id="histYear" class="mini-date"><option value="">Tất cả năm</option></select>
-        <select id="histMonth" class="mini-date"><option value="">Tất cả tháng</option></select>
-        <select id="histWeek" class="mini-date"><option value="">Tất cả tuần</option></select>
-        <button type="button" class="chip" id="histAll">Tất cả</button>
+        <select id="histDay" class="mini-date"><option value="">Ngày</option></select>
+        <select id="histWeek" class="mini-date"><option value="">Tuần</option></select>
+        <select id="histMonth" class="mini-date"><option value="">Tháng</option></select>
+        <select id="histYear" class="mini-date"><option value="">Năm</option></select>
       </div>
       <div class="toolbar" style="margin-bottom:12px">
         <input type="text" id="histSearch" placeholder="🔍 Tìm theo tên kỹ sư, sự cố..." />
@@ -460,11 +459,10 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
     <section id="view-manager" class="view">
       <div class="ymw-filter" id="mgrYMW">
-        <button type="button" class="chip on" id="mgrToday">Ngày</button>
-        <select id="mgrYear" class="mini-date"><option value="">Tất cả năm</option></select>
-        <select id="mgrMonth" class="mini-date"><option value="">Tất cả tháng</option></select>
-        <select id="mgrWeek" class="mini-date"><option value="">Tất cả tuần</option></select>
-        <button type="button" class="chip" id="mgrAll">Tất cả</button>
+        <select id="mgrDay" class="mini-date"><option value="">Ngày</option></select>
+        <select id="mgrWeek" class="mini-date"><option value="">Tuần</option></select>
+        <select id="mgrMonth" class="mini-date"><option value="">Tháng</option></select>
+        <select id="mgrYear" class="mini-date"><option value="">Năm</option></select>
       </div>
       <div class="filter-row">
         <select id="mgrCustomer"><option value="">Tất cả dự án</option></select>
@@ -611,19 +609,18 @@ $$('.seg').forEach(seg=>seg.querySelectorAll('button').forEach(b=>b.onclick=()=>
  if(seg.id==='dashRange')renderDashboard();
 }));
 
-/* ===== Bộ lọc Ngày/Năm/Tháng/Tuần/Tất cả cho Quản lý & Lịch sử =====
-   Thay vì bắt gõ/đoán 1 ngày cụ thể, cho chọn Năm/Tháng/Tuần từ dropdown —
-   chỉ liệt kê những Năm/Tháng/Tuần THỰC SỰ có phiếu (luôn kèm hôm nay/tuần
-   này/tháng này/năm nay dù chưa có phiếu, để còn chọn được lúc mới tạo). */
+/* ===== Bộ lọc Ngày/Tuần/Tháng/Năm cho Quản lý & Lịch sử =====
+   4 dropdown độc lập nhưng lồng nhau: Ngày (1-31, số ngày thật theo Tháng/Năm
+   đang chọn), Tuần (1-4, tự tính & hiện ngày đầu-cuối tuần theo Tháng/Năm đang
+   chọn), Tháng (1-12), Năm. Không chọn gì = xem tất cả. Chọn Ngày thì bỏ Tuần
+   và ngược lại (2 cái cùng ý nghĩa "trong khoảng nào của tháng", tránh rối). */
 function pad2(n){return String(n).padStart(2,'0')}
-function weekBounds(d){ // tuần bắt đầu từ Thứ 2 (ISO), trả về [đầu tuần, cuối tuần] dạng 'YYYY-MM-DD'
- const wd=(d.getDay()+6)%7;
- const start=new Date(d); start.setDate(d.getDate()-wd);
- const end=new Date(start); end.setDate(start.getDate()+6);
- const f=x=>x.getFullYear()+'-'+pad2(x.getMonth()+1)+'-'+pad2(x.getDate());
- return [f(start),f(end)];
+function daysInMonth(year,month){ return new Date(Number(year),Number(month),0).getDate(); } // month: 1-12
+function weekDayRange(week,year,month){ // week: '1'..'4' → [ngày bắt đầu, ngày kết thúc] trong tháng
+ const maxDay=daysInMonth(year,month);
+ const ranges={'1':[1,7],'2':[8,14],'3':[15,21],'4':[22,maxDay]};
+ return ranges[week];
 }
-function fmtDMYshort(iso){const p=iso.split('-');return p[2]+'/'+p[1]}
 function buildYearOptions(){
  const now=new Date();
  const years=new Set(mgrData.map(r=>(r.date||'').slice(0,4)).filter(Boolean));
@@ -631,60 +628,62 @@ function buildYearOptions(){
  const list=[...years].sort((a,b)=>b-a);
  ['mgrYear','histYear'].forEach(id=>{
    const sel=$('#'+id); if(!sel) return; const cur=sel.value;
-   sel.innerHTML='<option value="">Tất cả năm</option>'+list.map(y=>`<option value="${y}" ${y===cur?'selected':''}>Năm ${y}</option>`).join('');
+   sel.innerHTML='<option value="">Năm</option>'+list.map(y=>`<option value="${y}" ${y===cur?'selected':''}>Năm ${y}</option>`).join('');
  });
 }
 function buildMonthOptions(){
+ ['mgrMonth','histMonth'].forEach(id=>{
+   const sel=$('#'+id); if(!sel) return; const cur=sel.value;
+   let opts='<option value="">Tháng</option>';
+   for(let m=1;m<=12;m++){ const v=pad2(m); opts+=`<option value="${v}" ${v===cur?'selected':''}>Tháng ${m}</option>`; }
+   sel.innerHTML=opts;
+ });
+}
+function buildDayOptions(){
  const now=new Date();
  ['mgr','hist'].forEach(pfx=>{
-   const fYear=$('#'+pfx+'Year').value;
-   const months=new Set();
-   mgrData.forEach(r=>{ if(!r.date) return; if(fYear && r.date.slice(0,4)!==fYear) return; months.add(r.date.slice(5,7)); });
-   if(!fYear || fYear===String(now.getFullYear())) months.add(pad2(now.getMonth()+1));
-   const list=[...months].sort();
-   const sel=$('#'+pfx+'Month'); if(!sel) return; const cur=sel.value;
-   sel.innerHTML='<option value="">Tất cả tháng</option>'+list.map(m=>`<option value="${m}" ${m===cur?'selected':''}>Tháng ${Number(m)}</option>`).join('');
+   const fYear=$('#'+pfx+'Year').value||now.getFullYear();
+   const fMonth=$('#'+pfx+'Month').value||pad2(now.getMonth()+1);
+   const maxDay=daysInMonth(fYear,fMonth);
+   const sel=$('#'+pfx+'Day'); if(!sel) return; let cur=sel.value;
+   if(cur && Number(cur)>maxDay) cur='';
+   let opts='<option value="">Ngày</option>';
+   for(let d=1;d<=maxDay;d++){ const v=pad2(d); opts+=`<option value="${v}" ${v===cur?'selected':''}>${d}</option>`; }
+   sel.innerHTML=opts;
  });
 }
 function buildWeekOptions(){
- const now=new Date(); const [nowS,nowE]=weekBounds(now);
+ const now=new Date();
  ['mgr','hist'].forEach(pfx=>{
-   const fYear=$('#'+pfx+'Year').value, fMonth=$('#'+pfx+'Month').value;
-   const weekMap=new Map();
-   function consider(dateStr){
-     if(!dateStr) return;
-     if(fYear && dateStr.slice(0,4)!==fYear) return;
-     if(fMonth && dateStr.slice(5,7)!==fMonth) return;
-     const [s,e]=weekBounds(new Date(dateStr+'T00:00:00'));
-     weekMap.set(s+'_'+e,true);
-   }
-   mgrData.forEach(r=>consider(r.date));
-   if((!fYear||fYear===String(now.getFullYear())) && (!fMonth||fMonth===pad2(now.getMonth()+1))) weekMap.set(nowS+'_'+nowE,true);
-   const keys=[...weekMap.keys()].sort().reverse();
+   const fYear=$('#'+pfx+'Year').value||now.getFullYear();
+   const fMonth=$('#'+pfx+'Month').value||pad2(now.getMonth()+1);
    const sel=$('#'+pfx+'Week'); if(!sel) return; const cur=sel.value;
-   sel.innerHTML='<option value="">Tất cả tuần</option>'+keys.map(k=>{
-     const [s,e]=k.split('_');
-     return `<option value="${k}" ${k===cur?'selected':''}>Tuần ${fmtDMYshort(s)} - ${fmtDMYshort(e)}</option>`;
-   }).join('');
+   let opts='<option value="">Tuần</option>';
+   for(let w=1;w<=4;w++){
+     const [a,b]=weekDayRange(String(w),fYear,fMonth);
+     const label=`Tuần ${w} (${pad2(a)}/${fMonth} - ${pad2(b)}/${fMonth})`;
+     opts+=`<option value="${w}" ${String(w)===cur?'selected':''}>${label}</option>`;
+   }
+   sel.innerHTML=opts;
  });
 }
-function buildYMWOptions(){ buildYearOptions(); buildMonthOptions(); buildWeekOptions(); }
-function inYMW(dateStr, quick, fYear, fMonth, fWeek){
+function buildYMWOptions(){ buildYearOptions(); buildMonthOptions(); buildDayOptions(); buildWeekOptions(); }
+function inYMW(dateStr, fYear, fMonth, fDay, fWeek){
  if(!dateStr) return false;
- if(quick==='today'){ return dateStr===new Date().toISOString().slice(0,10); }
- if(!fYear && !fMonth && !fWeek) return true; // "Tất cả"
- if(fYear && dateStr.slice(0,4)!==fYear) return false;
- if(fMonth && dateStr.slice(5,7)!==fMonth) return false;
- if(fWeek){ const [ws,we]=fWeek.split('_'); if(dateStr<ws||dateStr>we) return false; }
+ if(!fYear && !fMonth && !fDay && !fWeek) return true; // không chọn gì = xem tất cả
+ const y=dateStr.slice(0,4), m=dateStr.slice(5,7), d=dateStr.slice(8,10);
+ if(fYear && y!==String(fYear)) return false;
+ if(fMonth && m!==fMonth) return false;
+ if(fDay && d!==fDay) return false;
+ if(fWeek){ const [a,b]=weekDayRange(fWeek,fYear||y,fMonth||m); const dn=Number(d); if(dn<a||dn>b) return false; }
  return true;
 }
 function wireYMW(pfx,onChange){
- const today=$('#'+pfx+'Today'), all=$('#'+pfx+'All'), yr=$('#'+pfx+'Year'), mo=$('#'+pfx+'Month'), wk=$('#'+pfx+'Week');
- today.onclick=()=>{today.classList.add('on');all.classList.remove('on');yr.value='';mo.value='';wk.value='';buildMonthOptions();buildWeekOptions();onChange();};
- all.onclick=()=>{all.classList.add('on');today.classList.remove('on');yr.value='';mo.value='';wk.value='';buildMonthOptions();buildWeekOptions();onChange();};
- yr.onchange=()=>{today.classList.remove('on');all.classList.remove('on');buildMonthOptions();buildWeekOptions();onChange();};
- mo.onchange=()=>{today.classList.remove('on');all.classList.remove('on');buildWeekOptions();onChange();};
- wk.onchange=()=>{today.classList.remove('on');all.classList.remove('on');onChange();};
+ const yr=$('#'+pfx+'Year'), mo=$('#'+pfx+'Month'), dy=$('#'+pfx+'Day'), wk=$('#'+pfx+'Week');
+ yr.onchange=()=>{buildDayOptions();buildWeekOptions();onChange();};
+ mo.onchange=()=>{buildDayOptions();buildWeekOptions();onChange();};
+ dy.onchange=()=>{ if(dy.value) wk.value=''; onChange(); };
+ wk.onchange=()=>{ if(wk.value) dy.value=''; onChange(); };
 }
 $('#f_customer').onchange=e=>$('#wrap_customer_other').style.display=e.target.value==='__other'?'block':'none';
 $('#f_system').onchange=e=>$('#wrap_system_other').style.display=e.target.value==='__other'?'block':'none';
@@ -865,12 +864,11 @@ function findTicket(no){
    || JSON.parse(localStorage.getItem(LS_HIST)||'[]').find(r=>String(r.no)===String(no));
 }
 function renderHistory(){
- const quick=$('#histToday').classList.contains('on')?'today':$('#histAll').classList.contains('on')?'all':'';
- const fYear=$('#histYear').value, fMonth=$('#histMonth').value, fWeek=$('#histWeek').value;
+ const fYear=$('#histYear').value, fMonth=$('#histMonth').value, fDay=$('#histDay').value, fWeek=$('#histWeek').value;
  const q=($('#histSearch').value||'').trim().toLowerCase();
- let h=mgrData.filter(r=>inYMW(r.date,quick,fYear,fMonth,fWeek));
+ let h=mgrData.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
  if(q) h=h.filter(r=>((r.engineer||'')+' '+(r.issue||'')+' '+(r.customer||'')+' '+(r.system||'')).toLowerCase().includes(q));
- const lbl=quick==='today'?'Hôm nay':quick==='all'?'Tất cả':[fYear&&('Năm '+fYear),fMonth&&('Tháng '+Number(fMonth)),fWeek&&('Tuần '+fmtDMYshort(fWeek.split('_')[0])+'-'+fmtDMYshort(fWeek.split('_')[1]))].filter(Boolean).join(', ')||'Tất cả';
+ const lbl=[fYear&&('Năm '+fYear),fMonth&&('Tháng '+Number(fMonth)),fDay&&('Ngày '+Number(fDay)),fWeek&&('Tuần '+fWeek)].filter(Boolean).join(', ')||'Tất cả';
  $('#histListTitle').textContent=`Lịch sử phiếu · ${lbl} (${h.length})`;
  if(!h.length){$('#historyList').innerHTML=emptyState(q?'Không tìm thấy':'Chưa có phiếu',q?'Không có phiếu khớp tìm kiếm.':CFG.url?'Không có phiếu trong khoảng thời gian này.':'Kết nối Google Sheet để xem lịch sử.');return}
  $('#historyList').innerHTML=`<div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột</div>
@@ -1070,11 +1068,10 @@ async function updateStatus(no,status,selEl){
  }catch(err){toast('Không cập nhật được. Kiểm tra mạng.',true); selEl.disabled=false;}
 }
 function renderManager(){
- const quick=$('#mgrToday').classList.contains('on')?'today':$('#mgrAll').classList.contains('on')?'all':'';
- const fYear=$('#mgrYear').value, fMonth=$('#mgrMonth').value, fWeek=$('#mgrWeek').value;
+ const fYear=$('#mgrYear').value, fMonth=$('#mgrMonth').value, fDay=$('#mgrDay').value, fWeek=$('#mgrWeek').value;
  const q=$('#mgrSearch').value.trim().toLowerCase();
  const fCus=$('#mgrCustomer').value,fSys=$('#mgrSystem').value,fPri=$('#mgrPriority').value;
- let data=mgrData.filter(r=>inYMW(r.date,quick,fYear,fMonth,fWeek));
+ let data=mgrData.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
  if(fCus)data=data.filter(r=>r.customer===fCus);
  if(fSys)data=data.filter(r=>r.system===fSys);
  if(fPri)data=data.filter(r=>r.priority===fPri);
@@ -1093,7 +1090,7 @@ function renderManager(){
    <div class="lg"><span class="a">Online ${po}%</span><span class="b">On-Site ${ps}%</span></div>`;
  renderCharts(data);
 
- const lbl=quick==='today'?'Hôm nay':quick==='all'?'Tất cả':[fYear&&('Năm '+fYear),fMonth&&('Tháng '+Number(fMonth)),fWeek&&('Tuần '+fmtDMYshort(fWeek.split('_')[0])+'-'+fmtDMYshort(fWeek.split('_')[1]))].filter(Boolean).join(', ')||'Tất cả';
+ const lbl=[fYear&&('Năm '+fYear),fMonth&&('Tháng '+Number(fMonth)),fDay&&('Ngày '+Number(fDay)),fWeek&&('Tuần '+fWeek)].filter(Boolean).join(', ')||'Tất cả';
  $('#mgrListTitle').textContent=`Danh sách phiếu · ${lbl} (${data.length})`;
  if(!data.length){
    $('#managerList').innerHTML=emptyState('Không có phiếu',CFG.url?'Không có phiếu khớp bộ lọc hiện tại.':'Kết nối Google Sheet để xem dữ liệu cả nhóm.');
@@ -1136,11 +1133,10 @@ $('#btnRefresh').onclick=()=>{loadManager();toast('Đã làm mới')};
 /* Xuất Excel (.xlsx) — định dạng giống Google Sheet: header xanh navy chữ
    trắng đậm, viền mảnh, font Times New Roman — không phải CSV thô. */
 $('#btnExport').onclick=()=>{
- const quick=$('#mgrToday').classList.contains('on')?'today':$('#mgrAll').classList.contains('on')?'all':'';
- const fYear=$('#mgrYear').value, fMonth=$('#mgrMonth').value, fWeek=$('#mgrWeek').value;
+ const fYear=$('#mgrYear').value, fMonth=$('#mgrMonth').value, fDay=$('#mgrDay').value, fWeek=$('#mgrWeek').value;
  const q=$('#mgrSearch').value.trim().toLowerCase();
  const fCus=$('#mgrCustomer').value,fSys=$('#mgrSystem').value,fPri=$('#mgrPriority').value;
- let data=mgrData.filter(r=>inYMW(r.date,quick,fYear,fMonth,fWeek));
+ let data=mgrData.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
  if(fCus)data=data.filter(r=>r.customer===fCus);
  if(fSys)data=data.filter(r=>r.system===fSys);
  if(fPri)data=data.filter(r=>r.priority===fPri);
@@ -1187,13 +1183,12 @@ $('#btnExport').onclick=()=>{
 
  const wb=XLSX.utils.book_new();
  XLSX.utils.book_append_sheet(wb,ws,'Report');
- const fnamePart=quick==='today'?'homnay':quick==='all'?'tatca':[fYear,fMonth,fWeek?'tuan':''].filter(Boolean).join('-')||'tatca';
+ const fnamePart=[fYear,fMonth,fDay,fWeek?'tuan'+fWeek:''].filter(Boolean).join('-')||'tatca';
  const fnameParts=[fnamePart];
  if(mgrEngineerFilter) fnameParts.push(mgrEngineerFilter.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,''));
  XLSX.writeFile(wb,`report-elv-${fnameParts.join('-')}-${new Date().toISOString().slice(0,10)}.xlsx`);
  const filterDesc=[];
- if(quick==='today') filterDesc.push('hôm nay');
- else{ if(fYear) filterDesc.push(`năm ${fYear}`); if(fMonth) filterDesc.push(`tháng ${Number(fMonth)}`); if(fWeek) filterDesc.push(`tuần ${fmtDMYshort(fWeek.split('_')[0])}-${fmtDMYshort(fWeek.split('_')[1])}`); }
+ if(fYear) filterDesc.push(`năm ${fYear}`); if(fMonth) filterDesc.push(`tháng ${Number(fMonth)}`); if(fDay) filterDesc.push(`ngày ${Number(fDay)}`); if(fWeek) filterDesc.push(`tuần ${fWeek}`);
  if(mgrEngineerFilter) filterDesc.push(`kỹ sư ${mgrEngineerFilter}`);
  toast(`✅ Đã xuất ${data.length} phiếu${filterDesc.length?' — '+filterDesc.join(', '):''}`);
 };
