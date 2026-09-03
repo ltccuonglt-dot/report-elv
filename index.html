@@ -77,7 +77,7 @@ body{background:var(--ground);color:var(--ink);font-family:var(--font);font-size
 .btn-edit-cancel{border:1.5px solid currentColor;background:transparent;color:inherit;font:inherit;font-weight:700;font-size:12px;padding:5px 10px;border-radius:999px;cursor:pointer;white-space:nowrap}
 .banner svg{width:16px;height:16px;flex:none}
 
-main{flex:1;padding:14px 14px 96px;overflow-y:auto}
+main{flex:1;padding:14px 14px 150px;overflow-y:auto} /* chừa đủ chỗ cho nút nổi (Cài đặt ứng dụng/Xuất Excel) không đè lên nội dung cuối trang */
 .view{display:none;animation:fade .25s ease}
 .view.active{display:block}
 @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -1036,6 +1036,31 @@ async function loadManager(){const list=$('#managerList');
  renderManager();
  renderDashboard();
  renderHistory();}
+
+/* ===== Tự động tải lại dữ liệu ngầm (mỗi 15 giây) =====
+   Để nhiều người dùng cùng lúc thấy phiếu của nhau cập nhật mà không cần bấm
+   "Làm mới" tay — chạy nền, KHÔNG hiện "Đang tải...", không hiện toast lỗi
+   (lỗi mạng tạm thời cứ bỏ qua, tự thử lại ở lần kế tiếp 15s sau). Tạm dừng
+   khi tab đang ẩn (đỡ tốn dữ liệu/quota khi không ai nhìn màn hình). */
+async function silentRefreshData(){
+ if(!CFG.url || document.hidden) return;
+ try{
+   const res=await fetch(CFG.url+'?action=list&token='+encodeURIComponent(CFG.token));
+   const j=await res.json();
+   if(j.ok){
+     mgrData=j.data||[];
+     buildFilterOptions('mgrCustomer',mgrData.map(r=>r.customer));
+     buildFilterOptions('mgrSystem',mgrData.map(r=>r.system));
+     buildEngineerFilterOptions();
+     buildYMWOptions();
+     renderManager();
+     renderDashboard();
+     renderHistory();
+   }
+ }catch(err){ /* lỗi mạng tạm thời — im lặng bỏ qua, không làm phiền */ }
+}
+setInterval(silentRefreshData,15000);
+
 function buildFilterOptions(selId,values){
  const sel=$('#'+selId);const cur=sel.value;
  const uniq=[...new Set(values.filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
