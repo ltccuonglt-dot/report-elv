@@ -610,21 +610,33 @@ $$('.seg').forEach(seg=>seg.querySelectorAll('button').forEach(b=>b.onclick=()=>
 
 /* ===== Bộ lọc Ngày/Tuần/Tháng/Năm cho Quản lý & Lịch sử =====
    4 dropdown độc lập nhưng lồng nhau: Ngày (1-31, số ngày thật theo Tháng/Năm
-   đang chọn), Tuần (1-4, tính theo LỊCH THỰC TẾ — tuần bắt đầu Thứ 2, tuần 1
-   kết thúc ở Chủ nhật đầu tiên của tháng, tuần 4 gom hết phần còn lại tới cuối
-   tháng — không phải chia cứng 7 ngày/khối), Tháng (1-12), Năm. Không chọn gì
-   = xem tất cả. Chọn Tuần thì Ngày tự giới hạn trong khoảng ngày của tuần đó. */
+   đang chọn), Tuần (LỊCH THỰC TẾ — mỗi tuần đúng Thứ 2 → Chủ nhật, 7 ngày,
+   kể cả năm nhuận; tuần đầu/cuối tháng có thể ngắn hơn 7 ngày nếu tháng không
+   bắt đầu/kết thúc đúng Thứ 2/CN, KHÔNG nhồi dư ngày vào tuần cuối — vì vậy số
+   tuần trong 1 tháng có thể là 4, 5 hoặc 6 tùy tháng), Tháng (1-12), Năm.
+   Không chọn gì = xem tất cả. Chọn Tuần thì Ngày tự giới hạn trong khoảng
+   ngày của tuần đó. */
 function pad2(n){return String(n).padStart(2,'0')}
 function daysInMonth(year,month){ return new Date(Number(year),Number(month),0).getDate(); } // month: 1-12
 function isoDow(year,month,day){ const d=new Date(Number(year),Number(month)-1,day).getDay(); return d===0?7:d; } // 1=Thứ 2 ... 7=CN
 const DOW_SHORT=['CN','T2','T3','T4','T5','T6','T7']; // index = Date.getDay() (0=CN)
 function dowShort(year,month,day){ return DOW_SHORT[new Date(Number(year),Number(month)-1,day).getDay()]; }
-function weekDayRange(week,year,month){ // week: '1'..'4' → [ngày bắt đầu, ngày kết thúc] trong tháng, tuần bắt đầu Thứ 2 theo lịch thực tế
+function monthWeekRanges(year,month){ // danh sách tuần thật (Thứ 2 → CN, đúng 7 ngày, trừ tuần đầu/cuối) trong tháng — số tuần tự tăng theo tháng (4-6 tuần)
  const maxDay=daysInMonth(year,month);
  const w1=isoDow(year,month,1); // thứ của ngày 1 trong tháng
- const end1=8-w1; // ngày Chủ nhật đầu tiên của tháng (kết thúc tuần 1)
- const bounds=[[1,Math.min(end1,maxDay)],[end1+1,Math.min(end1+7,maxDay)],[end1+8,Math.min(end1+14,maxDay)],[end1+15,maxDay]];
- return bounds[Number(week)-1];
+ const ranges=[];
+ let start=1, end=Math.min(8-w1,maxDay); // tuần 1: từ ngày 1 tới Chủ nhật đầu tiên
+ ranges.push([start,end]);
+ start=end+1;
+ while(start<=maxDay){
+   end=Math.min(start+6,maxDay); // các tuần sau: đúng 7 ngày, trừ tuần cuối cùng có thể ngắn hơn
+   ranges.push([start,end]);
+   start=end+1;
+ }
+ return ranges;
+}
+function weekDayRange(week,year,month){ // week: '1'..'N' → [ngày bắt đầu, ngày kết thúc] trong tháng
+ return monthWeekRanges(year,month)[Number(week)-1];
 }
 function buildYearOptions(){
  const now=new Date();
@@ -665,13 +677,15 @@ function buildWeekOptions(){
  ['mgr','hist','dash'].forEach(pfx=>{
    const fYear=$('#'+pfx+'Year').value||now.getFullYear();
    const fMonth=$('#'+pfx+'Month').value||pad2(now.getMonth()+1);
-   const sel=$('#'+pfx+'Week'); if(!sel) return; const cur=sel.value;
+   const sel=$('#'+pfx+'Week'); if(!sel) return; let cur=sel.value;
+   const ranges=monthWeekRanges(fYear,fMonth);
+   if(cur && Number(cur)>ranges.length) cur=''; // tháng mới có ít tuần hơn tuần đang chọn → bỏ chọn
    let opts='<option value="">Tuần</option>';
-   for(let w=1;w<=4;w++){
-     const [a,b]=weekDayRange(String(w),fYear,fMonth);
+   ranges.forEach(([a,b],i)=>{
+     const w=i+1;
      const label=`Tuần ${w} (${pad2(a)}/${fMonth} - ${pad2(b)}/${fMonth})`;
      opts+=`<option value="${w}" ${String(w)===cur?'selected':''}>${label}</option>`;
-   }
+   });
    sel.innerHTML=opts;
  });
 }
