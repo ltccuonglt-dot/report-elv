@@ -629,10 +629,8 @@ function weekDayRange(week,year,month){ // week: '1'..'4' → [ngày bắt đầ
 function buildYearOptions(){
  const now=new Date();
  const years=new Set(mgrData.map(r=>(r.date||'').slice(0,4)).filter(Boolean));
- years.add(String(now.getFullYear()));
- years.add(String(now.getFullYear()+1)); // luôn có sẵn 2 năm sau để xem/lên lịch trước, dù chưa có phiếu nào
- years.add(String(now.getFullYear()+2));
- const list=[...years].sort((a,b)=>b-a);
+ for(let i=0;i<10;i++) years.add(String(now.getFullYear()+i)); // luôn có sẵn 10 năm (năm nay + 9 năm sau) để xem/lên lịch trước, dù chưa có phiếu nào
+ const list=[...years].sort((a,b)=>a-b); // từ nhỏ đến lớn
  ['mgrYear','histYear','dashYear'].forEach(id=>{
    const sel=$('#'+id); if(!sel) return; const cur=sel.value;
    sel.innerHTML='<option value="">Năm</option>'+list.map(y=>`<option value="${y}" ${y===cur?'selected':''}>Năm ${y}</option>`).join('');
