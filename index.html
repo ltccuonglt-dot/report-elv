@@ -610,15 +610,19 @@ $$('.seg').forEach(seg=>seg.querySelectorAll('button').forEach(b=>b.onclick=()=>
 
 /* ===== Bộ lọc Ngày/Tuần/Tháng/Năm cho Quản lý & Lịch sử =====
    4 dropdown độc lập nhưng lồng nhau: Ngày (1-31, số ngày thật theo Tháng/Năm
-   đang chọn), Tuần (1-4, tự tính & hiện ngày đầu-cuối tuần theo Tháng/Năm đang
-   chọn), Tháng (1-12), Năm. Không chọn gì = xem tất cả. Chọn Ngày thì bỏ Tuần
-   và ngược lại (2 cái cùng ý nghĩa "trong khoảng nào của tháng", tránh rối). */
+   đang chọn), Tuần (1-4, tính theo LỊCH THỰC TẾ — tuần bắt đầu Thứ 2, tuần 1
+   kết thúc ở Chủ nhật đầu tiên của tháng, tuần 4 gom hết phần còn lại tới cuối
+   tháng — không phải chia cứng 7 ngày/khối), Tháng (1-12), Năm. Không chọn gì
+   = xem tất cả. Chọn Tuần thì Ngày tự giới hạn trong khoảng ngày của tuần đó. */
 function pad2(n){return String(n).padStart(2,'0')}
 function daysInMonth(year,month){ return new Date(Number(year),Number(month),0).getDate(); } // month: 1-12
-function weekDayRange(week,year,month){ // week: '1'..'4' → [ngày bắt đầu, ngày kết thúc] trong tháng
+function isoDow(year,month,day){ const d=new Date(Number(year),Number(month)-1,day).getDay(); return d===0?7:d; } // 1=Thứ 2 ... 7=CN
+function weekDayRange(week,year,month){ // week: '1'..'4' → [ngày bắt đầu, ngày kết thúc] trong tháng, tuần bắt đầu Thứ 2 theo lịch thực tế
  const maxDay=daysInMonth(year,month);
- const ranges={'1':[1,7],'2':[8,14],'3':[15,21],'4':[22,maxDay]};
- return ranges[week];
+ const w1=isoDow(year,month,1); // thứ của ngày 1 trong tháng
+ const end1=8-w1; // ngày Chủ nhật đầu tiên của tháng (kết thúc tuần 1)
+ const bounds=[[1,Math.min(end1,maxDay)],[end1+1,Math.min(end1+7,maxDay)],[end1+8,Math.min(end1+14,maxDay)],[end1+15,maxDay]];
+ return bounds[Number(week)-1];
 }
 function buildYearOptions(){
  const now=new Date();
