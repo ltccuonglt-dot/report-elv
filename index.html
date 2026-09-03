@@ -1034,19 +1034,32 @@ function renderHistory(){
 
 /* manager */
 let mgrData=[];
-async function loadManager(){const list=$('#managerList');
- if(CFG.url){list.innerHTML='<div class="empty"><div class="t">Đang tải...</div></div>';
-   try{const res=await fetch(CFG.url+'?action=list&token='+encodeURIComponent(CFG.token));const j=await res.json();
-     mgrData=j.ok?(j.data||[]):[];if(!j.ok)toast(j.error||'Lỗi tải dữ liệu',true);}
-   catch(err){mgrData=[];toast('Không tải được dữ liệu',true)}
- }else mgrData=JSON.parse(localStorage.getItem(LS_HIST)||'[]');
+const MGR_CACHE_KEY='kt_mgr_cache_v1';
+function renderAllFromMgrData(){
  buildFilterOptions('mgrCustomer',mgrData.map(r=>r.customer));
  buildFilterOptions('mgrSystem',mgrData.map(r=>r.system));
  buildEngineerFilterOptions();
  buildYMWOptions();
  renderManager();
  renderDashboard();
- renderHistory();}
+ renderHistory();
+}
+/* Tải dữ liệu kiểu "cũ trước, mới sau" (stale-while-revalidate): nếu máy đã
+   từng tải thành công 1 lần, hiện NGAY dữ liệu lần trước (không phải chờ
+   "Đang tải..." mỗi lần mở màn Quản lý/Lịch sử/Dashboard), rồi âm thầm tải
+   bản mới nhất từ Sheet và cập nhật lại khi xong — nhanh hơn hẳn cảm giác,
+   đặc biệt khi Sheet có nhiều dữ liệu (đọc lâu hơn). */
+async function loadManager(){const list=$('#managerList');
+ const cached=CFG.url?JSON.parse(localStorage.getItem(MGR_CACHE_KEY)||'null'):null;
+ if(cached && cached.length){ mgrData=cached; renderAllFromMgrData(); }
+ else if(CFG.url){ list.innerHTML='<div class="empty"><div class="t">Đang tải...</div></div>'; }
+ if(CFG.url){
+   try{const res=await fetch(CFG.url+'?action=list&token='+encodeURIComponent(CFG.token));const j=await res.json();
+     if(j.ok){ mgrData=j.data||[]; localStorage.setItem(MGR_CACHE_KEY,JSON.stringify(mgrData)); }
+     else if(!cached){ mgrData=[]; toast(j.error||'Lỗi tải dữ liệu',true); }}
+   catch(err){ if(!cached){ mgrData=[]; toast('Không tải được dữ liệu',true); } }
+ }else mgrData=JSON.parse(localStorage.getItem(LS_HIST)||'[]');
+ renderAllFromMgrData();}
 
 /* ===== Tự động tải lại dữ liệu ngầm (mỗi 15 giây) =====
    Để nhiều người dùng cùng lúc thấy phiếu của nhau cập nhật mà không cần bấm
@@ -1060,13 +1073,8 @@ async function silentRefreshData(){
    const j=await res.json();
    if(j.ok){
      mgrData=j.data||[];
-     buildFilterOptions('mgrCustomer',mgrData.map(r=>r.customer));
-     buildFilterOptions('mgrSystem',mgrData.map(r=>r.system));
-     buildEngineerFilterOptions();
-     buildYMWOptions();
-     renderManager();
-     renderDashboard();
-     renderHistory();
+     localStorage.setItem(MGR_CACHE_KEY,JSON.stringify(mgrData));
+     renderAllFromMgrData();
    }
  }catch(err){ /* lỗi mạng tạm thời — im lặng bỏ qua, không làm phiền */ }
 }
