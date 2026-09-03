@@ -644,11 +644,14 @@ function buildDayOptions(){
  ['mgr','hist'].forEach(pfx=>{
    const fYear=$('#'+pfx+'Year').value||now.getFullYear();
    const fMonth=$('#'+pfx+'Month').value||pad2(now.getMonth()+1);
+   const fWeek=$('#'+pfx+'Week').value;
    const maxDay=daysInMonth(fYear,fMonth);
+   let start=1, end=maxDay;
+   if(fWeek){ const r=weekDayRange(fWeek,fYear,fMonth); start=r[0]; end=r[1]; }
    const sel=$('#'+pfx+'Day'); if(!sel) return; let cur=sel.value;
-   if(cur && Number(cur)>maxDay) cur='';
+   if(cur && (Number(cur)<start || Number(cur)>end)) cur='';
    let opts='<option value="">Ngày</option>';
-   for(let d=1;d<=maxDay;d++){ const v=pad2(d); opts+=`<option value="${v}" ${v===cur?'selected':''}>${d}</option>`; }
+   for(let d=start;d<=end;d++){ const v=pad2(d); opts+=`<option value="${v}" ${v===cur?'selected':''}>${d}</option>`; }
    sel.innerHTML=opts;
  });
 }
@@ -667,7 +670,7 @@ function buildWeekOptions(){
    sel.innerHTML=opts;
  });
 }
-function buildYMWOptions(){ buildYearOptions(); buildMonthOptions(); buildDayOptions(); buildWeekOptions(); }
+function buildYMWOptions(){ buildYearOptions(); buildMonthOptions(); buildWeekOptions(); buildDayOptions(); }
 function inYMW(dateStr, fYear, fMonth, fDay, fWeek){
  if(!dateStr) return false;
  if(!fYear && !fMonth && !fDay && !fWeek) return true; // không chọn gì = xem tất cả
@@ -680,10 +683,10 @@ function inYMW(dateStr, fYear, fMonth, fDay, fWeek){
 }
 function wireYMW(pfx,onChange){
  const yr=$('#'+pfx+'Year'), mo=$('#'+pfx+'Month'), dy=$('#'+pfx+'Day'), wk=$('#'+pfx+'Week');
- yr.onchange=()=>{buildDayOptions();buildWeekOptions();onChange();};
- mo.onchange=()=>{buildDayOptions();buildWeekOptions();onChange();};
- dy.onchange=()=>{ if(dy.value) wk.value=''; onChange(); };
- wk.onchange=()=>{ if(wk.value) dy.value=''; onChange(); };
+ yr.onchange=()=>{buildWeekOptions();buildDayOptions();onChange();};
+ mo.onchange=()=>{buildWeekOptions();buildDayOptions();onChange();};
+ dy.onchange=()=>{onChange();};
+ wk.onchange=()=>{buildDayOptions();onChange();}; // chọn tuần → Ngày tự giới hạn trong khoảng tuần đó
 }
 $('#f_customer').onchange=e=>$('#wrap_customer_other').style.display=e.target.value==='__other'?'block':'none';
 $('#f_system').onchange=e=>$('#wrap_system_other').style.display=e.target.value==='__other'?'block':'none';
