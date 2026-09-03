@@ -447,11 +447,11 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     <!-- ===== QUẢN LÝ ===== -->
     <!-- ===== DASHBOARD ===== -->
     <section id="view-dashboard" class="view">
-      <div class="seg sm" id="dashRange" style="margin-bottom:14px">
-        <button type="button" data-v="day">Ngày</button>
-        <button type="button" data-v="week">Tuần</button>
-        <button type="button" data-v="month" class="on">Tháng</button>
-        <button type="button" data-v="all">Tất cả</button>
+      <div class="ymw-filter" id="dashYMW">
+        <select id="dashDay" class="mini-date"><option value="">Ngày</option></select>
+        <select id="dashWeek" class="mini-date"><option value="">Tuần</option></select>
+        <select id="dashMonth" class="mini-date"><option value="">Tháng</option></select>
+        <select id="dashYear" class="mini-date"><option value="">Năm</option></select>
       </div>
       <div class="stats" id="dashStats"></div>
       <div class="card" id="dashDonuts" style="margin-bottom:0"></div>
@@ -606,7 +606,6 @@ function setFieldOrOther(selectId,otherWrapId,otherInputId,value){
  else{ sel.value='__other'; $('#'+otherWrapId).style.display='block'; $('#'+otherInputId).value=value||''; }
 }
 $$('.seg').forEach(seg=>seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
- if(seg.id==='dashRange')renderDashboard();
 }));
 
 /* ===== Bộ lọc Ngày/Tuần/Tháng/Năm cho Quản lý & Lịch sử =====
@@ -626,13 +625,13 @@ function buildYearOptions(){
  const years=new Set(mgrData.map(r=>(r.date||'').slice(0,4)).filter(Boolean));
  years.add(String(now.getFullYear()));
  const list=[...years].sort((a,b)=>b-a);
- ['mgrYear','histYear'].forEach(id=>{
+ ['mgrYear','histYear','dashYear'].forEach(id=>{
    const sel=$('#'+id); if(!sel) return; const cur=sel.value;
    sel.innerHTML='<option value="">Năm</option>'+list.map(y=>`<option value="${y}" ${y===cur?'selected':''}>Năm ${y}</option>`).join('');
  });
 }
 function buildMonthOptions(){
- ['mgrMonth','histMonth'].forEach(id=>{
+ ['mgrMonth','histMonth','dashMonth'].forEach(id=>{
    const sel=$('#'+id); if(!sel) return; const cur=sel.value;
    let opts='<option value="">Tháng</option>';
    for(let m=1;m<=12;m++){ const v=pad2(m); opts+=`<option value="${v}" ${v===cur?'selected':''}>Tháng ${m}</option>`; }
@@ -641,7 +640,7 @@ function buildMonthOptions(){
 }
 function buildDayOptions(){
  const now=new Date();
- ['mgr','hist'].forEach(pfx=>{
+ ['mgr','hist','dash'].forEach(pfx=>{
    const fYear=$('#'+pfx+'Year').value||now.getFullYear();
    const fMonth=$('#'+pfx+'Month').value||pad2(now.getMonth()+1);
    const fWeek=$('#'+pfx+'Week').value;
@@ -657,7 +656,7 @@ function buildDayOptions(){
 }
 function buildWeekOptions(){
  const now=new Date();
- ['mgr','hist'].forEach(pfx=>{
+ ['mgr','hist','dash'].forEach(pfx=>{
    const fYear=$('#'+pfx+'Year').value||now.getFullYear();
    const fMonth=$('#'+pfx+'Month').value||pad2(now.getMonth()+1);
    const sel=$('#'+pfx+'Week'); if(!sel) return; const cur=sel.value;
@@ -941,14 +940,6 @@ function filterMgrEngineerList(q){
  $$('#mgrEngineer_list .msel-opt').forEach(opt=>{opt.hidden=q&&opt.dataset.name&&!opt.dataset.name.toLowerCase().includes(q)});
 }
 $('#mgrEngineer_search').oninput=e=>filterMgrEngineerList(e.target.value);
-function inRange(dateStr,range){
- if(range==='all')return true; if(!dateStr)return false;
- const d=new Date(dateStr+'T00:00:00'),now=new Date();
- if(range==='day')return dateStr===now.toISOString().slice(0,10);
- if(range==='month')return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
- if(range==='week'){const wd=(now.getDay()+6)%7;const start=new Date(now);start.setDate(now.getDate()-wd);start.setHours(0,0,0,0);
-   const end=new Date(start);end.setDate(start.getDate()+7);return d>=start&&d<end;}
- return true;}
 function hbarRow(label,val,max,color){
  const pct=max?Math.round(val/max*100):0;
  return `<div class="hbar-row"><span class="hbar-label">${esc(label)}</span><div class="hbar-track"><div class="hbar-fill" style="width:${pct}%;background:${color}"></div></div><span class="hbar-val">${val}</span></div>`;
@@ -997,8 +988,8 @@ function donutBlock(title,segments){
  </div>`;
 }
 function renderDashboard(){
- const range=segVal('dashRange');
- const data=mgrData.filter(r=>inRange(r.date,range));
+ const fYear=$('#dashYear').value, fMonth=$('#dashMonth').value, fDay=$('#dashDay').value, fWeek=$('#dashWeek').value;
+ const data=mgrData.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
  const online=data.filter(r=>!(r.support||'').toLowerCase().includes('site')).length;
  const onsite=data.length-online;
  $('#dashStats').innerHTML=`
@@ -1128,6 +1119,7 @@ $('#mgrSearch').oninput=renderManager;
 $('#histSearch').oninput=renderHistory;
 wireYMW('mgr',renderManager);
 wireYMW('hist',renderHistory);
+wireYMW('dash',renderDashboard);
 $('#mgrCustomer').onchange=renderManager;
 $('#mgrSystem').onchange=renderManager;
 $('#mgrPriority').onchange=renderManager;
