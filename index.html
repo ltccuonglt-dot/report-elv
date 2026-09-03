@@ -243,6 +243,9 @@ table.rpt select.status-sel:disabled{opacity:.5}
 .p-high{background:var(--danger-soft);color:var(--danger)} .p-medium{background:var(--warn-soft);color:var(--warn)} .p-low{background:var(--ok-soft);color:var(--ok)}
 .s-done{background:var(--ok-soft);color:var(--ok)} .s-prog{background:var(--warn-soft);color:var(--warn)} .s-pend{background:var(--danger-soft);color:var(--danger)}
 .sup-online{background:var(--info-soft);color:var(--info)} .sup-onsite{background:var(--brand-soft);color:var(--brand-ink)}
+.eng-chip{display:inline-flex;align-items:center;gap:6px;background:var(--brand-soft);color:var(--brand-ink);font-size:13px;font-weight:600;padding:6px 8px 6px 12px;border-radius:999px}
+.eng-chip button{border:none;background:rgba(0,0,0,.08);color:inherit;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;cursor:pointer;font-size:13px;line-height:1;padding:0}
+.eng-chip button:hover{background:rgba(0,0,0,.16)}
 table.rpt tr.weekend-row{background:var(--danger-soft)}
 table.rpt tr.weekend-row .dow-tag{color:var(--danger)}
 .dow-tag{font-size:9.5px;font-weight:800;letter-spacing:.3px;opacity:.85}
@@ -391,14 +394,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
               <button type="button" class="msel-btn placeholder" id="f_engineer_btn">— Chọn kỹ sư (được chọn nhiều) —</button>
               <div class="msel-panel" id="f_engineer_panel" hidden>
                 <input type="text" class="msel-search" id="f_engineer_search" placeholder="🔍 Tìm kỹ sư..." />
-                <div class="msel-list" id="f_engineer_list">
-                  <label class="msel-opt" data-name="Nguyễn Thái Bảo"><input type="checkbox" value="Nguyễn Thái Bảo"><span>Nguyễn Thái Bảo</span></label>
-                  <label class="msel-opt" data-name="Võ Quỳnh Bảo Châu"><input type="checkbox" value="Võ Quỳnh Bảo Châu"><span>Võ Quỳnh Bảo Châu</span></label>
-                  <label class="msel-opt" data-name="Lê Minh Anh"><input type="checkbox" value="Lê Minh Anh"><span>Lê Minh Anh</span></label>
-                  <label class="msel-opt" data-name="Phạm Nguyễn Gia Huy"><input type="checkbox" value="Phạm Nguyễn Gia Huy"><span>Phạm Nguyễn Gia Huy</span></label>
-                  <label class="msel-opt" data-name="Nguyễn Trung Hiếu"><input type="checkbox" value="Nguyễn Trung Hiếu"><span>Nguyễn Trung Hiếu</span></label>
-                  <label class="msel-opt" data-name="Lê Tấn Cường"><input type="checkbox" value="Lê Tấn Cường"><span>Lê Tấn Cường</span></label>
-                </div>
+                <div class="msel-list" id="f_engineer_list"><!-- được vẽ động bằng renderEngineerChecklist() --></div>
                 <label class="msel-opt msel-other-opt"><input type="checkbox" id="f_engineer_other_chk" value="__other"><span>Khác…</span></label>
                 <div class="msel-other" id="msel_other_wrap" hidden>
                   <input type="text" id="f_engineer_other" placeholder="Nhập tên, cách nhau bằng dấu phẩy nếu nhiều người" />
@@ -564,6 +560,14 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <span class="lab">Tên hiển thị</span>
       <input type="text" id="s_store" placeholder="VD: AEON Huế - Kỹ thuật" autocomplete="off" autocorrect="off" spellcheck="false" />
     </label>
+    <div class="divider"></div>
+    <div class="section-title" style="margin-bottom:8px">Danh sách kỹ sư</div>
+    <p class="desc" style="margin-top:-4px">Thêm/xóa ở đây sẽ đồng bộ ngay trên mọi thiết bị (lưu trên Google Sheet).</p>
+    <div id="engManageList" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <input type="text" id="engNewName" placeholder="Tên kỹ sư mới…" style="flex:1" autocomplete="off" autocorrect="off" spellcheck="false" />
+      <button type="button" class="btn btn-primary" id="btnAddEngineer" style="width:auto;padding:12px 18px;margin:0;flex:none">Thêm</button>
+    </div>
     <div class="divider"></div>
     <button class="btn btn-primary" id="btnSaveSettings" style="margin-bottom:10px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span>Lưu & Kiểm tra kết nối</span>
@@ -748,7 +752,11 @@ function filterEngineerList(q){
 }
 $('#f_engineer_search').oninput=e=>filterEngineerList(e.target.value);
 $('#f_engineer_done').onclick=()=>{engPanel.hidden=true;engDD.classList.remove('open');};
-$$('#f_engineer_panel input[type=checkbox]').forEach(cb=>cb.onchange=()=>{
+/* Ủy quyền sự kiện (event delegation) thay vì gắn .onchange trực tiếp từng ô —
+   vì danh sách kỹ sư trong #f_engineer_list giờ được vẽ lại động (renderEngineerChecklist),
+   gắn trực tiếp sẽ mất tác dụng mỗi khi danh sách đổi. */
+engPanel.addEventListener('change',e=>{
+ const cb=e.target; if(cb.tagName!=='INPUT'||cb.type!=='checkbox') return;
  if(cb===engOtherChk){ $('#msel_other_wrap').hidden=!cb.checked; if(!cb.checked)$('#f_engineer_other').value=''; else $('#f_engineer_other').focus(); }
  updateEngineerLabel();
 });
@@ -780,6 +788,63 @@ function setEngineerValue(str){
  $('#f_engineer_other').value=extras.join(', ');
  updateEngineerLabel();
 }
+
+/* ===== Danh sách kỹ sư — lấy từ Sheet "Ky Su" (đồng bộ mọi thiết bị) =====
+   Admin thêm/xóa qua ⚙️ Cài đặt; checklist ở form Tạo phiếu và bộ lọc kỹ sư
+   ở Quản lý đều vẽ lại từ đây mỗi khi danh sách đổi. */
+const FALLBACK_ENGINEERS=['Nguyễn Thái Bảo','Võ Quỳnh Bảo Châu','Lê Minh Anh','Phạm Nguyễn Gia Huy','Nguyễn Trung Hiếu','Lê Tấn Cường'];
+let engineerList=[];
+async function loadEngineers(){
+ if(CFG.url){
+   try{
+     const res=await fetch(CFG.url+'?action=engineers&token='+encodeURIComponent(CFG.token));
+     const j=await res.json();
+     engineerList=j.ok?(j.data||[]):FALLBACK_ENGINEERS;
+   }catch(err){ engineerList=FALLBACK_ENGINEERS; }
+ } else engineerList=FALLBACK_ENGINEERS;
+ renderEngineerChecklist();
+ renderEngineerManageList();
+ if(typeof buildEngineerFilterOptions==='function') buildEngineerFilterOptions();
+}
+function renderEngineerChecklist(){
+ const cur=$$('#f_engineer_list input[type=checkbox]:checked').map(c=>c.value); // giữ lựa chọn đang có nếu vẽ lại giữa chừng
+ $('#f_engineer_list').innerHTML=engineerList.map(n=>
+   `<label class="msel-opt" data-name="${esc(n)}"><input type="checkbox" value="${esc(n)}" ${cur.includes(n)?'checked':''}><span>${esc(n)}</span></label>`
+ ).join('');
+}
+function renderEngineerManageList(){
+ const wrap=$('#engManageList'); if(!wrap) return;
+ if(!engineerList.length){ wrap.innerHTML='<span class="hint">Chưa có kỹ sư nào.</span>'; return; }
+ wrap.innerHTML=engineerList.map(n=>
+   `<span class="eng-chip">${esc(n)}<button type="button" data-name="${esc(n)}" aria-label="Xóa ${esc(n)}">✕</button></span>`
+ ).join('');
+ $$('#engManageList button').forEach(b=>b.onclick=()=>deleteEngineer(b.dataset.name));
+}
+async function addEngineer(){
+ const input=$('#engNewName'); const name=input.value.trim();
+ if(!name){ toast('Nhập tên kỹ sư',true); return; }
+ if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
+ try{
+   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+     body:JSON.stringify({token:CFG.token,action:'addEngineer',name,adminPassword:ADMIN_PASSWORD})});
+   const j=await res.json();
+   if(j.ok){ engineerList=j.data||engineerList; input.value=''; renderEngineerChecklist(); renderEngineerManageList(); buildEngineerFilterOptions(); toast('✅ Đã thêm kỹ sư'); }
+   else toast(j.error||'Lỗi thêm kỹ sư',true);
+ }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
+}
+async function deleteEngineer(name){
+ if(!confirm(`Xóa kỹ sư "${name}" khỏi danh sách?`)) return;
+ if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
+ try{
+   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+     body:JSON.stringify({token:CFG.token,action:'deleteEngineer',name,adminPassword:ADMIN_PASSWORD})});
+   const j=await res.json();
+   if(j.ok){ engineerList=j.data||engineerList; renderEngineerChecklist(); renderEngineerManageList(); buildEngineerFilterOptions(); toast('✅ Đã xóa kỹ sư'); }
+   else toast(j.error||'Lỗi xóa kỹ sư',true);
+ }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
+}
+$('#btnAddEngineer').onclick=addEngineer;
+$('#engNewName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addEngineer();}});
 
 /* nhớ lựa chọn gần nhất */
 if(localStorage.getItem('kt_cus'))$('#f_customer').value=localStorage.getItem('kt_cus');
@@ -943,6 +1008,7 @@ function buildFilterOptions(selId,values){
 let mgrEngineerFilter='';
 function buildEngineerFilterOptions(){
  const names=new Set();
+ (engineerList||[]).forEach(n=>names.add(n)); // luôn có mặt dù chưa có phiếu nào (mới thêm)
  mgrData.forEach(r=>(r.engineer||'').split(' - ').map(s=>s.trim()).filter(Boolean).forEach(n=>names.add(n)));
  const uniq=[...names].sort((a,b)=>a.localeCompare(b,'vi'));
  $('#mgrEngineer_list').innerHTML=
@@ -1225,7 +1291,7 @@ $('#btnExport').onclick=()=>{
 /* cổng khóa admin — chỉ ai biết mã bảo mật mới vào được Cài đặt */
 const gate=$('#adminGateModal');
 function openSettingsModal(){$('#s_url').value=CFG.url;$('#s_token').value=CFG.token;$('#s_token').classList.add('masked');$('#s_store').value=CFG.store;
- const cs=$('#connStatus');cs.className='status-dot'+(CFG.url?' live':'');cs.querySelector('span').textContent=CFG.url?'Đã kết nối':'Chưa kết nối';modal.classList.add('show')}
+ const cs=$('#connStatus');cs.className='status-dot'+(CFG.url?' live':'');cs.querySelector('span').textContent=CFG.url?'Đã kết nối':'Chưa kết nối';modal.classList.add('show');loadEngineers();}
 $('#btnSettings').onclick=()=>{$('#admin_pin').value='';$('#admin_pin').classList.add('masked');gate.classList.add('show');setTimeout(()=>$('#admin_pin').focus(),100)};
 $('#btnCloseAdminGate').onclick=()=>gate.classList.remove('show');
 $('#btnToggleAdminPin').onclick=()=>{$('#admin_pin').classList.toggle('masked')};
@@ -1277,6 +1343,7 @@ $('#btnSaveSettings').onclick=async()=>{const url=$('#s_url').value.trim(),token
  else{toast('Đã lưu (thử nghiệm)');modal.classList.remove('show')}};
 
 refreshBanner();
+loadEngineers();
 </script>
 </body>
 </html>
