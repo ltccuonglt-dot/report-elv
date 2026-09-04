@@ -1109,7 +1109,7 @@ function renderHistory(){
  const q=($('#histSearch').value||'').trim().toLowerCase();
  let h=mgrData.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
  if(q) h=h.filter(r=>((r.engineer||'')+' '+(r.issue||'')+' '+(r.customer||'')+' '+(r.system||'')).toLowerCase().includes(q));
- h.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(Number(b.no)-Number(a.no))); // ngày mới nhất lên trước, xem chú thích ở renderManager
+ h.sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(Number(a.no)-Number(b.no))); // ngày nhỏ (cũ) đến lớn (mới), xem chú thích ở renderManager
  const lbl=[fYear&&('Năm '+fYear),fMonth&&('Tháng '+Number(fMonth)),fDay&&('Ngày '+Number(fDay)),fWeek&&('Tuần '+fWeek)].filter(Boolean).join(', ')||'Tất cả';
  $('#histListTitle').textContent=`Lịch sử phiếu · ${lbl} (${h.length})`;
  if(!h.length){$('#historyList').innerHTML=emptyState(q?'Không tìm thấy':'Chưa có phiếu',q?'Không có phiếu khớp tìm kiếm.':CFG.url?'Không có phiếu trong khoảng thời gian này.':'Kết nối Google Sheet để xem lịch sử.');return}
@@ -1380,11 +1380,12 @@ function renderManager(){
  if(fPri)data=data.filter(r=>r.priority===fPri);
  if(mgrEngineerFilter)data=data.filter(r=>(r.engineer||'').includes(mgrEngineerFilter));
  if(q)data=data.filter(r=>((r.issue||'')+(r.engineer||'')+(r.system||'')+(r.customer||'')+(r.priority||'')).toLowerCase().includes(q));
- // Xếp theo NGÀY mới nhất lên trước — không xếp theo No, vì No chỉ là số thứ
- // tự lúc tạo phiếu, không đổi khi sửa ngày, xếp theo No sẽ để phiếu ngày cũ
- // hơn nằm dưới phiếu ngày mới hơn, nhìn không hợp lý (No bằng nhau/ngày bằng
- // nhau thì phiếu tạo sau — No lớn hơn — lên trước).
- data.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(Number(b.no)-Number(a.no)));
+ // Xếp theo NGÀY từ nhỏ đến lớn (cũ → mới, giống thứ tự từ lúc build app) —
+ // không xếp theo No, vì No chỉ là số thứ tự lúc tạo phiếu, không đổi khi
+ // sửa ngày; xếp theo No sẽ để phiếu ngày cũ hơn nằm dưới phiếu ngày mới
+ // hơn, nhìn không hợp lý (ngày bằng nhau thì phiếu tạo trước — No nhỏ
+ // hơn — lên trước, đúng thứ tự tạo phiếu trong ngày đó).
+ data.sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(Number(a.no)-Number(b.no)));
 
  const online=data.filter(r=>!(r.support||'').toLowerCase().includes('site')).length;
  const onsite=data.length-online;
