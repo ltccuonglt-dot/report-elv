@@ -840,6 +840,14 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
           <label class="field"><span class="lab">Đến ngày</span><input type="date" id="ctp_f_todate"></label>
           <label class="field"><span class="lab">Mã vụ việc (chung)</span><input type="text" id="ctp_f_pjcode"></label>
           <label class="field"><span class="lab">Tên dự án (chung)</span><input type="text" id="ctp_f_pjname"></label>
+          <label class="field" style="grid-column:1/-1"><span class="lab">Loại dịch vụ (áp dụng cho cả đợt, đúng như mẫu — tick 1 lần)</span>
+            <div class="seg" id="ctp_f_tripservice">
+              <button type="button" data-v="Bảo trì" class="on">Bảo trì</button>
+              <button type="button" data-v="Bảo hành">Bảo hành</button>
+              <button type="button" data-v="Lắp mới">Lắp mới</button>
+              <button type="button" data-v="Khảo sát">Khảo sát</button>
+            </div>
+          </label>
         </div>
         <button type="button" class="btn" id="btnCtpSaveTrip" style="margin:10px 0"><span>Lưu thông tin đợt công tác</span></button>
       </div>
@@ -861,12 +869,9 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         <label class="field"><span class="lab">Từ ngày (dòng này)</span><input type="date" id="ctp_f_linefrom"></label>
         <label class="field"><span class="lab">Đến ngày (dòng này)</span><input type="date" id="ctp_f_lineto"></label>
         <label class="field" id="ctp_km_wrap" style="display:none"><span class="lab">Km (chỉ dòng xăng)</span><input type="number" id="ctp_f_km" step="0.1"></label>
-        <label class="field"><span class="lab">Số lượng</span><input type="number" id="ctp_f_qty" step="0.1" value="1"></label>
+        <label class="field"><span class="lab">Số lượng (tự tính, đúng mẫu — không nhập tay)</span><input type="number" id="ctp_f_qty" step="0.1" value="1" readonly style="background:var(--surface-2);color:var(--muted)"></label>
         <label class="field"><span class="lab">Định mức (đ)</span><input type="number" id="ctp_f_rate" step="1000"></label>
         <label class="field"><span class="lab">Thành tiền (đ)</span><input type="number" id="ctp_f_amount" step="1000"></label>
-        <label class="field"><span class="lab">Loại dịch vụ</span>
-          <select id="ctp_f_service"><option value="Bảo trì">Bảo trì</option><option value="Bảo hành">Bảo hành</option><option value="Lắp mới">Lắp mới</option><option value="Khảo sát">Khảo sát</option></select>
-        </label>
         <label class="field"><span class="lab">Mã vụ việc (dòng này)</span><input type="text" id="ctp_f_linecode"></label>
         <label class="field"><span class="lab">Tên DA (dòng này)</span><input type="text" id="ctp_f_linename"></label>
         <label class="field" style="grid-column:1/-1"><span class="lab">Ghi chú</span><input type="text" id="ctp_f_linenote"></label>
@@ -878,7 +883,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
       <div class="divider"></div>
       <div class="rpt-wrap"><table class="rpt" id="ctpLineTable"><thead><tr>
-        <th>Nội dung</th><th>Diễn giải</th><th>Km</th><th>SL</th><th>Định mức</th><th>Thành tiền</th><th>Dịch vụ</th><th>Ghi chú</th><th></th>
+        <th>Tên NV</th><th>Nội dung</th><th>Diễn giải</th><th>Km</th><th>SL</th><th>Định mức</th><th>Thành tiền</th><th>Ghi chú</th><th></th>
       </tr></thead><tbody id="ctpLineBody"></tbody></table></div>
       <div style="text-align:right;font-weight:800;margin:10px 0" id="ctpTotalBox">Tổng cộng: 0 đ</div>
 
@@ -2169,14 +2174,14 @@ function ccPopulateSelects(){
 
 async function ccLoadList(){
  if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
- const year=$('#cc_year').value, month=$('#cc_month').value;
+ const year=$('#cc_year').value, month=$('#cc_month').value, emp=$('#cc_employee').value;
  try{
-   const res=await fetch(`${CFG.url}?action=listAttendance&token=${encodeURIComponent(CFG.token)}&adminPassword=${encodeURIComponent(adminPasswordRuntime||'')}&year=${year}&month=${month}`);
+   // Mỗi kỹ sư 1 tab riêng — có chọn nhân viên thì server chỉ đọc đúng tab đó
+   // (nhanh hơn); để trống thì server tự gộp TẤT CẢ tab lại.
+   const res=await fetch(`${CFG.url}?action=listAttendance&token=${encodeURIComponent(CFG.token)}&adminPassword=${encodeURIComponent(adminPasswordRuntime||'')}&year=${year}&month=${month}&employee=${encodeURIComponent(emp)}`);
    const j=await res.json();
    if(!j.ok){ toast(j.error||'Lỗi tải chấm công',true); return; }
    ccCurrentList=j.data||[];
-   const emp=$('#cc_employee').value;
-   if(emp) ccCurrentList=ccCurrentList.filter(r=>r.employee===emp);
    ccRenderList();
    ccCheckMonthReminder();
  }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
@@ -2191,11 +2196,11 @@ function ccRenderList(){
    <td>${esc(r.timeIn)}</td><td>${esc(r.timeOut)}</td><td>${r.workDays||0}</td>
    <td>${esc(r.workContent)}</td><td>${esc(r.salePhuTrach)}</td><td>${esc(r.note)}</td>
    <td style="white-space:nowrap">
-     <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-act="edit" aria-label="Sửa dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-     <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-act="del" aria-label="Xoá dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+     <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-employee="${esc(r.employee)}" data-act="edit" aria-label="Sửa dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+     <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-employee="${esc(r.employee)}" data-act="del" aria-label="Xoá dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
    </td>
  </tr>`).join('') || `<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:14px">Chưa có dòng nào tháng này</td></tr>`;
- $$('#ccListBody .row-del-btn').forEach(b=>b.onclick=()=>b.dataset.act==='edit'?ccEditRow(b.dataset.no):ccDeleteRow(b.dataset.no));
+ $$('#ccListBody .row-del-btn').forEach(b=>b.onclick=()=>b.dataset.act==='edit'?ccEditRow(b.dataset.no):ccDeleteRow(b.dataset.no,b.dataset.employee));
 }
 
 let ccEditingNo=null;
@@ -2219,11 +2224,11 @@ $('#btnCcCancelEdit').onclick=()=>{
  $('#btnCcCancelEdit').style.display='none';
 };
 
-async function ccDeleteRow(no){
+async function ccDeleteRow(no,employee){
  if(!confirm('Xoá dòng chấm công này?')) return;
  try{
    const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-     body:JSON.stringify({token:CFG.token,action:'deleteAttendance',no,adminPassword:adminPasswordRuntime})});
+     body:JSON.stringify({token:CFG.token,action:'deleteAttendance',no,employee,adminPassword:adminPasswordRuntime})});
    const j=await res.json();
    if(j.ok){ toast('✅ Đã xoá'); ccLoadList(); } else toast(j.error||'Lỗi xoá',true);
  }catch(err){ toast('Không kết nối được',true); }
@@ -2448,22 +2453,35 @@ $('#ctp_mapUpload').onchange=()=>{
  reader.readAsDataURL(file);
 };
 
+/* Xăng: "Diễn giải" đúng mẫu là câu cố định kèm NGÀY THẬT của dòng này, tự
+   ghép chứ không gõ tay (đúng như file mẫu: "Xăng xe lượt đi và về từ ngày
+   ...đến ngày..."). Loại khác thì chỉ gợi ý câu mặc định, vẫn sửa tay được. */
+function ctpUpdateFuelDesc(){
+ if(!$('#ctp_f_type').value.includes('xăng')) return;
+ const f=$('#ctp_f_linefrom').value||$('#ctp_f_fromdate').value, t=$('#ctp_f_lineto').value||$('#ctp_f_todate').value;
+ $('#ctp_f_desc').value=`Xăng xe lượt đi và về từ ngày ${f?fmtDMYFull(f):'…'} đến ngày ${t?fmtDMYFull(t):'…'}`;
+}
 $('#ctp_f_type').onchange=()=>{
- const t=CTP_TYPES.find(x=>x.v===$('#ctp_f_type').value);
- if(t && !$('#ctp_f_desc').value) $('#ctp_f_desc').value=t.desc;
- $('#ctp_km_wrap').style.display=$('#ctp_f_type').value.includes('xăng')?'block':'none';
+ const isFuel=$('#ctp_f_type').value.includes('xăng');
+ $('#ctp_km_wrap').style.display=isFuel?'block':'none';
+ if(isFuel){ ctpUpdateFuelDesc(); }
+ else{ const t=CTP_TYPES.find(x=>x.v===$('#ctp_f_type').value); if(t && !$('#ctp_f_desc').value) $('#ctp_f_desc').value=t.desc; }
  ctpRecalcAmount();
 };
-['ctp_f_km','ctp_f_qty','ctp_f_rate'].forEach(id=>$('#'+id).addEventListener('input',ctpRecalcAmount));
+['ctp_f_linefrom','ctp_f_lineto'].forEach(id=>$('#'+id).addEventListener('input',ctpUpdateFuelDesc));
+['ctp_f_km','ctp_f_rate'].forEach(id=>$('#'+id).addEventListener('input',ctpRecalcAmount));
+// Số lượng KHÔNG cho gõ tay (đúng mẫu — luôn tự tính): 1 cho mọi loại chi
+// phí thường (1 lần/1 ngày công), riêng xăng tự tính km/30 (lít).
 function ctpRecalcAmount(){
  const isFuel=$('#ctp_f_type').value.includes('xăng');
  const rate=Number($('#ctp_f_rate').value)||0;
- let qty=Number($('#ctp_f_qty').value)||0;
+ let qty;
  if(isFuel){
    const km=Number($('#ctp_f_km').value)||0;
    qty=km/30; $('#ctp_f_qty').value=qty?qty.toFixed(3):0;
    $('#ctp_f_amount').value=Math.round(qty*2*rate);
  } else {
+   qty=1; $('#ctp_f_qty').value=1;
    $('#ctp_f_amount').value=Math.round(qty*rate);
  }
 }
@@ -2480,11 +2498,14 @@ async function ctpLoadAll(){
 }
 
 function ctpRenderTripSelect(){
- const trips={};
- ctpAllLines.forEach(r=>{ if(!trips[r.tripId]) trips[r.tripId]=r; });
+ const trips={}, namesByTrip={};
+ ctpAllLines.forEach(r=>{
+   if(!trips[r.tripId]) trips[r.tripId]=r;
+   (namesByTrip[r.tripId]=namesByTrip[r.tripId]||new Set()).add(r.requesterName);
+ });
  const ids=Object.keys(trips);
  const sel=$('#ctp_tripSelect');
- sel.innerHTML=ids.length?ids.map(id=>{ const t=trips[id]; return `<option value="${esc(id)}">${esc(fmtDMYFull(t.requestDate))} — ${esc(t.requesterName)} (${esc(t.workingPlace)})</option>`; }).join('')
+ sel.innerHTML=ids.length?ids.map(id=>{ const t=trips[id]; const names=[...namesByTrip[id]].filter(Boolean).join(' - '); return `<option value="${esc(id)}">${esc(fmtDMYFull(t.requestDate))} — ${esc(names)} (${esc(t.workingPlace)})</option>`; }).join('')
    :'<option value="">— Chưa có đợt công tác nào —</option>';
  if(ids.length){ currentTripId=ids[0]; sel.value=currentTripId; ctpLoadTripIntoForm(); }
  else ctpNewTrip();
@@ -2498,6 +2519,7 @@ function ctpNewTrip(){
  $('#ctp_f_place').value='';
  $('#ctp_f_fromdate').value=''; $('#ctp_f_todate').value='';
  $('#ctp_f_pjcode').value=''; $('#ctp_f_pjname').value='';
+ segSet('ctp_f_tripservice','Bảo trì');
  $('#ctp_mapSelect').value=''; ctpUploadedMapDataUrl=null; $('#ctp_mapUpload').value=''; $('#ctp_mapPreviewWrap').style.display='none';
  ctpRenderLines();
 }
@@ -2505,13 +2527,19 @@ $('#btnCtpNewTrip').onclick=ctpNewTrip;
 
 function ctpLoadTripIntoForm(){
  if(!currentTripId){ ctpNewTrip(); return; }
- const first=ctpAllLines.find(r=>r.tripId===currentTripId);
+ const lines=ctpAllLines.filter(r=>r.tripId===currentTripId);
+ const first=lines[0];
  if(!first){ ctpNewTrip(); return; }
  $('#ctp_f_reqdate').value=first.requestDate||'';
- ctpRenderRequesterChecklist(first.requesterName||'');
+ // Gộp TẤT CẢ tên riêng lẻ đã xuất hiện trên các dòng của đợt này (mỗi
+ // người 1 dòng, xem btnCtpAddLine) để tick sẵn đúng những ai đang đi đợt
+ // này — không phải chỉ lấy tên ở dòng đầu tiên.
+ const allNames=[...new Set(lines.map(l=>l.requesterName).filter(Boolean))].join(' - ');
+ ctpRenderRequesterChecklist(allNames);
  $('#ctp_f_place').value=first.workingPlace||'';
  $('#ctp_f_fromdate').value=first.fromDate||first.tripFromDate||''; $('#ctp_f_todate').value=first.toDate||first.tripToDate||'';
  $('#ctp_f_pjcode').value=first.projectCode||''; $('#ctp_f_pjname').value=first.projectName||'';
+ segSet('ctp_f_tripservice', first.serviceType||'Bảo trì');
  if(first.mapImage && first.mapImage.startsWith('data:')){ ctpUploadedMapDataUrl=first.mapImage; $('#ctp_mapSelect').value=''; $('#ctp_mapPreview').src=first.mapImage; $('#ctp_mapPreviewWrap').style.display='block'; }
  else if(first.mapImage){ $('#ctp_mapSelect').value=first.mapImage; ctpUploadedMapDataUrl=null; $('#ctp_mapPreview').src='./maps/'+encodeURIComponent(first.mapImage); $('#ctp_mapPreviewWrap').style.display='block'; }
  else { $('#ctp_mapSelect').value=''; ctpUploadedMapDataUrl=null; $('#ctp_mapPreviewWrap').style.display='none'; }
@@ -2522,8 +2550,8 @@ function ctpCurrentLines(){ return currentTripId ? ctpAllLines.filter(r=>r.tripI
 function ctpRenderLines(){
  const lines=ctpCurrentLines();
  $('#ctpLineBody').innerHTML=lines.map(r=>`<tr>
-   <td>${esc(r.expenseType)}</td><td>${esc(r.description)}</td><td>${r.km||''}</td><td>${r.quantity||''}</td>
-   <td>${(r.rate||0).toLocaleString('vi-VN')}</td><td>${(r.amount||0).toLocaleString('vi-VN')}</td><td>${esc(r.serviceType)}</td><td>${esc(r.note)}</td>
+   <td>${esc(r.requesterName)}</td><td>${esc(r.expenseType)}</td><td>${esc(r.description)}</td><td>${r.km||''}</td><td>${r.quantity||''}</td>
+   <td>${(r.rate||0).toLocaleString('vi-VN')}</td><td>${(r.amount||0).toLocaleString('vi-VN')}</td><td>${esc(r.note)}</td>
    <td style="white-space:nowrap">
      <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-act="edit" aria-label="Sửa dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
      <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-act="del" aria-label="Xoá dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
@@ -2542,7 +2570,7 @@ function ctpEditLine(no){
  $('#ctp_f_type').value=r.expenseType||'Công tác phí'; $('#ctp_km_wrap').style.display=(r.expenseType||'').includes('xăng')?'block':'none';
  $('#ctp_f_desc').value=r.description||''; $('#ctp_f_linefrom').value=r.lineFromDate||''; $('#ctp_f_lineto').value=r.lineToDate||'';
  $('#ctp_f_km').value=r.km||''; $('#ctp_f_qty').value=r.quantity||''; $('#ctp_f_rate').value=r.rate||''; $('#ctp_f_amount').value=r.amount||'';
- $('#ctp_f_service').value=r.serviceType||'Bảo trì'; $('#ctp_f_linecode').value=r.projectCode||''; $('#ctp_f_linename').value=r.projectName||'';
+ $('#ctp_f_linecode').value=r.projectCode||''; $('#ctp_f_linename').value=r.projectName||'';
  $('#ctp_f_linenote').value=r.note||'';
  $('#btnCtpAddLine span').textContent='💾 Lưu sửa dòng #'+no;
  $('#btnCtpCancelEdit').style.display='inline-block';
@@ -2571,10 +2599,14 @@ function ctpMapValueForSave(){ return ctpUploadedMapDataUrl || $('#ctp_mapSelect
 
 $('#btnCtpSaveTrip').onclick=async()=>{
  if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
+ // KHÔNG đụng tới requesterName ở đây — mỗi dòng chi phí đã gắn đúng tên
+ // người của dòng đó lúc thêm (xem btnCtpAddLine), sửa thông tin chung
+ // (ngày, địa điểm, mã DA...) không được ghi đè mất tên người trên từng dòng.
  const header={
-   requestDate:$('#ctp_f_reqdate').value, requesterName:ctpRequesterValue(), dept:'TECH',
+   requestDate:$('#ctp_f_reqdate').value, dept:'TECH',
    workingPlace:$('#ctp_f_place').value.trim(), fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value,
-   projectCode:$('#ctp_f_pjcode').value.trim(), projectName:$('#ctp_f_pjname').value.trim(), mapImage:ctpMapValueForSave()
+   projectCode:$('#ctp_f_pjcode').value.trim(), projectName:$('#ctp_f_pjname').value.trim(), mapImage:ctpMapValueForSave(),
+   serviceType:segVal('ctp_f_tripservice')
  };
  if(!header.requestDate){ toast('Chọn ngày đề nghị',true); return; }
  const lines=ctpCurrentLines();
@@ -2591,36 +2623,52 @@ $('#btnCtpSaveTrip').onclick=async()=>{
  await ctpLoadAll(); $('#ctp_tripSelect').value=currentTripId; ctpLoadTripIntoForm();
 };
 
+/* Thêm dòng chi phí — theo đúng mẫu, "Tên NV" là TỪNG NGƯỜI riêng (không phải
+   chuỗi gộp nhiều tên): nếu đang chọn nhiều kỹ sư cùng đi đợt này, mỗi người
+   tự động được tạo 1 dòng chi phí riêng (cùng nội dung/số tiền), thay vì gộp
+   chung 1 dòng ghi tên nhiều người — đúng cách kế toán claim từng người. Khi
+   SỬA (edit) 1 dòng có sẵn thì không đụng tới người của dòng đó. */
 $('#btnCtpAddLine').onclick=async()=>{
  if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
  const reqDate=$('#ctp_f_reqdate').value;
  if(!reqDate){ toast('Chọn ngày đề nghị ở phần đầu',true); return; }
- const requesterName=ctpRequesterValue();
- if(!requesterName){ toast('Chọn ít nhất 1 người đề nghị',true); return; }
  const isEdit=!!ctpEditingNo;
- const payload={
-   token:CFG.token, action:isEdit?'updateExpense':'addExpense', adminPassword:adminPasswordRuntime, tripId:currentTripId||'',
-   requestDate:reqDate, requesterName, dept:'TECH', workingPlace:$('#ctp_f_place').value.trim(),
-   fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value,
+ const lineFields={
    expenseType:$('#ctp_f_type').value, description:$('#ctp_f_desc').value.trim(),
    lineFromDate:$('#ctp_f_linefrom').value||$('#ctp_f_fromdate').value, lineToDate:$('#ctp_f_lineto').value||$('#ctp_f_todate').value,
    km:Number($('#ctp_f_km').value)||0, quantity:Number($('#ctp_f_qty').value)||0, rate:Number($('#ctp_f_rate').value)||0,
-   amount:Number($('#ctp_f_amount').value)||0, serviceType:$('#ctp_f_service').value,
+   amount:Number($('#ctp_f_amount').value)||0, serviceType:segVal('ctp_f_tripservice'),
    projectCode:$('#ctp_f_linecode').value.trim()||$('#ctp_f_pjcode').value.trim(), projectName:$('#ctp_f_linename').value.trim()||$('#ctp_f_pjname').value.trim(),
    note:$('#ctp_f_linenote').value.trim(), mapImage:ctpMapValueForSave()
  };
- if(isEdit) payload.no=ctpEditingNo;
  try{
-   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
-   const j=await res.json();
-   if(j.ok){
-     currentTripId=j.tripId||currentTripId;
-     toast(isEdit?'✅ Đã lưu sửa dòng chi phí':'✅ Đã thêm dòng chi phí');
-     ['ctp_f_desc','ctp_f_km','ctp_f_linecode','ctp_f_linename','ctp_f_linenote'].forEach(id=>$('#'+id).value='');
-     $('#ctp_f_qty').value='1'; $('#ctp_f_rate').value=''; $('#ctp_f_amount').value='';
-     ctpEditingNo=null; $('#btnCtpAddLine span').textContent='+ Thêm dòng chi phí'; $('#btnCtpCancelEdit').style.display='none';
-     await ctpLoadAll(); $('#ctp_tripSelect').value=currentTripId; ctpLoadTripIntoForm();
-   } else toast(j.error||(isEdit?'Lỗi lưu sửa':'Lỗi thêm dòng'),true);
+   if(isEdit){
+     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+       body:JSON.stringify(Object.assign({token:CFG.token,action:'updateExpense',no:ctpEditingNo,adminPassword:adminPasswordRuntime}, lineFields))});
+     const j=await res.json();
+     if(!j.ok){ toast(j.error||'Lỗi lưu sửa',true); return; }
+     toast('✅ Đã lưu sửa dòng chi phí');
+   } else {
+     const engineers=ctpRequesterValue().split(' - ').map(s=>s.trim()).filter(Boolean);
+     if(!engineers.length){ toast('Chọn ít nhất 1 người đề nghị',true); return; }
+     let tripIdToUse=currentTripId||'';
+     let ok=0, fail=0;
+     for(const eng of engineers){
+       const payload=Object.assign({token:CFG.token, action:'addExpense', adminPassword:adminPasswordRuntime, tripId:tripIdToUse,
+         requestDate:reqDate, requesterName:eng, dept:'TECH', workingPlace:$('#ctp_f_place').value.trim(),
+         fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value}, lineFields);
+       const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+       const j=await res.json();
+       if(j.ok){ ok++; tripIdToUse=j.tripId||tripIdToUse; } else fail++;
+     }
+     currentTripId=tripIdToUse;
+     if(fail) toast(`⚠️ Đã thêm ${ok} dòng, lỗi ${fail} dòng`,true);
+     else toast(engineers.length>1?`✅ Đã thêm ${ok} dòng (mỗi người 1 dòng)`:'✅ Đã thêm dòng chi phí');
+   }
+   ['ctp_f_desc','ctp_f_km','ctp_f_linecode','ctp_f_linename','ctp_f_linenote'].forEach(id=>$('#'+id).value='');
+   $('#ctp_f_qty').value='1'; $('#ctp_f_rate').value=''; $('#ctp_f_amount').value='';
+   ctpEditingNo=null; $('#btnCtpAddLine span').textContent='+ Thêm dòng chi phí'; $('#btnCtpCancelEdit').style.display='none';
+   await ctpLoadAll(); $('#ctp_tripSelect').value=currentTripId; ctpLoadTripIntoForm();
  }catch(err){ toast('Không kết nối được',true); }
 };
 
@@ -2650,7 +2698,7 @@ $('#btnCtpPrint').onclick=()=>{
  const thS=`padding:4px 6px;border:1px solid #999;font-size:11px;font-weight:700;text-align:center;background:#f0f0f0;${F}`;
  const rowsHtml=lines.map((r,i)=>`<tr>
    <td style="${tdS};text-align:center">${i+1}</td>
-   <td style="${tdS}">${esc($('#ctp_f_requester_list')?ctpRequesterValue():'')}</td>
+   <td style="${tdS}">${esc(r.requesterName)}</td>
    <td style="${tdS}">${esc(r.dept||'')}</td>
    <td style="${tdS}">${esc(r.expenseType)}</td>
    <td style="${tdS}">${esc(r.description)}</td>
@@ -2667,11 +2715,14 @@ $('#btnCtpPrint').onclick=()=>{
  </tr>`).join('');
  const mapSrc = ctpUploadedMapDataUrl || (($('#ctp_mapSelect').value)?('./maps/'+encodeURIComponent($('#ctp_mapSelect').value)):'');
  const first=lines[0]||{};
+ // Dòng đầu phiếu "Họ tên người đề nghị" gộp TẤT CẢ người có mặt trong đợt
+ // (mỗi người 1 dòng riêng trong bảng) — không chỉ lấy tên ở dòng đầu tiên.
+ const allNamesForPrint=[...new Set(lines.map(l=>l.requesterName).filter(Boolean))].join(' - ');
  $('#ctpPrintArea').innerHTML=`
   <div style="padding:24px;${F}">
    <p>Ngày/ Date: …………${fmtDMYFull(first.requestDate)||''}…………………….………</p>
    <p style="font-weight:700">Kính gởi/ To: Ban Giám Đốc Cty Cổ Phần TMDV Sao Nam An (Soeco's Mgt Board)</p>
-   <p>Họ tên người đề nghị thanh toán/ Requester Name: <b>${esc(first.requesterName||'')}</b></p>
+   <p>Họ tên người đề nghị thanh toán/ Requester Name: <b>${esc(allNamesForPrint)}</b></p>
    <p>Bộ phận/ Dept: ${esc(first.dept||'')}</p>
    <p>Địa điểm công tác/ Working Place: ${esc(first.workingPlace||'')}</p>
    <p>Thời gian công tác/ Working days: Từ …………${first.fromDate?fmtDMYFull(first.fromDate):''}……………. đến: ………${first.toDate?fmtDMYFull(first.toDate):''}…………….. </p>
@@ -2689,7 +2740,7 @@ $('#btnCtpPrint').onclick=()=>{
    </table>
    <p style="margin-top:10px">Bằng chữ: ${soThanhChu(total)}</p>
    <table style="width:100%;margin-top:40px;border:none"><tr>
-    <td style="border:none;text-align:center;font-weight:700;width:50%">Người đề nghị<br><br><br><br>${esc(first.requesterName||'')}</td>
+    <td style="border:none;text-align:center;font-weight:700;width:50%">Người đề nghị<br><br><br><br>${esc(allNamesForPrint)}</td>
     <td style="border:none;text-align:center;font-weight:700;width:50%">Phụ trách bộ phận</td>
    </tr></table>
    ${mapSrc?`<div style="page-break-before:always;padding-top:20px"><h3>Bản đồ khoảng cách di chuyển</h3><img src="${mapSrc}" style="max-width:100%"></div>`:''}
