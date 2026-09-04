@@ -661,7 +661,7 @@ $$('nav.tabs button').forEach(btn=>btn.onclick=()=>{const tab=btn.dataset.tab;
  $$('nav.tabs button').forEach(b=>b.classList.toggle('on',b===btn));
  $$('.view').forEach(v=>v.classList.remove('active'));$('#view-'+tab).classList.add('active');
  if(tab==='history'){if(!mgrData.length)loadManager();else renderHistory();}
- if(tab==='manager')loadManager();
+ if(tab==='manager'){if(!mgrData.length)loadManager();else renderManager();}
  if(tab==='dashboard'){if(!mgrData.length)loadManager();else renderDashboard();}
 });
 
