@@ -990,7 +990,7 @@ $('#tkForm').onsubmit=async e=>{
 
  if(!CFG.url) return; // chế độ thử nghiệm — không có máy chủ để gửi thật
 
- const body=isEdit?{...payload,action:'edit',no:editingNo,...(isAdminUnlocked?{adminPassword:ADMIN_PASSWORD}:{})}:payload;
+ const body=isEdit?{...payload,action:'edit',no,...(isAdminUnlocked?{adminPassword:ADMIN_PASSWORD}:{})}:payload;
  try{
    const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
    const j=await res.json();
