@@ -551,6 +551,13 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
           <option value="Medium">🟡 Medium</option>
           <option value="High">🔴 High</option>
         </select>
+        <select id="mgrWorkType">
+          <option value="">Tất cả loại công việc</option>
+          <option value="Bảo hành">Bảo hành</option>
+          <option value="Bảo trì">Bảo trì</option>
+          <option value="Lắp mới">Lắp mới</option>
+          <option value="Khảo sát">Khảo sát</option>
+        </select>
         <div class="msel" id="mgrEngineer_dd">
           <button type="button" class="msel-btn placeholder" id="mgrEngineer_btn">Tất cả kỹ sư</button>
           <div class="msel-panel" id="mgrEngineer_panel" hidden>
@@ -1130,7 +1137,7 @@ function renderHistory(){
  const fYear=$('#histYear').value, fMonth=$('#histMonth').value, fDay=$('#histDay').value, fWeek=$('#histWeek').value;
  const q=($('#histSearch').value||'').trim().toLowerCase();
  let h=mgrData.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
- if(q) h=h.filter(r=>((r.engineer||'')+' '+(r.issue||'')+' '+(r.customer||'')+' '+(r.system||'')).toLowerCase().includes(q));
+ if(q) h=h.filter(r=>((r.engineer||'')+' '+(r.issue||'')+' '+(r.customer||'')+' '+(r.system||'')+' '+(r.workType||'')).toLowerCase().includes(q));
  h.sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(Number(a.no)-Number(b.no))); // ngày nhỏ (cũ) đến lớn (mới), xem chú thích ở renderManager
  const lbl=[fYear&&('Năm '+fYear),fMonth&&('Tháng '+Number(fMonth)),fDay&&('Ngày '+Number(fDay)),fWeek&&('Tuần '+fWeek)].filter(Boolean).join(', ')||'Tất cả';
  $('#histListTitle').textContent=`Lịch sử phiếu · ${lbl} (${h.length})`;
@@ -1329,6 +1336,8 @@ function renderDashboard(){
  const st={Done:0,'In Progress':0,Pending:0};
  data.forEach(r=>{const s=(r.status||'').trim();
    if(st[s]!=null)st[s]++; else if(/prog|xử/i.test(s))st['In Progress']++; else if(/pend|chờ/i.test(s))st['Pending']++; else if(s)st['Done']++;});
+ const wt={'Bảo hành':0,'Bảo trì':0,'Lắp mới':0,'Khảo sát':0};
+ data.forEach(r=>{const w=(r.workType||'').trim();if(wt[w]!=null)wt[w]++;});
 
  $('#dashDonuts').innerHTML=`<div class="donut-wrap">
    ${donutBlock('Hình thức hỗ trợ',[
@@ -1342,6 +1351,11 @@ function renderDashboard(){
      {label:'Done',val:st.Done,color:'var(--ok)'},
      {label:'Đang xử lý',val:st['In Progress'],color:'var(--warn)'},
      {label:'Chờ',val:st.Pending,color:'var(--danger)'}])}
+   ${donutBlock('Loại công việc',[
+     {label:'Bảo hành',val:wt['Bảo hành'],color:'var(--info)'},
+     {label:'Bảo trì',val:wt['Bảo trì'],color:'var(--brand)'},
+     {label:'Lắp mới',val:wt['Lắp mới'],color:'var(--ok)'},
+     {label:'Khảo sát',val:wt['Khảo sát'],color:'var(--warn)'}])}
  </div>`;
 }
 function statusOptions(cur){
@@ -1396,13 +1410,14 @@ async function updateStatus(no,status,selEl){
 function renderManager(){
  const fYear=$('#mgrYear').value, fMonth=$('#mgrMonth').value, fDay=$('#mgrDay').value, fWeek=$('#mgrWeek').value;
  const q=$('#mgrSearch').value.trim().toLowerCase();
- const fCus=$('#mgrCustomer').value,fSys=$('#mgrSystem').value,fPri=$('#mgrPriority').value;
+ const fCus=$('#mgrCustomer').value,fSys=$('#mgrSystem').value,fPri=$('#mgrPriority').value,fWT=$('#mgrWorkType').value;
  let data=mgrData.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
  if(fCus)data=data.filter(r=>r.customer===fCus);
  if(fSys)data=data.filter(r=>r.system===fSys);
  if(fPri)data=data.filter(r=>r.priority===fPri);
+ if(fWT)data=data.filter(r=>r.workType===fWT);
  if(mgrEngineerFilter)data=data.filter(r=>(r.engineer||'').includes(mgrEngineerFilter));
- if(q)data=data.filter(r=>((r.issue||'')+(r.engineer||'')+(r.system||'')+(r.customer||'')+(r.priority||'')).toLowerCase().includes(q));
+ if(q)data=data.filter(r=>((r.issue||'')+(r.engineer||'')+(r.system||'')+(r.customer||'')+(r.priority||'')+(r.workType||'')).toLowerCase().includes(q));
  // Xếp theo NGÀY từ nhỏ đến lớn (cũ → mới, giống thứ tự từ lúc build app) —
  // không xếp theo No, vì No chỉ là số thứ tự lúc tạo phiếu, không đổi khi
  // sửa ngày; xếp theo No sẽ để phiếu ngày cũ hơn nằm dưới phiếu ngày mới
@@ -1463,6 +1478,7 @@ wireYMW('dash',renderDashboard);
 $('#mgrCustomer').onchange=renderManager;
 $('#mgrSystem').onchange=renderManager;
 $('#mgrPriority').onchange=renderManager;
+$('#mgrWorkType').onchange=renderManager;
 $('#btnRefresh').onclick=()=>{loadManager();toast('Đã làm mới')};
 /* Làm mới TOÀN BỘ TRANG (không chỉ dữ liệu) — tải lại bản mới nhất từ server,
    bỏ qua cache trình duyệt, dùng khi vừa cập nhật app mà máy vẫn hiện bản cũ. */
@@ -1473,13 +1489,14 @@ $('#btnPageReload').onclick=()=>{ location.href=location.pathname+'?v='+Date.now
 $('#btnExport').onclick=()=>{
  const fYear=$('#mgrYear').value, fMonth=$('#mgrMonth').value, fDay=$('#mgrDay').value, fWeek=$('#mgrWeek').value;
  const q=$('#mgrSearch').value.trim().toLowerCase();
- const fCus=$('#mgrCustomer').value,fSys=$('#mgrSystem').value,fPri=$('#mgrPriority').value;
+ const fCus=$('#mgrCustomer').value,fSys=$('#mgrSystem').value,fPri=$('#mgrPriority').value,fWT=$('#mgrWorkType').value;
  let data=mgrData.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
  if(fCus)data=data.filter(r=>r.customer===fCus);
  if(fSys)data=data.filter(r=>r.system===fSys);
  if(fPri)data=data.filter(r=>r.priority===fPri);
+ if(fWT)data=data.filter(r=>r.workType===fWT);
  if(mgrEngineerFilter)data=data.filter(r=>(r.engineer||'').includes(mgrEngineerFilter));
- if(q) data=data.filter(r=>((r.issue||'')+(r.engineer||'')+(r.system||'')+(r.customer||'')+(r.priority||'')).toLowerCase().includes(q));
+ if(q) data=data.filter(r=>((r.issue||'')+(r.engineer||'')+(r.system||'')+(r.customer||'')+(r.priority||'')+(r.workType||'')).toLowerCase().includes(q));
  if(!data.length){toast('Không có dữ liệu để xuất',true);return}
  if(typeof XLSX==='undefined'){toast('Chưa tải được thư viện xuất Excel, thử lại sau',true);return}
 
