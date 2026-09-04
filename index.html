@@ -649,7 +649,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     </div>
     <div class="divider"></div>
     <div class="section-title" style="margin-bottom:8px">Sao lưu dữ liệu</div>
-    <p class="desc" style="margin-top:-4px">Bình thường mỗi phiếu gửi/sửa/xóa đều tự đồng bộ sang file backup luôn. Chỉ cần bấm nút này khi nghi ngờ backup bị lệch (vd 1 lần mạng lỗi giữa chừng) — ghi đè lại backup cho khớp 100% với Sheet chính.</p>
+    <p class="desc" style="margin-top:-4px">Backup <b>KHÔNG</b> tự cập nhật theo mỗi lần gửi/sửa/xóa phiếu — chỉ cập nhật khi bạn bấm nút này. Nhờ vậy nếu lỡ xóa/sửa nhầm phiếu ở Sheet chính, backup (từ lần đồng bộ gần nhất) vẫn còn dữ liệu cũ để xem/chép lại. Nên bấm đồng bộ định kỳ (vd cuối ngày) để backup không bị quá cũ.</p>
     <button type="button" class="btn" id="btnSyncBackup" style="margin-bottom:16px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span>Đồng bộ Sheet chính → Backup</span>
     </button>
