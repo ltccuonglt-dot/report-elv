@@ -1134,6 +1134,21 @@ $('#tkForm').onsubmit=async e=>{
  const no=editingNo||'—';
  const displayNo=editingDisplayNo||no; // chỉ để hiện chữ, xem chú thích ở khai báo editingDisplayNo
 
+ // Chống TẠO TRÙNG phiếu: 2 người không biết nhau cùng ghi 1 sự cố (cùng
+ // ngày + khách hàng + hệ thống + mô tả y hệt) — mgrData tự làm mới mỗi 15s
+ // (xem silentRefreshData) nên đủ mới để bắt được phiếu người khác vừa tạo
+ // trước đó ít phút. Chỉ CẢNH BÁO rồi hỏi lại, không chặn cứng — có trường
+ // hợp thật sự cần ghi 2 phiếu giống nhau (sự cố lặp lại trong ngày).
+ if(!isEdit){
+   const norm=s=>String(s||'').trim().toLowerCase();
+   const dup=mgrData.find(r=>norm(r.date)===norm(payload.date) && norm(r.customer)===norm(payload.customer)
+     && norm(r.system)===norm(payload.system) && norm(r.issue)===norm(payload.issue));
+   if(dup){
+     const dupOk=confirm(`⚠️ Đã có phiếu giống hệt phiếu này rồi!\n\nKhách hàng: ${dup.customer}\nHệ thống: ${dup.system}\nNgày: ${dup.date}\nDo: ${dup.engineer||'?'} ghi\n\nBạn có chắc vẫn muốn tạo thêm phiếu mới (trùng)?`);
+     if(!dupOk) return;
+   }
+ }
+
  // Kiểm tra TRƯỚC giới hạn sửa (khớp EDIT_LIMIT bên Code.gs) — nếu không
  // chặn ở đây, phiếu đã hết lượt sửa vẫn hiện "✅ đã cập nhật" giả (do gửi
  // ngầm bên dưới), làm tưởng thành công nhưng lúc tải lại thì dữ liệu vẫn y
