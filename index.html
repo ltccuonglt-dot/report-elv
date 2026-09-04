@@ -74,6 +74,9 @@ body{background:var(--ground);color:var(--ink);font-family:var(--font);font-size
 .banner{margin:12px 14px 0;padding:10px 12px;border-radius:var(--radius-sm);background:var(--warn-soft);color:var(--warn);font-size:12.5px;font-weight:600;display:flex;gap:8px;align-items:center;border:1px solid color-mix(in srgb,var(--warn) 25%,transparent)}
 .banner.live{background:var(--ok-soft);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 25%,transparent)}
 .banner #editBannerText{flex:1}
+.period-notice{padding:10px 12px;border-radius:var(--radius-sm);background:var(--surface-2);color:var(--muted);font-size:12.5px;font-weight:600;border:1px solid var(--line)}
+.period-notice.soon{background:var(--warn-soft);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 25%,transparent)}
+.period-notice.overdue{background:var(--danger-soft);color:var(--danger);border-color:color-mix(in srgb,var(--danger) 25%,transparent)}
 .btn-edit-cancel{border:1.5px solid currentColor;background:transparent;color:inherit;font:inherit;font-weight:700;font-size:12px;padding:5px 10px;border-radius:999px;cursor:pointer;white-space:nowrap}
 .banner svg{width:16px;height:16px;flex:none}
 
@@ -596,6 +599,13 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <button type="button" class="btn btn-primary" id="btnAddEngineer" style="width:auto;padding:12px 18px;margin:0;flex:none">Thêm</button>
     </div>
     <div class="divider"></div>
+    <div class="section-title" style="margin-bottom:8px;color:var(--danger)">Kỳ dữ liệu (6 tháng)</div>
+    <div id="periodInfoBox" class="period-notice" style="margin-bottom:10px">Đang kiểm tra…</div>
+    <p class="desc" style="margin-top:-4px">Cứ 6 tháng nên xóa hết phiếu cũ để Sheet luôn gọn, app luôn nhanh. Việc này KHÔNG THỂ HOÀN TÁC — chỉ bấm khi chắc chắn.</p>
+    <button type="button" class="btn" id="btnClearAllData" style="margin-bottom:16px;background:var(--danger-soft);color:var(--danger);border:1.5px solid var(--danger)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Xóa toàn bộ dữ liệu</span>
+    </button>
+    <div class="divider"></div>
     <button class="btn btn-primary" id="btnSaveSettings" style="margin-bottom:10px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span>Lưu & Kiểm tra kết nối</span>
     </button>
@@ -1049,26 +1059,57 @@ function renderAllFromMgrData(){
    "Đang tải..." mỗi lần mở màn Quản lý/Lịch sử/Dashboard), rồi âm thầm tải
    bản mới nhất từ Sheet và cập nhật lại khi xong — nhanh hơn hẳn cảm giác,
    đặc biệt khi Sheet có nhiều dữ liệu (đọc lâu hơn). */
+/* Tải đầy đủ toàn bộ lịch sử phiếu từ Sheet — silent=true thì lỗi mạng bỏ
+   qua im lặng (đã có dữ liệu cũ/ưu tiên hiện sẵn trên màn hình rồi, khỏi làm
+   phiền); silent=false thì báo lỗi rõ (không còn gì khác để hiện). */
+async function fetchFullMgrData(silent){
+ try{const res=await fetch(CFG.url+'?action=list&token='+encodeURIComponent(CFG.token));const j=await res.json();
+   if(j.ok){ mgrData=j.data||[]; localStorage.setItem(MGR_CACHE_KEY,JSON.stringify(mgrData)); renderAllFromMgrData(); }
+   else if(!silent){ mgrData=[]; toast(j.error||'Lỗi tải dữ liệu',true); renderAllFromMgrData(); }}
+ catch(err){ if(!silent){ mgrData=[]; toast('Không tải được dữ liệu',true); renderAllFromMgrData(); } }
+}
 async function loadManager(){const list=$('#managerList');
  const cached=CFG.url?JSON.parse(localStorage.getItem(MGR_CACHE_KEY)||'null'):null;
- if(cached && cached.length){ mgrData=cached; renderAllFromMgrData(); }
- else if(CFG.url){ list.innerHTML='<div class="empty"><div class="t">Đang tải...</div></div>'; }
- if(CFG.url){
-   try{const res=await fetch(CFG.url+'?action=list&token='+encodeURIComponent(CFG.token));const j=await res.json();
-     if(j.ok){ mgrData=j.data||[]; localStorage.setItem(MGR_CACHE_KEY,JSON.stringify(mgrData)); }
-     else if(!cached){ mgrData=[]; toast(j.error||'Lỗi tải dữ liệu',true); }}
-   catch(err){ if(!cached){ mgrData=[]; toast('Không tải được dữ liệu',true); } }
- }else mgrData=JSON.parse(localStorage.getItem(LS_HIST)||'[]');
- renderAllFromMgrData();}
+ if(cached && cached.length){
+   // Đã có dữ liệu lần trước — hiện ngay, rồi âm thầm tải bản đầy đủ mới
+   // nhất phía sau (không chờ, không báo lỗi nếu mạng chập chờn).
+   mgrData=cached; renderAllFromMgrData();
+   if(CFG.url) fetchFullMgrData(true);
+   return;
+ }
+ if(!CFG.url){ mgrData=JSON.parse(localStorage.getItem(LS_HIST)||'[]'); renderAllFromMgrData(); return; }
+ // Lần đầu mở app (chưa có gì lưu sẵn) — tải NHANH đúng tháng hiện tại
+ // trước (nhẹ, ít dữ liệu hơn hẳn toàn bộ lịch sử) để có gì đó hiện ra ngay,
+ // rồi mới tải đầy đủ toàn bộ lịch sử ở phía sau.
+ const now=new Date();
+ let gotPriority=false;
+ try{
+   const res=await fetch(`${CFG.url}?action=list&token=${encodeURIComponent(CFG.token)}&year=${now.getFullYear()}&month=${pad2(now.getMonth()+1)}`);
+   const j=await res.json();
+   if(j.ok){ mgrData=j.data||[]; renderAllFromMgrData(); gotPriority=true; }
+ }catch(err){}
+ if(!gotPriority) list.innerHTML='<div class="empty"><div class="t">Đang tải...</div></div>';
+ await fetchFullMgrData(false);
+}
 
 /* ===== Tự động tải lại dữ liệu ngầm (mỗi 15 giây) =====
    Để nhiều người dùng cùng lúc thấy phiếu của nhau cập nhật mà không cần bấm
    "Làm mới" tay — chạy nền, KHÔNG hiện "Đang tải...", không hiện toast lỗi
    (lỗi mạng tạm thời cứ bỏ qua, tự thử lại ở lần kế tiếp 15s sau). Tạm dừng
    khi tab đang ẩn (đỡ tốn dữ liệu/quota khi không ai nhìn màn hình). */
+let lastKnownSheetSignal=null;
 async function silentRefreshData(){
  if(!CFG.url || document.hidden) return;
  try{
+   // Kiểm tra NHẸ trước (chỉ 1 chuỗi ngắn, không phải toàn bộ dữ liệu) — nếu
+   // không có gì mới thì dừng luôn, khỏi tải lại + vẽ lại cả bảng mỗi 15s.
+   // Quan trọng khi dữ liệu phình to dần (hàng nghìn phiếu trở lên).
+   const metaRes=await fetch(CFG.url+'?action=meta&token='+encodeURIComponent(CFG.token));
+   const meta=await metaRes.json();
+   if(meta.ok){
+     if(lastKnownSheetSignal===meta.signal) return; // không đổi gì — bỏ qua lần này
+     lastKnownSheetSignal=meta.signal;
+   }
    const res=await fetch(CFG.url+'?action=list&token='+encodeURIComponent(CFG.token));
    const j=await res.json();
    if(j.ok){
@@ -1377,7 +1418,40 @@ $('#btnExport').onclick=()=>{
 /* cổng khóa admin — chỉ ai biết mã bảo mật mới vào được Cài đặt */
 const gate=$('#adminGateModal');
 function openSettingsModal(){$('#s_url').value=CFG.url;$('#s_token').value=CFG.token;$('#s_token').classList.add('masked');$('#s_store').value=CFG.store;
- const cs=$('#connStatus');cs.className='status-dot'+(CFG.url?' live':'');cs.querySelector('span').textContent=CFG.url?'Đã kết nối':'Chưa kết nối';modal.classList.add('show');loadEngineers();}
+ const cs=$('#connStatus');cs.className='status-dot'+(CFG.url?' live':'');cs.querySelector('span').textContent=CFG.url?'Đã kết nối':'Chưa kết nối';modal.classList.add('show');loadEngineers();loadPeriodInfo();}
+
+/* ===== Kỳ dữ liệu 6 tháng — nhắc admin xóa hết phiếu cũ định kỳ =====
+   Giữ nguyên 1 Sheet duy nhất (không chia nhỏ) — chỉ nhắc + cho admin bấm
+   xóa toàn bộ khi thấy cần, tự chọn thời điểm phù hợp thay vì app tự xóa. */
+async function loadPeriodInfo(){
+ const box=$('#periodInfoBox'); if(!box) return;
+ if(!CFG.url){ box.textContent='Chưa kết nối Google Sheet.'; box.className='period-notice'; return; }
+ try{
+   const res=await fetch(CFG.url+'?action=periodInfo&token='+encodeURIComponent(CFG.token));
+   const j=await res.json();
+   if(!j.ok){ box.textContent='Không lấy được thông tin kỳ dữ liệu.'; box.className='period-notice'; return; }
+   const overdue=j.daysRemaining<=0, soon=!overdue && j.daysRemaining<=14;
+   box.className='period-notice'+(overdue?' overdue':soon?' soon':'');
+   box.textContent = overdue
+     ? `⚠️ Đã quá hạn 6 tháng (bắt đầu ${fmtDMYFull(j.periodStart)}) — nên xóa toàn bộ dữ liệu để bắt đầu kỳ mới.`
+     : `📅 Kỳ dữ liệu bắt đầu ${fmtDMYFull(j.periodStart)} — nên xóa vào khoảng ${fmtDMYFull(j.dueDate)} (còn ${j.daysRemaining} ngày).`;
+ }catch(err){ box.textContent='Không kết nối được để kiểm tra.'; box.className='period-notice'; }
+}
+$('#btnClearAllData').onclick=async()=>{
+ if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
+ if(!confirm('XÓA TOÀN BỘ phiếu (cả Sheet chính lẫn backup)?\n\nHành động này KHÔNG THỂ HOÀN TÁC. Bạn chắc chắn chứ?')) return;
+ if(!confirm('Xác nhận LẦN 2: thật sự muốn xóa HẾT toàn bộ dữ liệu phiếu?')) return;
+ try{
+   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+     body:JSON.stringify({token:CFG.token,action:'clearAllData',adminPassword:ADMIN_PASSWORD})});
+   const j=await res.json();
+   if(j.ok){
+     toast('✅ Đã xóa toàn bộ dữ liệu, bắt đầu kỳ mới');
+     mgrData=[]; localStorage.removeItem(MGR_CACHE_KEY); lastKnownSheetSignal=null;
+     loadManager(); loadPeriodInfo();
+   } else toast(j.error||'Lỗi xóa dữ liệu',true);
+ }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
+};
 $('#btnSettings').onclick=()=>{$('#admin_pin').value='';$('#admin_pin').classList.add('masked');gate.classList.add('show');setTimeout(()=>$('#admin_pin').focus(),100)};
 $('#btnCloseAdminGate').onclick=()=>gate.classList.remove('show');
 $('#btnToggleAdminPin').onclick=()=>{$('#admin_pin').classList.toggle('masked')};
