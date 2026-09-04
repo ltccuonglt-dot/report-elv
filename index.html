@@ -1121,111 +1121,120 @@ let isSubmitting=false;
 $('#tkForm').onsubmit=async e=>{
  e.preventDefault();
  if(isSubmitting){ toast('⏳ Đang gửi phiếu, vui lòng đợi giây lát...',true); return; }
- let customer=$('#f_customer').value; if(customer==='__other')customer=$('#f_customer_other').value.trim();
- let system=$('#f_system').value; if(system==='__other')system=$('#f_system_other').value.trim();
- const engineer=engineerValue();
- const issue=$('#f_issue').value.trim();
- if(!$('#f_date').value){toast('Chọn ngày',true);return}
- if(!customer){toast('Chọn khách hàng',true);return}
- if(!system){toast('Nhập tên hệ thống',true);return}
- if(!issue){toast('Nhập mô tả sự cố',true);return}
- if(!engineer){toast('Chọn ít nhất 1 kỹ sư xử lý',true);return}
- const payload={token:CFG.token,date:$('#f_date').value,customer,system,issue,
-   priority:segVal('f_priority'),engineer,support:segVal('f_support'),status:segVal('f_status'),remark:$('#f_remark').value.trim(),
-   workType:segVal('f_workType')};
- localStorage.setItem('kt_eng',engineer);localStorage.setItem('kt_cus',customer);
-
- const isEdit=!!editingNo;
- const no=editingNo||'—';
- const displayNo=editingDisplayNo||no; // chỉ để hiện chữ, xem chú thích ở khai báo editingDisplayNo
-
- // Chống TẠO TRÙNG phiếu: 2 người không biết nhau cùng ghi 1 sự cố (cùng
- // ngày + khách hàng + hệ thống + mô tả y hệt) — mgrData tự làm mới mỗi 15s
- // (xem silentRefreshData) nên đủ mới để bắt được phiếu người khác vừa tạo
- // trước đó ít phút. Chỉ CẢNH BÁO rồi hỏi lại, không chặn cứng — có trường
- // hợp thật sự cần ghi 2 phiếu giống nhau (sự cố lặp lại trong ngày).
- if(!isEdit){
-   const norm=s=>String(s||'').trim().toLowerCase();
-   const dup=mgrData.find(r=>norm(r.date)===norm(payload.date) && norm(r.customer)===norm(payload.customer)
-     && norm(r.system)===norm(payload.system) && norm(r.issue)===norm(payload.issue));
-   if(dup){
-     const dupOk=confirm(`⚠️ Đã có phiếu giống hệt phiếu này rồi!\n\nKhách hàng: ${dup.customer}\nHệ thống: ${dup.system}\nNgày: ${dup.date}\nDo: ${dup.engineer||'?'} ghi\n\nBạn có chắc vẫn muốn tạo thêm phiếu mới (trùng)?`);
-     if(!dupOk) return;
-   }
- }
-
- // Kiểm tra TRƯỚC giới hạn sửa (khớp EDIT_LIMIT bên Code.gs) — nếu không
- // chặn ở đây, phiếu đã hết lượt sửa vẫn hiện "✅ đã cập nhật" giả (do gửi
- // ngầm bên dưới), làm tưởng thành công nhưng lúc tải lại thì dữ liệu vẫn y
- // như cũ — rất khó hiểu ("lúc được lúc không"). Hết lượt thì hỏi ngay mật
- // khẩu quản trị tại chỗ để sửa tiếp, khỏi phải thoát ra vào lại Cài đặt.
- if(isEdit && !isAdminUnlocked){
-   const editingRec=mgrData.find(r=>String(r.no)===String(no));
-   if(editingRec && (Number(editingRec.editCount)||0)>=EDIT_LIMIT){
-     const pin=prompt(`Phiếu #${displayNo} đã sửa đủ ${EDIT_LIMIT} lần. Nhập mật khẩu quản trị để sửa tiếp:`);
-     if(pin===null) return;
-     const ok=await verifyAdminPassword(pin);
-     if(ok){ renderManager(); renderHistory(); }
-     else{ toast('Sai mật khẩu quản trị',true); return; }
-   }
- }
-
- // Chống XUNG ĐỘT khi 2 thiết bị cùng sửa 1 phiếu: tra nhanh (chỉ 1 dòng,
- // không tải cả danh sách) editCount HIỆN TẠI trên Sheet ngay trước khi lưu.
- // Nếu khác với lúc mở form sửa — tức có người khác vừa sửa xong trong lúc
- // mình đang gõ — cho xem thử họ sửa thành gì rồi hỏi lại trước khi ghi đè,
- // tránh làm mất nội dung của người kia mà không hay biết.
- if(isEdit && CFG.url){
-   try{
-     const cres=await fetch(`${CFG.url}?action=getOne&token=${encodeURIComponent(CFG.token)}&no=${encodeURIComponent(no)}`);
-     const cj=await cres.json();
-     if(cj.ok && Number(cj.data.editCount||0)!==Number(editingStartEditCount||0)){
-       const proceed=confirm(`⚠️ Phiếu #${displayNo} vừa bị người khác sửa trong lúc bạn đang sửa!\n\nHọ vừa sửa thành:\nKhách hàng: ${cj.data.customer}\nSự cố: ${cj.data.issue}\nHướng xử lý: ${cj.data.remark||'—'}\nTrạng thái: ${cj.data.status}\n\nBạn có chắc vẫn muốn LƯU ĐÈ bằng nội dung bạn vừa sửa không?`);
-       if(!proceed) return;
-       editingStartEditCount=cj.data.editCount; // khỏi bị chặn lại nếu họ cố ý bấm gửi lần nữa
-     }
-   }catch(err){ /* mất mạng lúc kiểm tra xung đột — bỏ qua, cứ gửi tiếp, lỗi thật (nếu có) sẽ báo ở bước gửi bên dưới */ }
- }
-
- // Khóa nút NGAY từ đây (trước khi làm gì khác) để lần bấm thứ 2, thứ 3 (do
- // tay run, mạng chậm tưởng chưa bấm được...) bị chặn ở dòng isSubmitting
- // phía trên, không tạo/sửa phiếu thêm lần nữa.
+ // Khóa nút NGAY TỪ ĐÂY — trước cả các bước kiểm tra bên dưới (chống trùng,
+ // chống xung đột... đều có gọi mạng, mất vài trăm ms). Nếu khóa đặt SAU các
+ // bước đó (như code cũ trước đây) thì đúng khoảng thời gian đang chờ mạng
+ // là "khe hở" — bấm lần 2 trong lúc đó vẫn lọt qua được, không bị chặn. Bọc
+ // toàn bộ trong try/finally để CHẮC CHẮN luôn mở khóa lại dù có lỗi bất ngờ
+ // ở đâu đó bên trong (không thì nút bị khóa cứng vĩnh viễn, phải tải lại
+ // trang mới bấm được nữa).
  isSubmitting=true;
  const btn=$('#btnSubmit'); btn.disabled=true;
-
- /* Hiện "thành công" NGAY LẬP TỨC — không bắt đứng nhìn màn hình chờ máy chủ
-    phản hồi (Apps Script + đồng bộ Sheet backup có thể mất vài giây). Việc
-    gửi thật chạy NGẦM phía sau; nếu thất bại thật sự (mất mạng, máy chủ lỗi)
-    sẽ có toast lỗi hiện ra SAU đó để biết mà gửi lại — đây không phải gửi
-    nhanh hơn thật, chỉ là không phải chờ nhìn vòng xoay. */
- if(isEdit){
-   const rec=mgrData.find(r=>String(r.no)===String(no)); if(rec) Object.assign(rec,payload);
-   const hist=JSON.parse(localStorage.getItem(LS_HIST)||'[]');
-   const hrec=hist.find(r=>String(r.no)===String(no)); if(hrec) Object.assign(hrec,payload);
-   localStorage.setItem(LS_HIST,JSON.stringify(hist));
-   toast(`✅ Đã cập nhật phiếu #${displayNo}`);
-   renderManager(); renderDashboard();
-   if($('#view-history').classList.contains('active')) renderHistory();
-   cancelEdit();
- } else {
-   const rec={...payload,no,thoiGian:new Date().toISOString(),_local:!CFG.url};
-   const h=JSON.parse(localStorage.getItem(LS_HIST)||'[]');h.unshift(rec);localStorage.setItem(LS_HIST,JSON.stringify(h.slice(0,120)));
-   toast(CFG.url?'✅ Đã gửi phiếu!':'✅ Đã lưu (thử nghiệm)');
-   $('#f_issue').value='';$('#f_remark').value='';
-   setDateValue(new Date().toISOString().slice(0,10));
- }
- submitBtnIdle();
-
- if(!CFG.url){ isSubmitting=false; btn.disabled=false; return; } // chế độ thử nghiệm — không có máy chủ để gửi thật
-
- const body=isEdit?{...payload,action:'edit',no,...(isAdminUnlocked?{adminPassword:adminPasswordRuntime}:{})}:payload;
  try{
-   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
-   const j=await res.json();
-   if(!j.ok) toast(`⚠️ Gửi ${isEdit?'cập nhật':''} phiếu${isEdit?` #${displayNo}`:''} thất bại: ${j.error||'máy chủ báo lỗi'} — thử gửi lại`,true);
-   else if(!isEdit) silentRefreshData(); // đồng bộ lại đúng số No thật + dữ liệu mới nhất từ server
+   let customer=$('#f_customer').value; if(customer==='__other')customer=$('#f_customer_other').value.trim();
+   let system=$('#f_system').value; if(system==='__other')system=$('#f_system_other').value.trim();
+   const engineer=engineerValue();
+   const issue=$('#f_issue').value.trim();
+   if(!$('#f_date').value){toast('Chọn ngày',true);return}
+   if(!customer){toast('Chọn khách hàng',true);return}
+   if(!system){toast('Nhập tên hệ thống',true);return}
+   if(!issue){toast('Nhập mô tả sự cố',true);return}
+   if(!engineer){toast('Chọn ít nhất 1 kỹ sư xử lý',true);return}
+   const payload={token:CFG.token,date:$('#f_date').value,customer,system,issue,
+     priority:segVal('f_priority'),engineer,support:segVal('f_support'),status:segVal('f_status'),remark:$('#f_remark').value.trim(),
+     workType:segVal('f_workType')};
+   localStorage.setItem('kt_eng',engineer);localStorage.setItem('kt_cus',customer);
+
+   const isEdit=!!editingNo;
+   const no=editingNo||'—';
+   const displayNo=editingDisplayNo||no; // chỉ để hiện chữ, xem chú thích ở khai báo editingDisplayNo
+
+   // Chống TẠO TRÙNG phiếu: 2 người không biết nhau cùng ghi 1 sự cố (cùng
+   // ngày + khách hàng + hệ thống + mô tả y hệt) — mgrData tự làm mới mỗi 15s
+   // (xem silentRefreshData) nên đủ mới để bắt được phiếu người khác vừa tạo
+   // trước đó ít phút. Chỉ CẢNH BÁO rồi hỏi lại, không chặn cứng — có trường
+   // hợp thật sự cần ghi 2 phiếu giống nhau (sự cố lặp lại trong ngày).
+   if(!isEdit){
+     const norm=s=>String(s||'').trim().toLowerCase();
+     const dup=mgrData.find(r=>norm(r.date)===norm(payload.date) && norm(r.customer)===norm(payload.customer)
+       && norm(r.system)===norm(payload.system) && norm(r.issue)===norm(payload.issue));
+     if(dup){
+       const dupOk=confirm(`⚠️ Đã có phiếu giống hệt phiếu này rồi!\n\nKhách hàng: ${dup.customer}\nHệ thống: ${dup.system}\nNgày: ${dup.date}\nDo: ${dup.engineer||'?'} ghi\n\nBạn có chắc vẫn muốn tạo thêm phiếu mới (trùng)?`);
+       if(!dupOk) return;
+     }
+   }
+
+   // Kiểm tra TRƯỚC giới hạn sửa (khớp EDIT_LIMIT bên Code.gs) — nếu không
+   // chặn ở đây, phiếu đã hết lượt sửa vẫn hiện "✅ đã cập nhật" giả (do gửi
+   // ngầm bên dưới), làm tưởng thành công nhưng lúc tải lại thì dữ liệu vẫn y
+   // như cũ — rất khó hiểu ("lúc được lúc không"). Hết lượt thì hỏi ngay mật
+   // khẩu quản trị tại chỗ để sửa tiếp, khỏi phải thoát ra vào lại Cài đặt.
+   if(isEdit && !isAdminUnlocked){
+     const editingRec=mgrData.find(r=>String(r.no)===String(no));
+     if(editingRec && (Number(editingRec.editCount)||0)>=EDIT_LIMIT){
+       const pin=prompt(`Phiếu #${displayNo} đã sửa đủ ${EDIT_LIMIT} lần. Nhập mật khẩu quản trị để sửa tiếp:`);
+       if(pin===null) return;
+       const ok=await verifyAdminPassword(pin);
+       if(ok){ renderManager(); renderHistory(); }
+       else{ toast('Sai mật khẩu quản trị',true); return; }
+     }
+   }
+
+   // Chống XUNG ĐỘT khi 2 thiết bị cùng sửa 1 phiếu: tra nhanh (chỉ 1 dòng,
+   // không tải cả danh sách) editCount HIỆN TẠI trên Sheet ngay trước khi lưu.
+   // Nếu khác với lúc mở form sửa — tức có người khác vừa sửa xong trong lúc
+   // mình đang gõ — cho xem thử họ sửa thành gì rồi hỏi lại trước khi ghi đè,
+   // tránh làm mất nội dung của người kia mà không hay biết.
+   if(isEdit && CFG.url){
+     try{
+       const cres=await fetch(`${CFG.url}?action=getOne&token=${encodeURIComponent(CFG.token)}&no=${encodeURIComponent(no)}`);
+       const cj=await cres.json();
+       if(cj.ok && Number(cj.data.editCount||0)!==Number(editingStartEditCount||0)){
+         const proceed=confirm(`⚠️ Phiếu #${displayNo} vừa bị người khác sửa trong lúc bạn đang sửa!\n\nHọ vừa sửa thành:\nKhách hàng: ${cj.data.customer}\nSự cố: ${cj.data.issue}\nHướng xử lý: ${cj.data.remark||'—'}\nTrạng thái: ${cj.data.status}\n\nBạn có chắc vẫn muốn LƯU ĐÈ bằng nội dung bạn vừa sửa không?`);
+         if(!proceed) return;
+         editingStartEditCount=cj.data.editCount; // khỏi bị chặn lại nếu họ cố ý bấm gửi lần nữa
+       }
+     }catch(err){ /* mất mạng lúc kiểm tra xung đột — bỏ qua, cứ gửi tiếp, lỗi thật (nếu có) sẽ báo ở bước gửi bên dưới */ }
+   }
+
+   /* Hiện "thành công" NGAY LẬP TỨC — không bắt đứng nhìn màn hình chờ máy chủ
+      phản hồi (Apps Script + đồng bộ Sheet backup có thể mất vài giây). Việc
+      gửi thật chạy NGẦM phía sau; nếu thất bại thật sự (mất mạng, máy chủ lỗi)
+      sẽ có toast lỗi hiện ra SAU đó để biết mà gửi lại — đây không phải gửi
+      nhanh hơn thật, chỉ là không phải chờ nhìn vòng xoay. */
+   if(isEdit){
+     const rec=mgrData.find(r=>String(r.no)===String(no)); if(rec) Object.assign(rec,payload);
+     const hist=JSON.parse(localStorage.getItem(LS_HIST)||'[]');
+     const hrec=hist.find(r=>String(r.no)===String(no)); if(hrec) Object.assign(hrec,payload);
+     localStorage.setItem(LS_HIST,JSON.stringify(hist));
+     toast(`✅ Đã cập nhật phiếu #${displayNo}`);
+     renderManager(); renderDashboard();
+     if($('#view-history').classList.contains('active')) renderHistory();
+     cancelEdit();
+   } else {
+     const rec={...payload,no,thoiGian:new Date().toISOString(),_local:!CFG.url};
+     const h=JSON.parse(localStorage.getItem(LS_HIST)||'[]');h.unshift(rec);localStorage.setItem(LS_HIST,JSON.stringify(h.slice(0,120)));
+     toast(CFG.url?'✅ Đã gửi phiếu!':'✅ Đã lưu (thử nghiệm)');
+     $('#f_issue').value='';$('#f_remark').value='';
+     setDateValue(new Date().toISOString().slice(0,10));
+   }
+   submitBtnIdle();
+
+   if(!CFG.url) return; // chế độ thử nghiệm — không có máy chủ để gửi thật
+
+   const body=isEdit?{...payload,action:'edit',no,...(isAdminUnlocked?{adminPassword:adminPasswordRuntime}:{})}:payload;
+   try{
+     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
+     const j=await res.json();
+     if(!j.ok) toast(`⚠️ Gửi ${isEdit?'cập nhật':''} phiếu${isEdit?` #${displayNo}`:''} thất bại: ${j.error||'máy chủ báo lỗi'} — thử gửi lại`,true);
+     else if(!isEdit) silentRefreshData(); // đồng bộ lại đúng số No thật + dữ liệu mới nhất từ server
+   }catch(err){
+     toast(`⚠️ Không gửi được phiếu${isEdit?` #${displayNo}`:''} (mất mạng) — thử gửi lại`,true);
+   }
  }catch(err){
-   toast(`⚠️ Không gửi được phiếu${isEdit?` #${displayNo}`:''} (mất mạng) — thử gửi lại`,true);
+   // Lưới an toàn: lỗi bất ngờ không lường trước (vd localStorage hỏng) — báo
+   // rõ thay vì im lặng treo, và finally bên dưới vẫn đảm bảo mở khóa nút lại.
+   toast('⚠️ Có lỗi bất ngờ, vui lòng thử lại',true);
  } finally {
    isSubmitting=false; btn.disabled=false;
  }
@@ -1358,10 +1367,18 @@ async function silentRefreshData(){
      if(lastKnownSheetSignal===meta.signal) return; // không đổi gì — bỏ qua lần này
      lastKnownSheetSignal=meta.signal;
    }
-   const res=await fetch(CFG.url+'?action=list&token='+encodeURIComponent(CFG.token));
+   // Có gì đó đổi — nhưng CHỈ tải lại đúng THÁNG HIỆN TẠI (ưu tiên tháng
+   // đang dùng, nhẹ hơn nhiều so với tải hết toàn bộ kỳ 6 tháng mỗi lần có
+   // 1 thay đổi nhỏ), rồi ghép vào các tháng khác đã có sẵn trong mgrData
+   // (giữ nguyên, không đụng tới). Đủ dùng vì hầu hết thao tác thực tế đều
+   // rơi vào phiếu THÁNG NÀY — ai sửa phiếu tháng cũ hơn thì người khác sẽ
+   // thấy khi họ tự mở lại app / bấm "Làm mới" (không tức thì như tháng này).
+   const now=new Date(), curY=String(now.getFullYear()), curM=pad2(now.getMonth()+1);
+   const res=await fetch(`${CFG.url}?action=list&token=${encodeURIComponent(CFG.token)}&year=${curY}&month=${curM}`);
    const j=await res.json();
    if(j.ok){
-     mgrData=j.data||[];
+     const others=mgrData.filter(r=>!((r.date||'').slice(0,4)===curY && (r.date||'').slice(5,7)===curM));
+     mgrData=others.concat(j.data||[]);
      localStorage.setItem(MGR_CACHE_KEY,JSON.stringify(mgrData));
      renderAllFromMgrData();
    }
