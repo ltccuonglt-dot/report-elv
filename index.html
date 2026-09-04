@@ -1825,6 +1825,11 @@ $('#btnSaveSettings').onclick=async()=>{const url=$('#s_url').value.trim(),token
 
 refreshBanner();
 loadEngineers();
+// Tải sẵn danh sách phiếu ngay khi mở app (dù đang đứng ở màn "Tạo phiếu",
+// không đợi bấm qua Quản lý/Lịch sử/Dashboard mới tải) — để tính năng chống
+// tạo trùng phiếu (so sánh mgrData khi gửi phiếu) luôn có dữ liệu mà so
+// sánh ngay từ phiếu đầu tiên, không phải đợi người dùng mở màn khác trước.
+loadManager();
 </script>
 </body>
 </html>
