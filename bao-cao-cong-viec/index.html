@@ -950,6 +950,18 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <select id="ctp_mapSelect" style="margin-bottom:8px"></select>
       <input type="file" id="ctp_mapUpload" accept="image/*" style="margin-bottom:8px">
       <div id="ctp_mapPreviewWrap" style="display:none;margin-bottom:10px"><img id="ctp_mapPreview" style="max-width:100%;border-radius:8px;border:1px solid var(--line)"></div>
+      <button type="button" class="btn" id="btnCtpAddMap" style="margin-bottom:10px">➕ Thêm map mới vào danh sách</button>
+      <div id="ctpAddMapForm" style="display:none;margin-bottom:14px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input type="text" id="ctp_newmap_name" placeholder="Tên dự án, VD: DHA" style="flex:2">
+          <input type="number" id="ctp_newmap_km" placeholder="Km" style="flex:1" min="0">
+        </div>
+        <input type="file" id="ctp_newmap_file" accept="image/*" style="margin-bottom:8px">
+        <div style="display:flex;gap:8px">
+          <button type="button" class="btn btn-primary" id="btnCtpSaveMap" style="flex:1">Lưu vào danh sách</button>
+          <button type="button" class="btn btn-ghost" id="btnCtpCancelAddMap" style="flex:1">Huỷ</button>
+        </div>
+      </div>
 
       <button type="button" class="btn btn-primary" id="btnCtpPrint" style="margin:10px 0">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg><span>In / Xuất PDF công tác phí</span>
@@ -1122,6 +1134,29 @@ const DB={
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
    const {data,error}=await sb.rpc('delete_engineer',{p_name:name,p_admin_password:adminPassword});
    return error?{ok:false,error:error.message}:{ok:true,data:data.map(r=>r.name)};
+ },
+ async listCtpMaps(){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.from('ctp_maps').select('*').order('label');
+   return error?{ok:false,error:error.message}:{ok:true,data};
+ },
+ async addCtpMap(label,fileUrl,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('add_ctp_map',{p_label:label,p_file_url:fileUrl,p_admin_password:adminPassword});
+   return error?{ok:false,error:error.message}:{ok:true,data};
+ },
+ async uploadCtpMap(file,label){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+   // Đặt tên file lưu trữ đúng quy định "Tên dự án Xkm" (khớp label hiển thị)
+   // thay vì tên ngẫu nhiên, để sau này xem trực tiếp trong Storage vẫn dễ
+   // nhận ra map nào — thêm hậu tố ngẫu nhiên ngắn để tránh trùng tên.
+   const safeName=(label||'map').replace(/[^\p{L}\p{N} _-]/gu,'').trim().replace(/\s+/g,' ')||'map';
+   const path=`${safeName}_${Math.random().toString(36).slice(2,6)}.${ext}`;
+   const {error}=await sb.storage.from('ctp-maps').upload(path,file);
+   if(error) return {ok:false,error:error.message};
+   const {data:pub}=sb.storage.from('ctp-maps').getPublicUrl(path);
+   return {ok:true,url:pub.publicUrl};
  },
  async uploadAttachment(file){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
@@ -2403,6 +2438,7 @@ $('#btnAdminTools').onclick=()=>{
  ccPopulateSelects();
  ctpRenderRequesterChecklist('');
  ctpPopulateMapSelect();
+ loadCtpMaps();
  $('#adminToolsModal').classList.add('show');
  ccLoadList();
  ctpLoadAll();
@@ -2693,14 +2729,55 @@ function ctpRenderRequesterChecklist(selectedNames){
 }
 function ctpRequesterValue(){ return $$('#ctp_f_requester_list input:checked').map(c=>c.value).join(' - '); }
 
+/* Map = ảnh cố định trong ./maps/ (đặt sẵn trong code, tên file) HOẶC map
+   admin tự thêm mới qua nút "Thêm map mới vào danh sách" (ảnh tải lên
+   Supabase Storage, lưu link đầy đủ https://...) — mapSrcFor() phân biệt
+   2 dạng này khi cần hiển thị/in. */
+function mapSrcFor(v){ return v && /^https?:\/\//.test(v) ? v : ('./maps/'+encodeURIComponent(v||'')); }
+let ctpMapsFromDb=[];
+async function loadCtpMaps(){
+ if(!sb) return;
+ const j=await DB.listCtpMaps();
+ ctpMapsFromDb=j.ok?(j.data||[]):[];
+ ctpPopulateMapSelect();
+}
 function ctpPopulateMapSelect(){
- $('#ctp_mapSelect').innerHTML='<option value="">— Không chọn bản đồ —</option>'+MAP_IMAGES.map(m=>`<option value="${esc(m.file)}">${esc(m.label)}</option>`).join('');
+ const cur=$('#ctp_mapSelect').value;
+ const staticOpts=MAP_IMAGES.map(m=>`<option value="${esc(m.file)}">${esc(m.label)}</option>`).join('');
+ const dbOpts=ctpMapsFromDb.map(m=>`<option value="${esc(m.file_url)}">${esc(m.label)}</option>`).join('');
+ $('#ctp_mapSelect').innerHTML='<option value="">— Không chọn bản đồ —</option>'+staticOpts+dbOpts;
+ if(cur) $('#ctp_mapSelect').value=cur;
 }
 $('#ctp_mapSelect').onchange=()=>{
  const f=$('#ctp_mapSelect').value;
  ctpUploadedMapDataUrl=null; $('#ctp_mapUpload').value='';
- if(f){ $('#ctp_mapPreview').src='./maps/'+encodeURIComponent(f); $('#ctp_mapPreviewWrap').style.display='block'; }
+ if(f){ $('#ctp_mapPreview').src=mapSrcFor(f); $('#ctp_mapPreviewWrap').style.display='block'; }
  else $('#ctp_mapPreviewWrap').style.display='none';
+};
+$('#btnCtpAddMap').onclick=()=>{ $('#ctpAddMapForm').style.display='block'; };
+$('#btnCtpCancelAddMap').onclick=()=>{ $('#ctpAddMapForm').style.display='none'; $('#ctp_newmap_name').value=''; $('#ctp_newmap_km').value=''; $('#ctp_newmap_file').value=''; };
+$('#btnCtpSaveMap').onclick=async()=>{
+ const name=$('#ctp_newmap_name').value.trim();
+ const km=$('#ctp_newmap_km').value.trim();
+ const file=$('#ctp_newmap_file').files[0];
+ if(!name){ toast('Nhập tên dự án',true); return; }
+ if(!km){ toast('Nhập số km',true); return; }
+ if(!file){ toast('Chọn ảnh map',true); return; }
+ if(!sb){ toast('Chưa kết nối Supabase',true); return; }
+ // Đúng quy định đặt tên map: "Tên dự án Xkm" — tự ghép, không để nhập tay tự
+ // do (tránh mỗi người gõ 1 kiểu, sau này khó tìm/khó khớp giữa các map).
+ const label=`${name} ${km}km`;
+ try{
+   const up=await DB.uploadCtpMap(file,label);
+   if(!up.ok){ toast(up.error||'Lỗi tải ảnh lên',true); return; }
+   const j=await DB.addCtpMap(label,up.url,adminPasswordRuntime);
+   if(j.ok){
+     ctpMapsFromDb=j.data||ctpMapsFromDb; ctpPopulateMapSelect();
+     $('#ctp_mapSelect').value=up.url; $('#ctp_mapSelect').dispatchEvent(new Event('change'));
+     $('#ctpAddMapForm').style.display='none'; $('#ctp_newmap_name').value=''; $('#ctp_newmap_km').value=''; $('#ctp_newmap_file').value='';
+     toast(`✅ Đã thêm map "${label}" vào danh sách`);
+   } else toast(j.error||'Lỗi lưu map',true);
+ }catch(err){ toast('Không tải lên được. Kiểm tra mạng.',true); }
 };
 $('#ctp_mapUpload').onchange=()=>{
  const file=$('#ctp_mapUpload').files[0];
@@ -2799,7 +2876,7 @@ function ctpLoadTripIntoForm(){
  $('#ctp_f_pjcode').value=first.projectCode||''; $('#ctp_f_pjname').value=first.projectName||'';
  segSet('ctp_f_tripservice', first.serviceType||'Bảo trì');
  if(first.mapImage && first.mapImage.startsWith('data:')){ ctpUploadedMapDataUrl=first.mapImage; $('#ctp_mapSelect').value=''; $('#ctp_mapPreview').src=first.mapImage; $('#ctp_mapPreviewWrap').style.display='block'; }
- else if(first.mapImage){ $('#ctp_mapSelect').value=first.mapImage; ctpUploadedMapDataUrl=null; $('#ctp_mapPreview').src='./maps/'+encodeURIComponent(first.mapImage); $('#ctp_mapPreviewWrap').style.display='block'; }
+ else if(first.mapImage){ $('#ctp_mapSelect').value=first.mapImage; ctpUploadedMapDataUrl=null; $('#ctp_mapPreview').src=mapSrcFor(first.mapImage); $('#ctp_mapPreviewWrap').style.display='block'; }
  else { $('#ctp_mapSelect').value=''; ctpUploadedMapDataUrl=null; $('#ctp_mapPreviewWrap').style.display='none'; }
  ctpRenderLines();
 }
@@ -2971,7 +3048,7 @@ $('#btnCtpPrint').onclick=()=>{
    <td style="${tdS}">${esc(r.serviceType)}</td>
    <td style="${tdS}">${esc(r.note)}</td>
  </tr>`).join('');
- const mapSrc = ctpUploadedMapDataUrl || (($('#ctp_mapSelect').value)?('./maps/'+encodeURIComponent($('#ctp_mapSelect').value)):'');
+ const mapSrc = ctpUploadedMapDataUrl || (($('#ctp_mapSelect').value)?mapSrcFor($('#ctp_mapSelect').value):'');
  const first=lines[0]||{};
  // Dòng đầu phiếu "Họ tên người đề nghị" gộp TẤT CẢ người có mặt trong đợt
  // (mỗi người 1 dòng riêng trong bảng) — không chỉ lấy tên ở dòng đầu tiên.
