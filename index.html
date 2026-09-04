@@ -974,16 +974,22 @@ if(localStorage.getItem('kt_cus'))$('#f_customer').value=localStorage.getItem('k
 
 /* sửa phiếu đã có (khi nhập sai) */
 let editingNo=null;
+// Số hiển thị (#1,#2...) của phiếu đang sửa — CHỈ để hiện chữ cho người dùng
+// đọc (khớp đúng số họ thấy trên danh sách, vì danh sách xếp theo NGÀY chứ
+// không theo No thật). Việc gửi sửa lên server vẫn luôn dùng editingNo (No
+// thật, cố định, không đổi) — không liên quan tới số hiển thị này.
+let editingDisplayNo=null;
 function submitBtnIdle(){
  const btn=$('#btnSubmit');
  btn.innerHTML=editingNo
    ?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span>Cập nhật phiếu</span>'
    :'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg><span>Gửi phiếu</span>';
 }
-function startEdit(no){
+function startEdit(no,displayNo){
  const rec=findTicket(no);
  if(!rec){toast('Không tìm thấy phiếu để sửa',true);return}
  editingNo=no;
+ editingDisplayNo=displayNo||no;
  setDateValue(rec.date||new Date().toISOString().slice(0,10));
  setFieldOrOther('f_customer','wrap_customer_other','f_customer_other',rec.customer||'');
  setFieldOrOther('f_system','wrap_system_other','f_system_other',rec.system||'');
@@ -993,7 +999,7 @@ function startEdit(no){
  segSet('f_support',rec.support);
  segSet('f_status',/prog|xử/i.test(rec.status||'')?'In Progress':/pend|chờ/i.test(rec.status||'')?'Pending':'Done');
  setEngineerValue(rec.engineer||'');
- $('#editBannerText').textContent=`Đang sửa phiếu #${no} — sửa xong bấm "Cập nhật phiếu" bên dưới`;
+ $('#editBannerText').textContent=`Đang sửa phiếu #${editingDisplayNo} — sửa xong bấm "Cập nhật phiếu" bên dưới`;
  $('#editBanner').style.display='flex';
  submitBtnIdle();
  $$('nav.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab==='report'));
@@ -1002,6 +1008,7 @@ function startEdit(no){
 }
 function cancelEdit(){
  editingNo=null;
+ editingDisplayNo=null;
  $('#editBanner').style.display='none';
  $('#tkForm').reset();
  setDateValue(new Date().toISOString().slice(0,10));
@@ -1030,6 +1037,7 @@ $('#tkForm').onsubmit=async e=>{
 
  const isEdit=!!editingNo;
  const no=editingNo||'—';
+ const displayNo=editingDisplayNo||no; // chỉ để hiện chữ, xem chú thích ở khai báo editingDisplayNo
 
  /* Hiện "thành công" NGAY LẬP TỨC — không bắt đứng nhìn màn hình chờ máy chủ
     phản hồi (Apps Script + đồng bộ Sheet backup có thể mất vài giây). Việc
@@ -1041,7 +1049,7 @@ $('#tkForm').onsubmit=async e=>{
    const hist=JSON.parse(localStorage.getItem(LS_HIST)||'[]');
    const hrec=hist.find(r=>String(r.no)===String(no)); if(hrec) Object.assign(hrec,payload);
    localStorage.setItem(LS_HIST,JSON.stringify(hist));
-   toast(`✅ Đã cập nhật phiếu #${no}`);
+   toast(`✅ Đã cập nhật phiếu #${displayNo}`);
    renderManager(); renderDashboard();
    if($('#view-history').classList.contains('active')) renderHistory();
    cancelEdit();
@@ -1060,10 +1068,10 @@ $('#tkForm').onsubmit=async e=>{
  try{
    const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
    const j=await res.json();
-   if(!j.ok) toast(`⚠️ Gửi ${isEdit?'cập nhật':''} phiếu${isEdit?` #${no}`:''} thất bại: ${j.error||'máy chủ báo lỗi'} — thử gửi lại`,true);
+   if(!j.ok) toast(`⚠️ Gửi ${isEdit?'cập nhật':''} phiếu${isEdit?` #${displayNo}`:''} thất bại: ${j.error||'máy chủ báo lỗi'} — thử gửi lại`,true);
    else if(!isEdit) silentRefreshData(); // đồng bộ lại đúng số No thật + dữ liệu mới nhất từ server
  }catch(err){
-   toast(`⚠️ Không gửi được phiếu${isEdit?` #${no}`:''} (mất mạng) — thử gửi lại`,true);
+   toast(`⚠️ Không gửi được phiếu${isEdit?` #${displayNo}`:''} (mất mạng) — thử gửi lại`,true);
  }
 };
 
@@ -1101,17 +1109,18 @@ function renderHistory(){
  const q=($('#histSearch').value||'').trim().toLowerCase();
  let h=mgrData.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
  if(q) h=h.filter(r=>((r.engineer||'')+' '+(r.issue||'')+' '+(r.customer||'')+' '+(r.system||'')).toLowerCase().includes(q));
+ h.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(Number(b.no)-Number(a.no))); // ngày mới nhất lên trước, xem chú thích ở renderManager
  const lbl=[fYear&&('Năm '+fYear),fMonth&&('Tháng '+Number(fMonth)),fDay&&('Ngày '+Number(fDay)),fWeek&&('Tuần '+fWeek)].filter(Boolean).join(', ')||'Tất cả';
  $('#histListTitle').textContent=`Lịch sử phiếu · ${lbl} (${h.length})`;
  if(!h.length){$('#historyList').innerHTML=emptyState(q?'Không tìm thấy':'Chưa có phiếu',q?'Không có phiếu khớp tìm kiếm.':CFG.url?'Không có phiếu trong khoảng thời gian này.':'Kết nối Google Sheet để xem lịch sử.');return}
  $('#historyList').innerHTML=`<div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột</div>
    <div class="rpt-wrap"><table class="rpt">
    <thead><tr><th>No</th><th>Ngày</th><th>Khách hàng</th><th>Hệ thống</th><th>Sự cố</th><th>Ưu tiên</th><th>Kỹ sư</th><th>Hỗ trợ</th><th>Trạng thái</th><th>Sửa</th></tr></thead>
-   <tbody>${h.map(rptRow).join('')}</tbody>
+   <tbody>${h.map((r,i)=>rptRow(r,i+1)).join('')}</tbody>
  </table></div>`;
  $$('#historyList .status-sel').forEach(sel=>sel.onchange=()=>updateStatus(sel.dataset.no,sel.value,sel));
- $$('#historyList .btn-row-edit').forEach(b=>b.onclick=()=>startEdit(b.dataset.no));
- $$('#historyList .btn-row-delete').forEach(b=>b.onclick=()=>deleteTicket(b.dataset.no));
+ $$('#historyList .btn-row-edit').forEach(b=>b.onclick=()=>startEdit(b.dataset.no,b.dataset.displayNo));
+ $$('#historyList .btn-row-delete').forEach(b=>b.onclick=()=>deleteTicket(b.dataset.no,b.dataset.displayNo));
 }
 
 /* manager */
@@ -1318,13 +1327,17 @@ function statusOptions(cur){
  const curNorm=/prog|xử/i.test(cur)?'In Progress':/pend|chờ/i.test(cur)?'Pending':'Done';
  return opts.map(([v,l])=>`<option value="${v}" ${v===curNorm?'selected':''}>${l}</option>`).join('');
 }
-function rptRow(r){
+/* displayNo = số thứ tự hiện trên màn hình (1,2,3... theo đúng thứ tự đang
+   hiển thị — vì danh sách xếp theo NGÀY mới nhất lên trước, không theo No
+   thật lưu trong Sheet). r.no (No thật) vẫn giữ nguyên, không đổi, chỉ dùng
+   ngầm để gọi sửa/xóa đúng phiếu — người dùng chỉ thấy displayNo. */
+function rptRow(r,displayNo){
  const dd=(r.date||'').split('-').reverse().join('/');
  const supCls=(r.support||'').toLowerCase().includes('site')?'sup-onsite':'sup-online';
  const dow=r.date?new Date(r.date+'T00:00:00').getDay():-1; // 0=CN, 6=Thứ 7
  const isWeekend=dow===0||dow===6;
  return `<tr${isWeekend?' class="weekend-row"':''}>
-   <td class="num" data-label="No">#${esc(r.no||'—')}</td>
+   <td class="num" data-label="No">#${esc(displayNo||r.no||'—')}</td>
    <td data-label="Ngày">${esc(dd)}${isWeekend?` <span class="dow-tag">${dow===0?'CN':'T7'}</span>`:''}</td>
    <td data-label="Khách hàng">${esc(r.customer||'')}</td>
    <td data-label="Hệ thống">${esc(r.system||'')}</td>
@@ -1334,8 +1347,8 @@ function rptRow(r){
    <td data-label="Hỗ trợ"><span class="pill ${supCls}">${esc(r.support||'')}</span></td>
    <td data-label="Trạng thái">${r.no&&CFG.url?`<select class="status-sel ${scls(r.status)}" data-no="${esc(r.no)}">${statusOptions(r.status)}</select>`:`<span class="pill ${scls(r.status)}">${esc(slabel(r.status))}</span>`}</td>
    <td data-label="Sửa">${r.no&&CFG.url?`<div class="row-actions">
-     <button type="button" class="btn-row-edit" data-no="${esc(r.no)}" aria-label="Sửa phiếu #${esc(r.no)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-     <button type="button" class="btn-row-delete" data-no="${esc(r.no)}" aria-label="Xóa phiếu #${esc(r.no)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+     <button type="button" class="btn-row-edit" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" aria-label="Sửa phiếu #${esc(displayNo||r.no)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+     <button type="button" class="btn-row-delete" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" aria-label="Xóa phiếu #${esc(displayNo||r.no)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
    </div>`:''}</td>
  </tr>`;
 }
@@ -1367,6 +1380,11 @@ function renderManager(){
  if(fPri)data=data.filter(r=>r.priority===fPri);
  if(mgrEngineerFilter)data=data.filter(r=>(r.engineer||'').includes(mgrEngineerFilter));
  if(q)data=data.filter(r=>((r.issue||'')+(r.engineer||'')+(r.system||'')+(r.customer||'')+(r.priority||'')).toLowerCase().includes(q));
+ // Xếp theo NGÀY mới nhất lên trước — không xếp theo No, vì No chỉ là số thứ
+ // tự lúc tạo phiếu, không đổi khi sửa ngày, xếp theo No sẽ để phiếu ngày cũ
+ // hơn nằm dưới phiếu ngày mới hơn, nhìn không hợp lý (No bằng nhau/ngày bằng
+ // nhau thì phiếu tạo sau — No lớn hơn — lên trước).
+ data.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(Number(b.no)-Number(a.no)));
 
  const online=data.filter(r=>!(r.support||'').toLowerCase().includes('site')).length;
  const onsite=data.length-online;
@@ -1389,19 +1407,20 @@ function renderManager(){
  $('#managerList').innerHTML=`<div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột</div>
    <div class="rpt-wrap"><table class="rpt">
    <thead><tr><th>No</th><th>Ngày</th><th>Khách hàng</th><th>Hệ thống</th><th>Sự cố</th><th>Ưu tiên</th><th>Kỹ sư</th><th>Hỗ trợ</th><th>Trạng thái</th><th>Sửa</th></tr></thead>
-   <tbody>${data.map(rptRow).join('')}</tbody>
+   <tbody>${data.map((r,i)=>rptRow(r,i+1)).join('')}</tbody>
  </table></div>`;
  $$('#managerList .status-sel').forEach(sel=>sel.onchange=()=>updateStatus(sel.dataset.no,sel.value,sel));
- $$('#managerList .btn-row-edit').forEach(b=>b.onclick=()=>startEdit(b.dataset.no));
- $$('#managerList .btn-row-delete').forEach(b=>b.onclick=()=>deleteTicket(b.dataset.no));
+ $$('#managerList .btn-row-edit').forEach(b=>b.onclick=()=>startEdit(b.dataset.no,b.dataset.displayNo));
+ $$('#managerList .btn-row-delete').forEach(b=>b.onclick=()=>deleteTicket(b.dataset.no,b.dataset.displayNo));
 }
-async function deleteTicket(no){
- if(!confirm(`Xóa hẳn phiếu #${no}? Không thể hoàn tác.`)) return;
+async function deleteTicket(no,displayNo){
+ displayNo=displayNo||no;
+ if(!confirm(`Xóa hẳn phiếu #${displayNo}? Không thể hoàn tác.`)) return;
  try{
    const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:CFG.token,action:'delete',no})});
    const j=await res.json();
    if(j.ok){
-     toast(`🗑️ Đã xóa phiếu #${no}`);
+     toast(`🗑️ Đã xóa phiếu #${displayNo}`);
      mgrData=mgrData.filter(r=>String(r.no)!==String(no));
      const hist=JSON.parse(localStorage.getItem(LS_HIST)||'[]').filter(r=>String(r.no)!==String(no));
      localStorage.setItem(LS_HIST,JSON.stringify(hist));
