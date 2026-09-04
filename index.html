@@ -835,7 +835,6 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
           <label class="field" style="grid-column:1/-1"><span class="lab">Người đề nghị (chọn được nhiều người cùng đi)</span>
             <div id="ctp_f_requester_list" class="ctp-checklist"></div>
           </label>
-          <label class="field"><span class="lab">Bộ phận</span><input type="text" id="ctp_f_dept" value="TECH"></label>
           <label class="field"><span class="lab">Địa điểm công tác</span><input type="text" id="ctp_f_place"></label>
           <label class="field"><span class="lab">Từ ngày</span><input type="date" id="ctp_f_fromdate"></label>
           <label class="field"><span class="lab">Đến ngày</span><input type="date" id="ctp_f_todate"></label>
@@ -2496,7 +2495,7 @@ function ctpNewTrip(){
  currentTripId=null;
  $('#ctp_f_reqdate').value=new Date().toISOString().slice(0,10);
  ctpRenderRequesterChecklist('');
- $('#ctp_f_dept').value='TECH'; $('#ctp_f_place').value='';
+ $('#ctp_f_place').value='';
  $('#ctp_f_fromdate').value=''; $('#ctp_f_todate').value='';
  $('#ctp_f_pjcode').value=''; $('#ctp_f_pjname').value='';
  $('#ctp_mapSelect').value=''; ctpUploadedMapDataUrl=null; $('#ctp_mapUpload').value=''; $('#ctp_mapPreviewWrap').style.display='none';
@@ -2510,7 +2509,7 @@ function ctpLoadTripIntoForm(){
  if(!first){ ctpNewTrip(); return; }
  $('#ctp_f_reqdate').value=first.requestDate||'';
  ctpRenderRequesterChecklist(first.requesterName||'');
- $('#ctp_f_dept').value=first.dept||'TECH'; $('#ctp_f_place').value=first.workingPlace||'';
+ $('#ctp_f_place').value=first.workingPlace||'';
  $('#ctp_f_fromdate').value=first.fromDate||first.tripFromDate||''; $('#ctp_f_todate').value=first.toDate||first.tripToDate||'';
  $('#ctp_f_pjcode').value=first.projectCode||''; $('#ctp_f_pjname').value=first.projectName||'';
  if(first.mapImage && first.mapImage.startsWith('data:')){ ctpUploadedMapDataUrl=first.mapImage; $('#ctp_mapSelect').value=''; $('#ctp_mapPreview').src=first.mapImage; $('#ctp_mapPreviewWrap').style.display='block'; }
@@ -2573,7 +2572,7 @@ function ctpMapValueForSave(){ return ctpUploadedMapDataUrl || $('#ctp_mapSelect
 $('#btnCtpSaveTrip').onclick=async()=>{
  if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
  const header={
-   requestDate:$('#ctp_f_reqdate').value, requesterName:ctpRequesterValue(), dept:$('#ctp_f_dept').value.trim(),
+   requestDate:$('#ctp_f_reqdate').value, requesterName:ctpRequesterValue(), dept:'TECH',
    workingPlace:$('#ctp_f_place').value.trim(), fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value,
    projectCode:$('#ctp_f_pjcode').value.trim(), projectName:$('#ctp_f_pjname').value.trim(), mapImage:ctpMapValueForSave()
  };
@@ -2601,7 +2600,7 @@ $('#btnCtpAddLine').onclick=async()=>{
  const isEdit=!!ctpEditingNo;
  const payload={
    token:CFG.token, action:isEdit?'updateExpense':'addExpense', adminPassword:adminPasswordRuntime, tripId:currentTripId||'',
-   requestDate:reqDate, requesterName, dept:$('#ctp_f_dept').value.trim(), workingPlace:$('#ctp_f_place').value.trim(),
+   requestDate:reqDate, requesterName, dept:'TECH', workingPlace:$('#ctp_f_place').value.trim(),
    fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value,
    expenseType:$('#ctp_f_type').value, description:$('#ctp_f_desc').value.trim(),
    lineFromDate:$('#ctp_f_linefrom').value||$('#ctp_f_fromdate').value, lineToDate:$('#ctp_f_lineto').value||$('#ctp_f_todate').value,
