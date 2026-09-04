@@ -128,6 +128,8 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--brand);b
 select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23867d8e' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:38px}
 
 .seg{display:flex;gap:6px;background:var(--surface-2);border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:4px}
+.seg.seg-wrap{flex-wrap:wrap}
+.seg.seg-wrap button{flex:1 1 calc(50% - 6px)}
 .seg button{flex:1;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-weight:600;font-size:13.5px;padding:9px 4px;border-radius:8px;cursor:pointer;transition:.15s}
 .seg button.on{background:var(--brand);color:#fff;box-shadow:0 2px 8px -2px var(--brand)}
 /* Online = xanh dương, On-Site = tím — khớp màu đã dùng ở bảng/thống kê, để phân biệt rõ ngay trên nút chọn */
@@ -429,9 +431,18 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
               <option value="__other">Khác…</option>
             </select>
           </label>
-          <label class="field" id="wrap_system_other" style="display:none;margin-bottom:0">
+          <label class="field" id="wrap_system_other" style="display:none">
             <span class="lab">Nhập tên hệ thống</span>
             <input type="text" id="f_system_other" placeholder="VD: Thang máy, Hệ thống nước..." />
+          </label>
+          <label class="field" style="margin-bottom:0">
+            <span class="lab">Loại công việc <span class="req">*</span></span>
+            <div class="seg seg-wrap" id="f_workType">
+              <button type="button" data-v="Bảo hành">Bảo hành</button>
+              <button type="button" data-v="Bảo trì" class="on">Bảo trì</button>
+              <button type="button" data-v="Lắp mới">Lắp mới</button>
+              <button type="button" data-v="Khảo sát">Khảo sát</button>
+            </div>
           </label>
         </div>
 
@@ -1007,6 +1018,7 @@ function startEdit(no,displayNo){
  segSet('f_priority',rec.priority);
  segSet('f_support',rec.support);
  segSet('f_status',/prog|xử/i.test(rec.status||'')?'In Progress':/pend|chờ/i.test(rec.status||'')?'Pending':'Done');
+ segSet('f_workType',rec.workType||'Bảo trì');
  setEngineerValue(rec.engineer||'');
  $('#editBannerText').textContent=`Đang sửa phiếu #${editingDisplayNo} — sửa xong bấm "Cập nhật phiếu" bên dưới`;
  $('#editBanner').style.display='flex';
@@ -1023,7 +1035,7 @@ function cancelEdit(){
  setDateValue(new Date().toISOString().slice(0,10));
  $('#wrap_customer_other').style.display='none';$('#wrap_system_other').style.display='none';
  setEngineerValue('');
- segSet('f_priority','Medium');segSet('f_support','Online');segSet('f_status','Done');
+ segSet('f_priority','Medium');segSet('f_support','Online');segSet('f_status','Done');segSet('f_workType','Bảo trì');
  submitBtnIdle();
 }
 $('#btnCancelEdit').onclick=cancelEdit;
@@ -1041,7 +1053,8 @@ $('#tkForm').onsubmit=async e=>{
  if(!issue){toast('Nhập mô tả sự cố',true);return}
  if(!engineer){toast('Chọn ít nhất 1 kỹ sư xử lý',true);return}
  const payload={token:CFG.token,date:$('#f_date').value,customer,system,issue,
-   priority:segVal('f_priority'),engineer,support:segVal('f_support'),status:segVal('f_status'),remark:$('#f_remark').value.trim()};
+   priority:segVal('f_priority'),engineer,support:segVal('f_support'),status:segVal('f_status'),remark:$('#f_remark').value.trim(),
+   workType:segVal('f_workType')};
  localStorage.setItem('kt_eng',engineer);localStorage.setItem('kt_cus',customer);
 
  const isEdit=!!editingNo;
@@ -1124,7 +1137,7 @@ function renderHistory(){
  if(!h.length){$('#historyList').innerHTML=emptyState(q?'Không tìm thấy':'Chưa có phiếu',q?'Không có phiếu khớp tìm kiếm.':CFG.url?'Không có phiếu trong khoảng thời gian này.':'Kết nối Google Sheet để xem lịch sử.');return}
  $('#historyList').innerHTML=`<div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột</div>
    <div class="rpt-wrap"><table class="rpt">
-   <thead><tr><th>No</th><th>Ngày</th><th>Khách hàng</th><th>Hệ thống</th><th>Sự cố</th><th>Ưu tiên</th><th>Kỹ sư</th><th>Hỗ trợ</th><th>Trạng thái</th><th>Sửa</th></tr></thead>
+   <thead><tr><th>No</th><th>Ngày</th><th>Khách hàng</th><th>Hệ thống</th><th>Loại công việc</th><th>Sự cố</th><th>Ưu tiên</th><th>Kỹ sư</th><th>Hỗ trợ</th><th>Trạng thái</th><th>Sửa</th></tr></thead>
    <tbody>${h.map((r,i)=>rptRow(r,i+1)).join('')}</tbody>
  </table></div>`;
  $$('#historyList .status-sel').forEach(sel=>sel.onchange=()=>updateStatus(sel.dataset.no,sel.value,sel));
@@ -1350,6 +1363,7 @@ function rptRow(r,displayNo){
    <td data-label="Ngày">${esc(dd)}${isWeekend?` <span class="dow-tag">${dow===0?'CN':'T7'}</span>`:''}</td>
    <td data-label="Khách hàng">${esc(r.customer||'')}</td>
    <td data-label="Hệ thống">${esc(r.system||'')}</td>
+   <td data-label="Loại công việc">${esc(r.workType||'')}</td>
    <td class="issue-cell" data-label="Sự cố">${esc(r.issue||'')}</td>
    <td data-label="Ưu tiên"><span class="pill ${pcls(r.priority)}">${esc(r.priority||'')}</span></td>
    <td data-label="Kỹ sư">${esc(r.engineer||'')}</td>
@@ -1416,7 +1430,7 @@ function renderManager(){
  }
  $('#managerList').innerHTML=`<div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột</div>
    <div class="rpt-wrap"><table class="rpt">
-   <thead><tr><th>No</th><th>Ngày</th><th>Khách hàng</th><th>Hệ thống</th><th>Sự cố</th><th>Ưu tiên</th><th>Kỹ sư</th><th>Hỗ trợ</th><th>Trạng thái</th><th>Sửa</th></tr></thead>
+   <thead><tr><th>No</th><th>Ngày</th><th>Khách hàng</th><th>Hệ thống</th><th>Loại công việc</th><th>Sự cố</th><th>Ưu tiên</th><th>Kỹ sư</th><th>Hỗ trợ</th><th>Trạng thái</th><th>Sửa</th></tr></thead>
    <tbody>${data.map((r,i)=>rptRow(r,i+1)).join('')}</tbody>
  </table></div>`;
  $$('#managerList .status-sel').forEach(sel=>sel.onchange=()=>updateStatus(sel.dataset.no,sel.value,sel));
@@ -1469,9 +1483,9 @@ $('#btnExport').onclick=()=>{
  if(!data.length){toast('Không có dữ liệu để xuất',true);return}
  if(typeof XLSX==='undefined'){toast('Chưa tải được thư viện xuất Excel, thử lại sau',true);return}
 
- const cols=['no','date','customer','system','issue','priority','engineer','support','status','remark'];
- const head=['No','Date','Customer','System','Issue','Priority','Engineer','Support','Status','Remark'];
- const centerCols=[0,1,3,5,7,8]; // No, Date, System, Priority, Support, Status
+ const cols=['no','date','customer','system','workType','issue','priority','engineer','support','status','remark'];
+ const head=['No','Date','Customer','System','Work Type','Issue','Priority','Engineer','Support','Status','Remark'];
+ const centerCols=[0,1,3,4,6,8,9]; // No, Date, System, Work Type, Priority, Support, Status
 
  const aoa=[head, ...data.map(r=>cols.map(c=>r[c]||''))];
  const ws=XLSX.utils.aoa_to_sheet(aoa);
@@ -1496,12 +1510,12 @@ $('#btnExport').onclick=()=>{
      if(centerCols.includes(c)) st.alignment=Object.assign({},baseCellStyle.alignment,{horizontal:'center'});
      // Thứ 7/CN: tô ĐỎ NHẠT CẢ DÒNG — khớp màu trên app
      if(isWeekend) st.fill={patternType:'solid',fgColor:{rgb:'FBE3E3'}};
-     // Cột Hỗ trợ (c===7): Online = xanh dương nhạt, On-Site = tím nhạt — khớp màu trên app (ưu tiên hơn màu đỏ nhạt của dòng)
-     if(c===7){ st.fill={patternType:'solid',fgColor:{rgb:isOnline?'E2EBFB':'F0E3F5'}}; st.font=Object.assign({},baseCellStyle.font,{bold:true,color:{rgb:isOnline?'2563C9':'571B68'}}); }
+     // Cột Hỗ trợ (c===8): Online = xanh dương nhạt, On-Site = tím nhạt — khớp màu trên app (ưu tiên hơn màu đỏ nhạt của dòng)
+     if(c===8){ st.fill={patternType:'solid',fgColor:{rgb:isOnline?'E2EBFB':'F0E3F5'}}; st.font=Object.assign({},baseCellStyle.font,{bold:true,color:{rgb:isOnline?'2563C9':'571B68'}}); }
      ws[ref].s=st;
    }
  }
- ws['!cols']=[{wch:6},{wch:12},{wch:16},{wch:14},{wch:42},{wch:10},{wch:20},{wch:10},{wch:12},{wch:36}];
+ ws['!cols']=[{wch:6},{wch:12},{wch:16},{wch:14},{wch:14},{wch:42},{wch:10},{wch:20},{wch:10},{wch:12},{wch:36}];
  ws['!rows']=[{hpt:22}];
  ws['!freeze']={xSplit:0,ySplit:1};
 
