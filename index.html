@@ -1108,8 +1108,14 @@ function cancelEdit(){
 $('#btnCancelEdit').onclick=cancelEdit;
 
 /* submit (tạo mới HOẶC cập nhật phiếu đang sửa) */
+// Khóa chống bấm trùng (double/triple-click): bấm 1 lần là khóa nút ngay —
+// chặn cả trường hợp bấm nhanh nhiều lần lẫn 2 tab/thiết bị cùng bấm gần
+// như đồng thời (chặn được ở phía trình duyệt đang gửi; server vẫn xử lý
+// độc lập từng request nếu lọt qua khóa này).
+let isSubmitting=false;
 $('#tkForm').onsubmit=async e=>{
  e.preventDefault();
+ if(isSubmitting){ toast('⏳ Đang gửi phiếu, vui lòng đợi giây lát...',true); return; }
  let customer=$('#f_customer').value; if(customer==='__other')customer=$('#f_customer_other').value.trim();
  let system=$('#f_system').value; if(system==='__other')system=$('#f_system_other').value.trim();
  const engineer=engineerValue();
@@ -1144,6 +1150,12 @@ $('#tkForm').onsubmit=async e=>{
    }
  }
 
+ // Khóa nút NGAY từ đây (trước khi làm gì khác) để lần bấm thứ 2, thứ 3 (do
+ // tay run, mạng chậm tưởng chưa bấm được...) bị chặn ở dòng isSubmitting
+ // phía trên, không tạo/sửa phiếu thêm lần nữa.
+ isSubmitting=true;
+ const btn=$('#btnSubmit'); btn.disabled=true;
+
  /* Hiện "thành công" NGAY LẬP TỨC — không bắt đứng nhìn màn hình chờ máy chủ
     phản hồi (Apps Script + đồng bộ Sheet backup có thể mất vài giây). Việc
     gửi thật chạy NGẦM phía sau; nếu thất bại thật sự (mất mạng, máy chủ lỗi)
@@ -1167,7 +1179,7 @@ $('#tkForm').onsubmit=async e=>{
  }
  submitBtnIdle();
 
- if(!CFG.url) return; // chế độ thử nghiệm — không có máy chủ để gửi thật
+ if(!CFG.url){ isSubmitting=false; btn.disabled=false; return; } // chế độ thử nghiệm — không có máy chủ để gửi thật
 
  const body=isEdit?{...payload,action:'edit',no,...(isAdminUnlocked?{adminPassword:adminPasswordRuntime}:{})}:payload;
  try{
@@ -1177,6 +1189,8 @@ $('#tkForm').onsubmit=async e=>{
    else if(!isEdit) silentRefreshData(); // đồng bộ lại đúng số No thật + dữ liệu mới nhất từ server
  }catch(err){
    toast(`⚠️ Không gửi được phiếu${isEdit?` #${displayNo}`:''} (mất mạng) — thử gửi lại`,true);
+ } finally {
+   isSubmitting=false; btn.disabled=false;
  }
 };
 
