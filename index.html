@@ -84,6 +84,32 @@ body{background:var(--ground);color:var(--ink);font-family:var(--font);font-size
 .period-notice.soon{background:var(--warn-soft);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 25%,transparent)}
 .period-notice.overdue{background:var(--danger-soft);color:var(--danger);border-color:color-mix(in srgb,var(--danger) 25%,transparent)}
 .btn-edit-cancel{border:1.5px solid currentColor;background:transparent;color:inherit;font:inherit;font-weight:700;font-size:12px;padding:5px 10px;border-radius:999px;cursor:pointer;white-space:nowrap}
+
+/* ===== Chấm công & Công tác phí (khu vực admin) ===== */
+.admtabs{display:flex;gap:8px;margin-bottom:14px}
+.admtab{flex:1;border:1.5px solid var(--line);background:var(--surface-2);color:var(--muted);font:inherit;font-weight:700;font-size:13px;padding:10px;border-radius:var(--radius-sm);cursor:pointer}
+.admtab.on{background:var(--brand-soft);color:var(--brand);border-color:var(--brand)}
+.admtab-panel{display:none}
+.admtab-panel.active{display:block}
+.cc-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.cc-filters select{flex:1;min-width:110px;border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:9px 10px;font:inherit;background:var(--surface)}
+.btn-mini{border:1.5px solid var(--brand);background:var(--brand-soft);color:var(--brand);font:inherit;font-weight:700;font-size:12.5px;padding:9px 14px;border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap}
+.cc-add-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.cc-add-grid label.field{margin-bottom:0}
+@media (max-width:520px){.cc-add-grid{grid-template-columns:1fr}}
+.ctp-checklist{display:flex;flex-wrap:wrap;gap:8px}
+.ctp-checklist label{display:flex;align-items:center;gap:6px;border:1.5px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer;background:var(--surface)}
+.ctp-checklist input:checked + span{font-weight:700;color:var(--brand)}
+#ccListTable td,#ctpLineTable td{font-size:12px}
+.row-del-btn{border:none;background:transparent;color:var(--danger);cursor:pointer;padding:4px}
+.row-del-btn svg{width:16px;height:16px}
+#ctpPrintArea{display:none}
+@media print{
+  body *{visibility:hidden}
+  #ctpPrintArea, #ctpPrintArea *{visibility:visible}
+  #ctpPrintArea{display:block;position:absolute;left:0;top:0;width:100%}
+  .modal{display:none!important}
+}
 .banner svg{width:16px;height:16px;flex:none}
 
 main{flex:1;padding:14px 14px 150px;overflow-y:auto} /* chừa đủ chỗ cho nút nổi (Cài đặt ứng dụng/Xuất Excel) không đè lên nội dung cuối trang */
@@ -363,6 +389,9 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     </div>
     <button class="icon-btn" id="btnPageReload" aria-label="Làm mới trang" title="Làm mới trang (tải bản mới nhất)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    </button>
+    <button class="icon-btn" id="btnAdminTools" aria-label="Chấm công & Công tác phí" title="Chấm công & Công tác phí (chỉ quản trị)" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
     </button>
     <button class="icon-btn" id="btnSettings" aria-label="Cài đặt">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -721,6 +750,187 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
   </div>
 </div>
 
+<!-- ===== Chấm công & Công tác phí (chỉ admin) ===== -->
+<div class="modal" id="adminToolsModal">
+  <div class="sheet" style="max-width:920px">
+    <h2>Chấm công &amp; Công tác phí</h2>
+    <p class="desc" style="margin-top:-6px">Chỉ quản trị viên thấy được mục này. Dữ liệu lưu riêng, không lẫn với phiếu kỹ thuật.</p>
+    <div class="admtabs">
+      <button type="button" class="admtab on" data-admtab="chamcong">📅 Chấm công</button>
+      <button type="button" class="admtab" data-admtab="ctp">🧾 Công tác phí</button>
+    </div>
+
+    <!-- ===== TAB CHẤM CÔNG ===== -->
+    <div id="admtab-chamcong" class="admtab-panel active">
+      <div id="ccMonthReminder" class="period-notice" style="display:none;margin-bottom:10px"></div>
+      <div class="cc-filters">
+        <select id="cc_employee" class="msel-select"></select>
+        <select id="cc_month"></select>
+        <select id="cc_year"></select>
+        <button type="button" class="btn-mini" id="btnCcLoad">Xem</button>
+      </div>
+
+      <button type="button" class="btn" id="btnCcAutoFill" style="margin:10px 0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        <span>Tạo nháp cả tháng từ Report (ngày On-Site lấy khách hàng, còn lại = văn phòng)</span>
+      </button>
+
+      <div id="ccDraftBox" style="display:none">
+        <div class="section-title" style="margin-bottom:6px">Nháp cả tháng — kiểm tra/sửa rồi mới lưu</div>
+        <div class="rpt-wrap"><table class="rpt" id="ccDraftTable"><thead><tr>
+          <th>Ngày</th><th>Thứ</th><th>Nhân viên</th><th>Dự án/Nội dung</th><th>Mã DA</th><th>Địa chỉ</th>
+          <th>IN</th><th>OUT</th><th>Số công</th><th>Nội dung CV</th><th>Sale phụ trách</th><th>Ghi chú</th>
+        </tr></thead><tbody id="ccDraftBody"></tbody></table></div>
+        <div style="display:flex;gap:10px;margin:10px 0">
+          <button type="button" class="btn btn-primary" id="btnCcSaveDraft"><span>Lưu tất cả vào Sheet</span></button>
+          <button type="button" class="btn btn-ghost" id="btnCcCancelDraft">Huỷ nháp</button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-title" style="margin-bottom:8px">Thêm 1 dòng chấm công</div>
+      <div class="cc-add-grid">
+        <label class="field"><span class="lab">Ngày</span><input type="date" id="cc_f_date"></label>
+        <label class="field"><span class="lab">Nhân viên</span><select id="cc_f_employee"></select></label>
+        <label class="field"><span class="lab">Dự án / Nội dung</span><input type="text" id="cc_f_project" placeholder="VD: Làm việc tại văn phòng"></label>
+        <label class="field"><span class="lab">Mã dự án</span><input type="text" id="cc_f_code" placeholder="Không bắt buộc"></label>
+        <label class="field"><span class="lab">Địa chỉ làm việc</span><input type="text" id="cc_f_addr"></label>
+        <label class="field"><span class="lab">Giờ vào</span><input type="time" id="cc_f_in"></label>
+        <label class="field"><span class="lab">Giờ ra</span><input type="time" id="cc_f_out"></label>
+        <label class="field"><span class="lab">Số công</span><input type="number" step="0.5" id="cc_f_days" value="1"></label>
+        <label class="field" style="grid-column:1/-1"><span class="lab">Nội dung công việc</span><input type="text" id="cc_f_work"></label>
+        <label class="field"><span class="lab">Sale phụ trách</span><input type="text" id="cc_f_sale"></label>
+        <label class="field"><span class="lab">Ghi chú</span><input type="text" id="cc_f_note"></label>
+      </div>
+      <div style="display:flex;gap:10px;margin:10px 0">
+        <button type="button" class="btn btn-primary" id="btnCcAddRow"><span>+ Thêm dòng</span></button>
+        <button type="button" class="btn btn-ghost" id="btnCcCancelEdit" style="display:none">Huỷ sửa</button>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-title" style="margin-bottom:8px">Danh sách tháng đang xem (<span id="ccListCount">0</span> dòng)</div>
+      <div class="rpt-wrap"><table class="rpt" id="ccListTable"><thead><tr>
+        <th>Ngày</th><th>Thứ</th><th>Nhân viên</th><th>Dự án/Nội dung</th><th>Mã DA</th><th>Địa chỉ</th>
+        <th>IN</th><th>OUT</th><th>Công</th><th>Nội dung CV</th><th>Sale</th><th>Ghi chú</th><th></th>
+      </tr></thead><tbody id="ccListBody"></tbody></table></div>
+
+      <div class="divider"></div>
+      <button type="button" class="btn btn-primary" id="btnCcExport" style="margin-bottom:10px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg><span>Xem trước &amp; Xuất Excel chấm công</span>
+      </button>
+      <button type="button" class="btn" id="btnCcClearMonth" style="margin-bottom:10px;background:var(--danger-soft);color:var(--danger);border:1.5px solid var(--danger)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Xoá chấm công tháng này (làm lại tháng mới)</span>
+      </button>
+    </div>
+
+    <!-- ===== TAB CÔNG TÁC PHÍ ===== -->
+    <div id="admtab-ctp" class="admtab-panel">
+      <div class="section-title" style="margin-bottom:8px">Đợt công tác</div>
+      <select id="ctp_tripSelect" style="margin-bottom:10px"></select>
+      <button type="button" class="btn-mini" id="btnCtpNewTrip">+ Tạo đợt công tác mới</button>
+
+      <div id="ctpTripForm" style="margin-top:12px">
+        <div class="cc-add-grid">
+          <label class="field"><span class="lab">Ngày đề nghị</span><input type="date" id="ctp_f_reqdate"></label>
+          <label class="field" style="grid-column:1/-1"><span class="lab">Người đề nghị (chọn được nhiều người cùng đi)</span>
+            <div id="ctp_f_requester_list" class="ctp-checklist"></div>
+          </label>
+          <label class="field"><span class="lab">Bộ phận</span><input type="text" id="ctp_f_dept" value="TECH"></label>
+          <label class="field"><span class="lab">Địa điểm công tác</span><input type="text" id="ctp_f_place"></label>
+          <label class="field"><span class="lab">Từ ngày</span><input type="date" id="ctp_f_fromdate"></label>
+          <label class="field"><span class="lab">Đến ngày</span><input type="date" id="ctp_f_todate"></label>
+          <label class="field"><span class="lab">Mã vụ việc (chung)</span><input type="text" id="ctp_f_pjcode"></label>
+          <label class="field"><span class="lab">Tên dự án (chung)</span><input type="text" id="ctp_f_pjname"></label>
+        </div>
+        <button type="button" class="btn" id="btnCtpSaveTrip" style="margin:10px 0"><span>Lưu thông tin đợt công tác</span></button>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-title" style="margin-bottom:8px">Thêm dòng chi phí</div>
+      <div class="cc-add-grid">
+        <label class="field"><span class="lab">Nội dung chi phí</span>
+          <select id="ctp_f_type">
+            <option value="Công tác phí">Công tác phí (phụ cấp/ngày)</option>
+            <option value="Chi phí thuê xe máy di chuyển">Chi phí thuê xe máy di chuyển</option>
+            <option value="Chi phí lưu trú">Chi phí lưu trú (khách sạn)</option>
+            <option value="Chi phí xe công nghệ">Chi phí xe công nghệ (Grab)</option>
+            <option value="Chi phí xe có vé">Chi phí xe có vé (vé xe)</option>
+            <option value="Chi phí xăng tiêu hao cho di chuyển 30km/l">Chi phí xăng (30km/l)</option>
+          </select>
+        </label>
+        <label class="field" style="grid-column:1/-1"><span class="lab">Diễn giải</span><input type="text" id="ctp_f_desc"></label>
+        <label class="field"><span class="lab">Từ ngày (dòng này)</span><input type="date" id="ctp_f_linefrom"></label>
+        <label class="field"><span class="lab">Đến ngày (dòng này)</span><input type="date" id="ctp_f_lineto"></label>
+        <label class="field" id="ctp_km_wrap" style="display:none"><span class="lab">Km (chỉ dòng xăng)</span><input type="number" id="ctp_f_km" step="0.1"></label>
+        <label class="field"><span class="lab">Số lượng</span><input type="number" id="ctp_f_qty" step="0.1" value="1"></label>
+        <label class="field"><span class="lab">Định mức (đ)</span><input type="number" id="ctp_f_rate" step="1000"></label>
+        <label class="field"><span class="lab">Thành tiền (đ)</span><input type="number" id="ctp_f_amount" step="1000"></label>
+        <label class="field"><span class="lab">Loại dịch vụ</span>
+          <select id="ctp_f_service"><option value="Bảo trì">Bảo trì</option><option value="Bảo hành">Bảo hành</option><option value="Lắp mới">Lắp mới</option><option value="Khảo sát">Khảo sát</option></select>
+        </label>
+        <label class="field"><span class="lab">Mã vụ việc (dòng này)</span><input type="text" id="ctp_f_linecode"></label>
+        <label class="field"><span class="lab">Tên DA (dòng này)</span><input type="text" id="ctp_f_linename"></label>
+        <label class="field" style="grid-column:1/-1"><span class="lab">Ghi chú</span><input type="text" id="ctp_f_linenote"></label>
+      </div>
+      <div style="display:flex;gap:10px;margin:10px 0">
+        <button type="button" class="btn btn-primary" id="btnCtpAddLine"><span>+ Thêm dòng chi phí</span></button>
+        <button type="button" class="btn btn-ghost" id="btnCtpCancelEdit" style="display:none">Huỷ sửa</button>
+      </div>
+
+      <div class="divider"></div>
+      <div class="rpt-wrap"><table class="rpt" id="ctpLineTable"><thead><tr>
+        <th>Nội dung</th><th>Diễn giải</th><th>Km</th><th>SL</th><th>Định mức</th><th>Thành tiền</th><th>Dịch vụ</th><th>Ghi chú</th><th></th>
+      </tr></thead><tbody id="ctpLineBody"></tbody></table></div>
+      <div style="text-align:right;font-weight:800;margin:10px 0" id="ctpTotalBox">Tổng cộng: 0 đ</div>
+
+      <div class="divider"></div>
+      <div class="section-title" style="margin-bottom:8px">Chọn bản đồ in kèm</div>
+      <select id="ctp_mapSelect" style="margin-bottom:8px"></select>
+      <input type="file" id="ctp_mapUpload" accept="image/*" style="margin-bottom:8px">
+      <div id="ctp_mapPreviewWrap" style="display:none;margin-bottom:10px"><img id="ctp_mapPreview" style="max-width:100%;border-radius:8px;border:1px solid var(--line)"></div>
+
+      <button type="button" class="btn btn-primary" id="btnCtpPrint" style="margin:10px 0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg><span>In / Xuất PDF công tác phí</span>
+      </button>
+      <button type="button" class="btn" id="btnCtpDeleteTrip" style="margin-bottom:10px;background:var(--danger-soft);color:var(--danger);border:1.5px solid var(--danger)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Xoá hẳn đợt công tác này</span>
+      </button>
+    </div>
+
+    <button class="btn btn-ghost" id="btnCloseAdminTools">Đóng</button>
+  </div>
+</div>
+
+<!-- Vùng in công tác phí — ẩn khỏi màn hình, chỉ hiện khi in (xem CSS @media print) -->
+<div id="ctpPrintArea"></div>
+
+<!-- Xem trước trước khi in công tác phí -->
+<div class="modal" id="ctpPreviewModal">
+  <div class="sheet" style="max-width:900px">
+    <h2>Xem trước công tác phí</h2>
+    <div id="ctpPreviewBody" style="max-height:60vh;overflow:auto;border:1px solid var(--line);border-radius:var(--radius-sm);background:#fff"></div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button type="button" class="btn btn-primary" id="btnCtpDoPrint"><span>🖨️ In ngay / Lưu PDF</span></button>
+      <button type="button" class="btn btn-ghost" id="btnCloseCtpPreview">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<!-- Xem trước trước khi xuất Excel chấm công -->
+<div class="modal" id="ccExportPreviewModal">
+  <div class="sheet" style="max-width:900px">
+    <h2>Xem trước Excel chấm công</h2>
+    <p class="desc" id="ccExportPreviewDesc" style="margin-top:-6px"></p>
+    <div style="max-height:55vh;overflow:auto"><div class="rpt-wrap"><table class="rpt" id="ccExportPreviewTable"><thead><tr>
+      <th>Ngày</th><th>Thứ</th><th>Dự án</th><th>Mã DA</th><th>Địa chỉ</th><th>NV</th><th>IN</th><th>OUT</th><th>Công</th><th>Nội dung CV</th><th>Sale</th><th>Ghi chú</th>
+    </tr></thead><tbody id="ccExportPreviewBody"></tbody></table></div></div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button type="button" class="btn btn-primary" id="btnCcDoExport"><span>⬇️ Xuất file Excel</span></button>
+      <button type="button" class="btn btn-ghost" id="btnCloseCcExportPreview">Đóng</button>
+    </div>
+  </div>
+</div>
+
 <script>
 "use strict";
 /* ===== CẤU HÌNH — mở app, bấm ⚙️ để dán link, KHÔNG cần sửa file ===== */
@@ -739,7 +949,7 @@ async function verifyAdminPassword(pin){
  try{
    const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:CFG.token,action:'verifyAdmin',pass:pin})});
    const j=await res.json();
-   if(j.ok){ isAdminUnlocked=true; adminPasswordRuntime=pin; return true; }
+   if(j.ok){ isAdminUnlocked=true; adminPasswordRuntime=pin; $('#btnAdminTools').style.display='flex'; return true; }
  }catch(err){}
  return false;
 }
@@ -1861,6 +2071,638 @@ $('#btnSaveSettings').onclick=async()=>{const url=$('#s_url').value.trim(),token
    if(j.ok){toast('✅ Kết nối thành công!');modal.classList.remove('show')}else toast(j.error||'Sai mã bảo mật',true);}
    catch(err){toast('Không kết nối được. Kiểm tra link.',true)}}
  else{toast('Đã lưu (thử nghiệm)');modal.classList.remove('show')}};
+
+/* ================= Chấm công & Công tác phí (chỉ admin) =================
+   Toàn bộ khối này chỉ chạy được sau khi isAdminUnlocked=true (nút mở khối
+   này — #btnAdminTools — bị ẩn tới lúc đó). Dữ liệu KHÔNG lẫn với mgrData
+   của phiếu kỹ thuật, tải riêng qua action listAttendance/listExpenses (bắt
+   buộc đúng adminPassword mới đọc được, xem Code.gs). */
+const WEEKDAY_VN=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
+function thuVN(dateStr){ return dateStr ? WEEKDAY_VN[new Date(dateStr+'T00:00:00').getDay()] : ''; }
+
+// Ảnh bản đồ (khoảng cách di chuyển) — file thật nằm trong thư mục ./maps/
+// cùng cấp index.html trên GitHub Pages, đã nén nhẹ lại để tải nhanh.
+const MAP_IMAGES=[
+ {label:'DHA', file:'DHA.jpg'},
+ {label:'Kobayashi', file:'Kobayashi.jpg'},
+ {label:'Lavie', file:'Lavie.jpg'},
+ {label:'Long Thành Riverside (59km)', file:'Long Thành Reverside 59km.jpg'},
+ {label:'Lux Garden', file:'Lux Garden.jpg'},
+ {label:'RockWool (23km)', file:'RockWool 23km.jpg'},
+ {label:'San Lim (61km)', file:'San Lim 61km.jpg'},
+ {label:'UENO', file:'UENO.jpg'},
+ {label:'VNM Sữa Bột', file:'VNM Sữa Bột.jpg'},
+ {label:'VNM Trường Thọ', file:'VNM Truong Tho.jpg'},
+ {label:'VSIP 2 - Schenker (31km)', file:'VSIP 2 - Schenker - 31km.jpg'},
+];
+// 6 loại chi phí + diễn giải gợi ý — khớp đúng sheet "data" trong file mẫu
+// Mau_Cong Tac Phi_Chung.xlsx (giữ nguyên nội dung, không đổi).
+const CTP_TYPES=[
+ {v:'Công tác phí', desc:'Chi phí công tác-tiêu vặt'},
+ {v:'Chi phí thuê xe máy di chuyển', desc:'Chi phí thuê xe máy di chuyển'},
+ {v:'Chi phí lưu trú', desc:'Chi phí lưu trú'},
+ {v:'Chi phí xe công nghệ', desc:'Grab bike/Grab car từ…đến…'},
+ {v:'Chi phí xe có vé', desc:'Vé xe đi từ …đến…'},
+ {v:'Chi phí xăng tiêu hao cho di chuyển 30km/l', desc:'Xăng xe lượt đi và về'},
+];
+
+/* Đọc số tiền (VNĐ) thành chữ — dùng cho dòng "Bằng chữ" khi in công tác phí. */
+function soThanhChu(soVND){
+ soVND=Math.round(Number(soVND)||0);
+ if(soVND===0) return 'Không đồng';
+ const isNeg=soVND<0; soVND=Math.abs(soVND);
+ const CS=['không','một','hai','ba','bốn','năm','sáu','bảy','tám','chín'];
+ function docNhom3(so, coHangTramTruoc){
+   const tram=Math.floor(so/100), chuc=Math.floor((so%100)/10), donvi=so%10;
+   let out=[];
+   if(tram>0){ out.push(CS[tram],'trăm'); } else if(coHangTramTruoc){ out.push('không','trăm'); }
+   if(chuc===0){ if(donvi>0){ if(tram>0||coHangTramTruoc) out.push('lẻ'); out.push(CS[donvi]); } }
+   else if(chuc===1){ out.push('mười'); if(donvi===1) out.push('một'); else if(donvi===5) out.push('lăm'); else if(donvi>0) out.push(CS[donvi]); }
+   else { out.push(CS[chuc],'mươi'); if(donvi===1) out.push('mốt'); else if(donvi===5) out.push('lăm'); else if(donvi>0) out.push(CS[donvi]); }
+   return out.join(' ');
+ }
+ const DV=['','nghìn','triệu','tỷ'];
+ let nhom=[], n=soVND;
+ while(n>0){ nhom.push(n%1000); n=Math.floor(n/1000); }
+ let parts=[];
+ for(let i=nhom.length-1;i>=0;i--){
+   if(nhom[i]===0) continue;
+   let text=docNhom3(nhom[i], i<nhom.length-1);
+   if(DV[i]) text+=' '+DV[i];
+   parts.push(text);
+ }
+ let result=parts.join(' ').trim();
+ result=result.charAt(0).toUpperCase()+result.slice(1);
+ return (isNeg?'Âm ':'')+result+' đồng';
+}
+
+/* ---- Mở/đóng modal + chuyển tab ---- */
+$('#btnAdminTools').onclick=()=>{
+ ccPopulateSelects();
+ ctpRenderRequesterChecklist('');
+ ctpPopulateMapSelect();
+ $('#adminToolsModal').classList.add('show');
+ ccLoadList();
+ ctpLoadAll();
+};
+$('#btnCloseAdminTools').onclick=()=>$('#adminToolsModal').classList.remove('show');
+$('#adminToolsModal').onclick=e=>{if(e.target===$('#adminToolsModal'))$('#adminToolsModal').classList.remove('show')};
+$$('.admtab').forEach(b=>b.onclick=()=>{
+ $$('.admtab').forEach(x=>x.classList.toggle('on',x===b));
+ $$('.admtab-panel').forEach(p=>p.classList.toggle('active',p.id==='admtab-'+b.dataset.admtab));
+});
+
+/* ================= TAB CHẤM CÔNG ================= */
+let ccCurrentList=[];
+let ccDraft=[];
+
+function ccPopulateSelects(){
+ const empSel=$('#cc_employee'); const curE=empSel.value;
+ empSel.innerHTML='<option value="">— Chọn nhân viên để tạo nháp/xem riêng —</option>'+engineerList.map(n=>`<option value="${esc(n)}" ${n===curE?'selected':''}>${esc(n)}</option>`).join('');
+ $('#cc_f_employee').innerHTML=engineerList.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+ const now=new Date();
+ const mSel=$('#cc_month');
+ if(!mSel.dataset.built){ let opts=''; for(let m=1;m<=12;m++) opts+=`<option value="${pad2(m)}" ${pad2(m)===pad2(now.getMonth()+1)?'selected':''}>Tháng ${m}</option>`; mSel.innerHTML=opts; mSel.dataset.built='1'; }
+ const ySel=$('#cc_year');
+ if(!ySel.dataset.built){ let opts=''; for(let y=now.getFullYear()-1;y<=now.getFullYear()+1;y++) opts+=`<option value="${y}" ${y===now.getFullYear()?'selected':''}>Năm ${y}</option>`; ySel.innerHTML=opts; ySel.dataset.built='1'; }
+ if(!$('#cc_f_date').value) $('#cc_f_date').value=now.toISOString().slice(0,10);
+}
+
+async function ccLoadList(){
+ if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
+ const year=$('#cc_year').value, month=$('#cc_month').value;
+ try{
+   const res=await fetch(`${CFG.url}?action=listAttendance&token=${encodeURIComponent(CFG.token)}&adminPassword=${encodeURIComponent(adminPasswordRuntime||'')}&year=${year}&month=${month}`);
+   const j=await res.json();
+   if(!j.ok){ toast(j.error||'Lỗi tải chấm công',true); return; }
+   ccCurrentList=j.data||[];
+   const emp=$('#cc_employee').value;
+   if(emp) ccCurrentList=ccCurrentList.filter(r=>r.employee===emp);
+   ccRenderList();
+   ccCheckMonthReminder();
+ }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
+}
+$('#btnCcLoad').onclick=ccLoadList;
+
+function ccRenderList(){
+ $('#ccListCount').textContent=ccCurrentList.length;
+ $('#ccListBody').innerHTML=ccCurrentList.map(r=>`<tr>
+   <td>${esc(fmtDMYFull(r.date))}</td><td>${esc(thuVN(r.date))}</td><td>${esc(r.employee)}</td>
+   <td>${esc(r.projectContent)}</td><td>${esc(r.projectCode)}</td><td>${esc(r.workAddress)}</td>
+   <td>${esc(r.timeIn)}</td><td>${esc(r.timeOut)}</td><td>${r.workDays||0}</td>
+   <td>${esc(r.workContent)}</td><td>${esc(r.salePhuTrach)}</td><td>${esc(r.note)}</td>
+   <td style="white-space:nowrap">
+     <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-act="edit" aria-label="Sửa dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+     <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-act="del" aria-label="Xoá dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+   </td>
+ </tr>`).join('') || `<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:14px">Chưa có dòng nào tháng này</td></tr>`;
+ $$('#ccListBody .row-del-btn').forEach(b=>b.onclick=()=>b.dataset.act==='edit'?ccEditRow(b.dataset.no):ccDeleteRow(b.dataset.no));
+}
+
+let ccEditingNo=null;
+function ccEditRow(no){
+ const r=ccCurrentList.find(x=>String(x.no)===String(no));
+ if(!r) return;
+ ccEditingNo=no;
+ $('#cc_f_date').value=r.date||''; $('#cc_f_employee').value=r.employee||'';
+ $('#cc_f_project').value=r.projectContent||''; $('#cc_f_code').value=r.projectCode||''; $('#cc_f_addr').value=r.workAddress||'';
+ $('#cc_f_in').value=r.timeIn||''; $('#cc_f_out').value=r.timeOut||''; $('#cc_f_days').value=r.workDays||1;
+ $('#cc_f_work').value=r.workContent||''; $('#cc_f_sale').value=r.salePhuTrach||''; $('#cc_f_note').value=r.note||'';
+ $('#btnCcAddRow span').textContent='💾 Lưu sửa dòng #'+no;
+ $('#btnCcCancelEdit').style.display='inline-block';
+ $('#cc_f_date').scrollIntoView({behavior:'smooth',block:'center'});
+}
+$('#btnCcCancelEdit').onclick=()=>{
+ ccEditingNo=null;
+ ['cc_f_project','cc_f_code','cc_f_addr','cc_f_in','cc_f_out','cc_f_work','cc_f_sale','cc_f_note'].forEach(id=>$('#'+id).value='');
+ $('#cc_f_days').value='1';
+ $('#btnCcAddRow span').textContent='+ Thêm dòng';
+ $('#btnCcCancelEdit').style.display='none';
+};
+
+async function ccDeleteRow(no){
+ if(!confirm('Xoá dòng chấm công này?')) return;
+ try{
+   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+     body:JSON.stringify({token:CFG.token,action:'deleteAttendance',no,adminPassword:adminPasswordRuntime})});
+   const j=await res.json();
+   if(j.ok){ toast('✅ Đã xoá'); ccLoadList(); } else toast(j.error||'Lỗi xoá',true);
+ }catch(err){ toast('Không kết nối được',true); }
+}
+
+$('#btnCcAddRow').onclick=async()=>{
+ const date=$('#cc_f_date').value;
+ if(!date){ toast('Chọn ngày',true); return; }
+ if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
+ const isEdit=!!ccEditingNo;
+ const payload={token:CFG.token,action:isEdit?'updateAttendance':'addAttendance',adminPassword:adminPasswordRuntime,
+   date, employee:$('#cc_f_employee').value, projectContent:$('#cc_f_project').value.trim(),
+   projectCode:$('#cc_f_code').value.trim(), workAddress:$('#cc_f_addr').value.trim(),
+   timeIn:$('#cc_f_in').value, timeOut:$('#cc_f_out').value, workDays:Number($('#cc_f_days').value)||0,
+   workContent:$('#cc_f_work').value.trim(), salePhuTrach:$('#cc_f_sale').value.trim(), note:$('#cc_f_note').value.trim()};
+ if(isEdit) payload.no=ccEditingNo;
+ try{
+   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+   const j=await res.json();
+   if(j.ok){
+     toast(isEdit?'✅ Đã lưu sửa dòng chấm công':'✅ Đã thêm dòng chấm công');
+     ['cc_f_project','cc_f_code','cc_f_addr','cc_f_in','cc_f_out','cc_f_work','cc_f_sale','cc_f_note'].forEach(id=>$('#'+id).value='');
+     $('#cc_f_days').value='1';
+     ccEditingNo=null; $('#btnCcAddRow span').textContent='+ Thêm dòng'; $('#btnCcCancelEdit').style.display='none';
+     ccLoadList();
+   } else toast(j.error||(isEdit?'Lỗi lưu sửa':'Lỗi thêm dòng'),true);
+ }catch(err){ toast('Không kết nối được',true); }
+};
+
+/* Tạo nháp cả tháng cho 1 nhân viên: ngày nào có phiếu On-Site (trong report
+   phiếu kỹ thuật, mgrData đã tải sẵn) thì lấy khách hàng/nội dung phiếu đó;
+   ngày thường (T2-T6) mặc định "Làm việc tại văn phòng"; Thứ 7 mặc định nửa
+   ngày trực sáng; Chủ nhật KHÔNG tạo dòng (trừ khi có phiếu On-Site hôm đó) —
+   đúng theo cách chấm công thực tế của phòng Tech. */
+$('#btnCcAutoFill').onclick=()=>{
+ const emp=$('#cc_employee').value;
+ if(!emp){ toast('Chọn 1 nhân viên cụ thể ở trên trước',true); return; }
+ const year=Number($('#cc_year').value), month=Number($('#cc_month').value);
+ const days=new Date(year,month,0).getDate();
+ ccDraft=[];
+ for(let d=1; d<=days; d++){
+   const dateStr=`${year}-${pad2(month)}-${pad2(d)}`;
+   const dow=new Date(dateStr+'T00:00:00').getDay();
+   const ticket=mgrData.find(r=>(r.engineer||'').split(' - ').map(s=>s.trim()).includes(emp) && r.date===dateStr && (r.support||'').toLowerCase().includes('site'));
+   if(ticket){
+     ccDraft.push({date:dateStr, employee:emp, projectContent:ticket.customer||'', projectCode:'', workAddress:ticket.customer||'',
+       timeIn:'08:00', timeOut:'17:00', workDays:1, workContent:ticket.issue||'', salePhuTrach:'', note:''});
+   } else if(dow===0){
+     continue; // Chủ nhật, không có phiếu On-Site — bỏ qua, không chấm công
+   } else if(dow===6){
+     ccDraft.push({date:dateStr, employee:emp, projectContent:'Làm việc tại văn phòng', projectCode:'', workAddress:'Văn phòng Soeco',
+       timeIn:'08:00', timeOut:'12:00', workDays:0.5, workContent:'Trực chờ thông tin sáng thứ 7', salePhuTrach:'', note:''});
+   } else {
+     ccDraft.push({date:dateStr, employee:emp, projectContent:'Làm việc tại văn phòng', projectCode:'', workAddress:'Văn phòng Soeco',
+       timeIn:'08:00', timeOut:'17:00', workDays:1, workContent:'Trực thông tin sự cố', salePhuTrach:'', note:''});
+   }
+ }
+ ccRenderDraft();
+ $('#ccDraftBox').style.display=ccDraft.length?'block':'none';
+ if(!ccDraft.length) toast('Tháng này không có ngày nào để tạo nháp',true);
+};
+
+function ccRenderDraft(){
+ $('#ccDraftBody').innerHTML=ccDraft.map((r,i)=>`<tr>
+   <td>${esc(fmtDMYFull(r.date))}</td><td>${esc(thuVN(r.date))}</td><td>${esc(r.employee)}</td>
+   <td><input type="text" data-i="${i}" data-f="projectContent" value="${esc(r.projectContent)}" style="width:130px"></td>
+   <td><input type="text" data-i="${i}" data-f="projectCode" value="${esc(r.projectCode)}" style="width:80px"></td>
+   <td><input type="text" data-i="${i}" data-f="workAddress" value="${esc(r.workAddress)}" style="width:100px"></td>
+   <td><input type="time" data-i="${i}" data-f="timeIn" value="${esc(r.timeIn)}" style="width:82px"></td>
+   <td><input type="time" data-i="${i}" data-f="timeOut" value="${esc(r.timeOut)}" style="width:82px"></td>
+   <td><input type="number" step="0.5" data-i="${i}" data-f="workDays" value="${r.workDays}" style="width:52px"></td>
+   <td><input type="text" data-i="${i}" data-f="workContent" value="${esc(r.workContent)}" style="width:160px"></td>
+   <td><input type="text" data-i="${i}" data-f="salePhuTrach" value="${esc(r.salePhuTrach)}" style="width:100px"></td>
+   <td><input type="text" data-i="${i}" data-f="note" value="${esc(r.note)}" style="width:100px"></td>
+ </tr>`).join('');
+ $$('#ccDraftBody input').forEach(inp=>inp.oninput=()=>{
+   const i=Number(inp.dataset.i), f=inp.dataset.f;
+   ccDraft[i][f]=(f==='workDays')?(Number(inp.value)||0):inp.value;
+ });
+}
+
+$('#btnCcCancelDraft').onclick=()=>{ ccDraft=[]; $('#ccDraftBox').style.display='none'; };
+$('#btnCcSaveDraft').onclick=async()=>{
+ if(!ccDraft.length){ toast('Không có gì để lưu',true); return; }
+ if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
+ if(!confirm(`Lưu ${ccDraft.length} dòng chấm công vào Sheet?`)) return;
+ const btn=$('#btnCcSaveDraft'); btn.disabled=true;
+ let ok=0, fail=0;
+ for(const row of ccDraft){
+   try{
+     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+       body:JSON.stringify(Object.assign({token:CFG.token,action:'addAttendance',adminPassword:adminPasswordRuntime}, row))});
+     const j=await res.json();
+     if(j.ok) ok++; else fail++;
+   }catch(err){ fail++; }
+ }
+ btn.disabled=false;
+ toast(fail?`⚠️ Đã lưu ${ok} dòng, lỗi ${fail} dòng`:`✅ Đã lưu ${ok} dòng vào Sheet`, !!fail);
+ ccDraft=[]; $('#ccDraftBox').style.display='none';
+ ccLoadList();
+};
+
+function ccCheckMonthReminder(){
+ const now=new Date(); const box=$('#ccMonthReminder');
+ if(now.getDate()<=5){
+   box.style.display='block'; box.className='period-notice soon';
+   box.textContent=`📌 Đầu tháng ${now.getMonth()+1}/${now.getFullYear()} — nhớ xuất Excel chấm công tháng trước rồi bấm "Xoá chấm công tháng này" (chọn đúng tháng cũ ở trên) để làm lại tháng mới cho gọn Sheet.`;
+ } else box.style.display='none';
+}
+
+/* Xuất Excel — GIỮ NGUYÊN bố cục mẫu "Chấm công Tech...xlsx": tiêu đề, dòng
+   ghi chú + tổng SỐ CÔNG, header 16 cột (kể cả 3 cột tăng ca — luôn để trống
+   vì không tính), dữ liệu, chữ ký "NGƯỜI LẬP BẢNG"/"PHÒNG HCNS". */
+/* Xem trước — hiện đúng nội dung sẽ xuất (đọc từ ccCurrentList hiện có) rồi
+   mới cho bấm xuất thật, tránh xuất nhầm dữ liệu chưa kiểm tra lại. */
+$('#btnCcExport').onclick=()=>{
+ if(!ccCurrentList.length){ toast('Không có dữ liệu tháng này để xuất',true); return; }
+ const year=$('#cc_year').value, month=Number($('#cc_month').value);
+ const rows=[...ccCurrentList].sort((a,b)=>a.date.localeCompare(b.date)||(a.employee||'').localeCompare(b.employee||'','vi'));
+ $('#ccExportPreviewDesc').textContent=`Tháng ${month}/${year}${$('#cc_employee').value?' — '+$('#cc_employee').value:' (tất cả nhân viên)'} — ${rows.length} dòng`;
+ $('#ccExportPreviewBody').innerHTML=rows.map(r=>`<tr>
+   <td>${esc(fmtDMYFull(r.date))}</td><td>${esc(thuVN(r.date))}</td><td>${esc(r.projectContent)}</td><td>${esc(r.projectCode)}</td>
+   <td>${esc(r.workAddress)}</td><td>${esc(r.employee)}</td><td>${esc(r.timeIn)}</td><td>${esc(r.timeOut)}</td><td>${r.workDays||0}</td>
+   <td>${esc(r.workContent)}</td><td>${esc(r.salePhuTrach)}</td><td>${esc(r.note)}</td>
+ </tr>`).join('');
+ $('#ccExportPreviewModal').classList.add('show');
+};
+$('#btnCloseCcExportPreview').onclick=()=>$('#ccExportPreviewModal').classList.remove('show');
+$('#ccExportPreviewModal').onclick=e=>{if(e.target===$('#ccExportPreviewModal'))$('#ccExportPreviewModal').classList.remove('show')};
+
+$('#btnCcDoExport').onclick=()=>{
+ if(typeof XLSX==='undefined'){ toast('Chưa tải được thư viện xuất Excel, thử lại sau',true); return; }
+ const year=$('#cc_year').value, month=Number($('#cc_month').value);
+ const rows=[...ccCurrentList].sort((a,b)=>a.date.localeCompare(b.date)||(a.employee||'').localeCompare(b.employee||'','vi'));
+ const HEAD=['STT\nNo.','TÊN DỰ ÁN\nProject','MÃ DỰ ÁN\nProject Code','ĐỊA CHỈ LÀM VIỆC','TÊN NHÂN VIÊN\nEmployee','THỨ\nDay','NGÀY\nDate','IN','OUT',
+   'SỐ CÔNG\nNumber of work','TĂNG CA NT\n(Trước 22H)','TĂNG CA NT\n(Sau 22H)','TĂNG CA T7/CN','NỘI DUNG CV','SALE PHỤ TRÁCH','GHI CHÚ'];
+ const noteRow=new Array(HEAD.length).fill('');
+ noteRow[0]='Lưu ý: tăng ca sau giờ làm việc tính từ 17h30';
+ noteRow[9]=rows.reduce((s,r)=>s+(Number(r.workDays)||0),0);
+ const aoa=[
+   [`BÁO CÁO CHẤM CÔNG PHÒNG TECH CÁC DỰ ÁN KHÁC\n(Tháng ${month} - ${year})`],
+   noteRow,
+   HEAD,
+   ...rows.map((r,i)=>{
+     const row=new Array(HEAD.length).fill('');
+     row[0]=i+1; row[1]=r.projectContent||''; row[2]=r.projectCode||''; row[3]=r.workAddress||''; row[4]=r.employee||'';
+     row[5]=thuVN(r.date); row[6]=r.date?fmtDMYFull(r.date):''; row[7]=r.timeIn||''; row[8]=r.timeOut||''; row[9]=r.workDays||'';
+     row[13]=r.workContent||''; row[14]=r.salePhuTrach||''; row[15]=r.note||'';
+     return row;
+   }),
+   new Array(HEAD.length).fill(''),
+   (()=>{ const r=new Array(HEAD.length).fill(''); r[0]='NGƯỜI LẬP BẢNG'; r[5]='PHÒNG HCNS'; return r; })(),
+   new Array(HEAD.length).fill(''),
+   new Array(HEAD.length).fill(''),
+   (()=>{ const r=new Array(HEAD.length).fill(''); r[0]='Lạc Huệ Bình'; r[5]='Phạm Thị Lệ Thu'; return r; })(),
+ ];
+ const ws=XLSX.utils.aoa_to_sheet(aoa);
+ ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:HEAD.length-1}}];
+ const thin=(rgb)=>({top:{style:'thin',color:{rgb}},bottom:{style:'thin',color:{rgb}},left:{style:'thin',color:{rgb}},right:{style:'thin',color:{rgb}}});
+ const titleRef=XLSX.utils.encode_cell({r:0,c:0});
+ ws[titleRef].s={font:{name:'Times New Roman',sz:14,bold:true},alignment:{horizontal:'center',vertical:'center',wrapText:true}};
+ for(let c=0;c<HEAD.length;c++){
+   const ref=XLSX.utils.encode_cell({r:2,c});
+   if(ws[ref]) ws[ref].s={font:{name:'Times New Roman',sz:11,bold:true,color:{rgb:'FFFFFF'}},fill:{patternType:'solid',fgColor:{rgb:'1F4E78'}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border:thin('FFFFFF')};
+ }
+ const leftCols=[1,2,3,13,14,15];
+ for(let r=3;r<3+rows.length;r++){
+   for(let c=0;c<HEAD.length;c++){
+     const ref=XLSX.utils.encode_cell({r,c});
+     if(!ws[ref]) continue;
+     ws[ref].s={font:{name:'Times New Roman',sz:11},alignment:{vertical:'middle',horizontal:leftCols.includes(c)?'left':'center',wrapText:true},border:thin('D9D9D9')};
+   }
+ }
+ ws['!cols']=[{wch:6},{wch:26},{wch:16},{wch:18},{wch:20},{wch:10},{wch:11},{wch:8},{wch:8},{wch:10},{wch:12},{wch:12},{wch:12},{wch:34},{wch:18},{wch:22}];
+ ws['!rows']=[{hpt:36},{hpt:20},{hpt:44}];
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,ws,'Tech');
+ const empPart=$('#cc_employee').value?('-'+$('#cc_employee').value.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'')):'';
+ XLSX.writeFile(wb,`Cham-cong-Tech-${month}-${year}${empPart}.xlsx`);
+ toast('✅ Đã xuất Excel chấm công');
+ $('#ccExportPreviewModal').classList.remove('show');
+};
+
+$('#btnCcClearMonth').onclick=async()=>{
+ const year=$('#cc_year').value, month=$('#cc_month').value;
+ if(!confirm(`Xoá TOÀN BỘ chấm công tháng ${Number(month)}/${year} (mọi nhân viên)? Nhớ đã xuất Excel xong chưa — không thể hoàn tác.`)) return;
+ try{
+   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+     body:JSON.stringify({token:CFG.token,action:'clearAttendanceMonth',year,month,adminPassword:adminPasswordRuntime})});
+   const j=await res.json();
+   if(j.ok){ toast(`✅ Đã xoá ${j.count||0} dòng tháng ${Number(month)}/${year}`); ccLoadList(); }
+   else toast(j.error||'Lỗi xoá',true);
+ }catch(err){ toast('Không kết nối được',true); }
+};
+
+/* ================= TAB CÔNG TÁC PHÍ ================= */
+let ctpAllLines=[];
+let currentTripId=null;
+let ctpUploadedMapDataUrl=null;
+
+function ctpRenderRequesterChecklist(selectedNames){
+ const sel=new Set(String(selectedNames||'').split(' - ').map(s=>s.trim()).filter(Boolean));
+ $('#ctp_f_requester_list').innerHTML=engineerList.map(n=>`<label><input type="checkbox" value="${esc(n)}" ${sel.has(n)?'checked':''}><span>${esc(n)}</span></label>`).join('');
+}
+function ctpRequesterValue(){ return $$('#ctp_f_requester_list input:checked').map(c=>c.value).join(' - '); }
+
+function ctpPopulateMapSelect(){
+ $('#ctp_mapSelect').innerHTML='<option value="">— Không chọn bản đồ —</option>'+MAP_IMAGES.map(m=>`<option value="${esc(m.file)}">${esc(m.label)}</option>`).join('');
+}
+$('#ctp_mapSelect').onchange=()=>{
+ const f=$('#ctp_mapSelect').value;
+ ctpUploadedMapDataUrl=null; $('#ctp_mapUpload').value='';
+ if(f){ $('#ctp_mapPreview').src='./maps/'+encodeURIComponent(f); $('#ctp_mapPreviewWrap').style.display='block'; }
+ else $('#ctp_mapPreviewWrap').style.display='none';
+};
+$('#ctp_mapUpload').onchange=()=>{
+ const file=$('#ctp_mapUpload').files[0];
+ if(!file) return;
+ $('#ctp_mapSelect').value='';
+ const reader=new FileReader();
+ reader.onload=()=>{ ctpUploadedMapDataUrl=reader.result; $('#ctp_mapPreview').src=ctpUploadedMapDataUrl; $('#ctp_mapPreviewWrap').style.display='block'; };
+ reader.readAsDataURL(file);
+};
+
+$('#ctp_f_type').onchange=()=>{
+ const t=CTP_TYPES.find(x=>x.v===$('#ctp_f_type').value);
+ if(t && !$('#ctp_f_desc').value) $('#ctp_f_desc').value=t.desc;
+ $('#ctp_km_wrap').style.display=$('#ctp_f_type').value.includes('xăng')?'block':'none';
+ ctpRecalcAmount();
+};
+['ctp_f_km','ctp_f_qty','ctp_f_rate'].forEach(id=>$('#'+id).addEventListener('input',ctpRecalcAmount));
+function ctpRecalcAmount(){
+ const isFuel=$('#ctp_f_type').value.includes('xăng');
+ const rate=Number($('#ctp_f_rate').value)||0;
+ let qty=Number($('#ctp_f_qty').value)||0;
+ if(isFuel){
+   const km=Number($('#ctp_f_km').value)||0;
+   qty=km/30; $('#ctp_f_qty').value=qty?qty.toFixed(3):0;
+   $('#ctp_f_amount').value=Math.round(qty*2*rate);
+ } else {
+   $('#ctp_f_amount').value=Math.round(qty*rate);
+ }
+}
+
+async function ctpLoadAll(){
+ if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
+ try{
+   const res=await fetch(`${CFG.url}?action=listExpenses&token=${encodeURIComponent(CFG.token)}&adminPassword=${encodeURIComponent(adminPasswordRuntime||'')}`);
+   const j=await res.json();
+   if(!j.ok){ toast(j.error||'Lỗi tải công tác phí',true); return; }
+   ctpAllLines=j.data||[];
+   ctpRenderTripSelect();
+ }catch(err){ toast('Không kết nối được',true); }
+}
+
+function ctpRenderTripSelect(){
+ const trips={};
+ ctpAllLines.forEach(r=>{ if(!trips[r.tripId]) trips[r.tripId]=r; });
+ const ids=Object.keys(trips);
+ const sel=$('#ctp_tripSelect');
+ sel.innerHTML=ids.length?ids.map(id=>{ const t=trips[id]; return `<option value="${esc(id)}">${esc(fmtDMYFull(t.requestDate))} — ${esc(t.requesterName)} (${esc(t.workingPlace)})</option>`; }).join('')
+   :'<option value="">— Chưa có đợt công tác nào —</option>';
+ if(ids.length){ currentTripId=ids[0]; sel.value=currentTripId; ctpLoadTripIntoForm(); }
+ else ctpNewTrip();
+}
+$('#ctp_tripSelect').onchange=()=>{ currentTripId=$('#ctp_tripSelect').value||null; ctpLoadTripIntoForm(); };
+
+function ctpNewTrip(){
+ currentTripId=null;
+ $('#ctp_f_reqdate').value=new Date().toISOString().slice(0,10);
+ ctpRenderRequesterChecklist('');
+ $('#ctp_f_dept').value='TECH'; $('#ctp_f_place').value='';
+ $('#ctp_f_fromdate').value=''; $('#ctp_f_todate').value='';
+ $('#ctp_f_pjcode').value=''; $('#ctp_f_pjname').value='';
+ $('#ctp_mapSelect').value=''; ctpUploadedMapDataUrl=null; $('#ctp_mapUpload').value=''; $('#ctp_mapPreviewWrap').style.display='none';
+ ctpRenderLines();
+}
+$('#btnCtpNewTrip').onclick=ctpNewTrip;
+
+function ctpLoadTripIntoForm(){
+ if(!currentTripId){ ctpNewTrip(); return; }
+ const first=ctpAllLines.find(r=>r.tripId===currentTripId);
+ if(!first){ ctpNewTrip(); return; }
+ $('#ctp_f_reqdate').value=first.requestDate||'';
+ ctpRenderRequesterChecklist(first.requesterName||'');
+ $('#ctp_f_dept').value=first.dept||'TECH'; $('#ctp_f_place').value=first.workingPlace||'';
+ $('#ctp_f_fromdate').value=first.fromDate||first.tripFromDate||''; $('#ctp_f_todate').value=first.toDate||first.tripToDate||'';
+ $('#ctp_f_pjcode').value=first.projectCode||''; $('#ctp_f_pjname').value=first.projectName||'';
+ if(first.mapImage && first.mapImage.startsWith('data:')){ ctpUploadedMapDataUrl=first.mapImage; $('#ctp_mapSelect').value=''; $('#ctp_mapPreview').src=first.mapImage; $('#ctp_mapPreviewWrap').style.display='block'; }
+ else if(first.mapImage){ $('#ctp_mapSelect').value=first.mapImage; ctpUploadedMapDataUrl=null; $('#ctp_mapPreview').src='./maps/'+encodeURIComponent(first.mapImage); $('#ctp_mapPreviewWrap').style.display='block'; }
+ else { $('#ctp_mapSelect').value=''; ctpUploadedMapDataUrl=null; $('#ctp_mapPreviewWrap').style.display='none'; }
+ ctpRenderLines();
+}
+
+function ctpCurrentLines(){ return currentTripId ? ctpAllLines.filter(r=>r.tripId===currentTripId) : []; }
+function ctpRenderLines(){
+ const lines=ctpCurrentLines();
+ $('#ctpLineBody').innerHTML=lines.map(r=>`<tr>
+   <td>${esc(r.expenseType)}</td><td>${esc(r.description)}</td><td>${r.km||''}</td><td>${r.quantity||''}</td>
+   <td>${(r.rate||0).toLocaleString('vi-VN')}</td><td>${(r.amount||0).toLocaleString('vi-VN')}</td><td>${esc(r.serviceType)}</td><td>${esc(r.note)}</td>
+   <td style="white-space:nowrap">
+     <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-act="edit" aria-label="Sửa dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+     <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-act="del" aria-label="Xoá dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+   </td>
+ </tr>`).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:14px">Chưa có dòng chi phí nào</td></tr>`;
+ $$('#ctpLineBody .row-del-btn').forEach(b=>b.onclick=()=>b.dataset.act==='edit'?ctpEditLine(b.dataset.no):ctpDeleteLine(b.dataset.no));
+ const total=lines.reduce((s,r)=>s+(Number(r.amount)||0),0);
+ $('#ctpTotalBox').textContent=`Tổng cộng: ${total.toLocaleString('vi-VN')} đ`;
+}
+
+let ctpEditingNo=null;
+function ctpEditLine(no){
+ const r=ctpCurrentLines().find(x=>String(x.no)===String(no));
+ if(!r) return;
+ ctpEditingNo=no;
+ $('#ctp_f_type').value=r.expenseType||'Công tác phí'; $('#ctp_km_wrap').style.display=(r.expenseType||'').includes('xăng')?'block':'none';
+ $('#ctp_f_desc').value=r.description||''; $('#ctp_f_linefrom').value=r.lineFromDate||''; $('#ctp_f_lineto').value=r.lineToDate||'';
+ $('#ctp_f_km').value=r.km||''; $('#ctp_f_qty').value=r.quantity||''; $('#ctp_f_rate').value=r.rate||''; $('#ctp_f_amount').value=r.amount||'';
+ $('#ctp_f_service').value=r.serviceType||'Bảo trì'; $('#ctp_f_linecode').value=r.projectCode||''; $('#ctp_f_linename').value=r.projectName||'';
+ $('#ctp_f_linenote').value=r.note||'';
+ $('#btnCtpAddLine span').textContent='💾 Lưu sửa dòng #'+no;
+ $('#btnCtpCancelEdit').style.display='inline-block';
+ $('#ctp_f_type').scrollIntoView({behavior:'smooth',block:'center'});
+}
+$('#btnCtpCancelEdit').onclick=()=>{
+ ctpEditingNo=null;
+ ['ctp_f_desc','ctp_f_km','ctp_f_linecode','ctp_f_linename','ctp_f_linenote'].forEach(id=>$('#'+id).value='');
+ $('#ctp_f_qty').value='1'; $('#ctp_f_rate').value=''; $('#ctp_f_amount').value='';
+ $('#btnCtpAddLine span').textContent='+ Thêm dòng chi phí';
+ $('#btnCtpCancelEdit').style.display='none';
+};
+
+async function ctpDeleteLine(no){
+ if(!confirm('Xoá dòng chi phí này?')) return;
+ try{
+   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+     body:JSON.stringify({token:CFG.token,action:'deleteExpense',no,adminPassword:adminPasswordRuntime})});
+   const j=await res.json();
+   if(j.ok){ toast('✅ Đã xoá'); await ctpLoadAll(); if(currentTripId) $('#ctp_tripSelect').value=currentTripId; ctpLoadTripIntoForm(); }
+   else toast(j.error||'Lỗi xoá',true);
+ }catch(err){ toast('Không kết nối được',true); }
+}
+
+function ctpMapValueForSave(){ return ctpUploadedMapDataUrl || $('#ctp_mapSelect').value || ''; }
+
+$('#btnCtpSaveTrip').onclick=async()=>{
+ if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
+ const header={
+   requestDate:$('#ctp_f_reqdate').value, requesterName:ctpRequesterValue(), dept:$('#ctp_f_dept').value.trim(),
+   workingPlace:$('#ctp_f_place').value.trim(), fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value,
+   projectCode:$('#ctp_f_pjcode').value.trim(), projectName:$('#ctp_f_pjname').value.trim(), mapImage:ctpMapValueForSave()
+ };
+ if(!header.requestDate){ toast('Chọn ngày đề nghị',true); return; }
+ const lines=ctpCurrentLines();
+ if(!lines.length){ toast('✅ Đã ghi nhớ — sẽ áp dụng khi bạn thêm dòng chi phí đầu tiên'); return; }
+ let ok=0, fail=0;
+ for(const line of lines){
+   try{
+     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+       body:JSON.stringify(Object.assign({token:CFG.token,action:'updateExpense',no:line.no,adminPassword:adminPasswordRuntime}, header))});
+     const j=await res.json(); if(j.ok) ok++; else fail++;
+   }catch(err){ fail++; }
+ }
+ toast(fail?`⚠️ Cập nhật ${ok} dòng, lỗi ${fail}`:`✅ Đã cập nhật thông tin đợt công tác (${ok} dòng)`, !!fail);
+ await ctpLoadAll(); $('#ctp_tripSelect').value=currentTripId; ctpLoadTripIntoForm();
+};
+
+$('#btnCtpAddLine').onclick=async()=>{
+ if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
+ const reqDate=$('#ctp_f_reqdate').value;
+ if(!reqDate){ toast('Chọn ngày đề nghị ở phần đầu',true); return; }
+ const requesterName=ctpRequesterValue();
+ if(!requesterName){ toast('Chọn ít nhất 1 người đề nghị',true); return; }
+ const isEdit=!!ctpEditingNo;
+ const payload={
+   token:CFG.token, action:isEdit?'updateExpense':'addExpense', adminPassword:adminPasswordRuntime, tripId:currentTripId||'',
+   requestDate:reqDate, requesterName, dept:$('#ctp_f_dept').value.trim(), workingPlace:$('#ctp_f_place').value.trim(),
+   fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value,
+   expenseType:$('#ctp_f_type').value, description:$('#ctp_f_desc').value.trim(),
+   lineFromDate:$('#ctp_f_linefrom').value||$('#ctp_f_fromdate').value, lineToDate:$('#ctp_f_lineto').value||$('#ctp_f_todate').value,
+   km:Number($('#ctp_f_km').value)||0, quantity:Number($('#ctp_f_qty').value)||0, rate:Number($('#ctp_f_rate').value)||0,
+   amount:Number($('#ctp_f_amount').value)||0, serviceType:$('#ctp_f_service').value,
+   projectCode:$('#ctp_f_linecode').value.trim()||$('#ctp_f_pjcode').value.trim(), projectName:$('#ctp_f_linename').value.trim()||$('#ctp_f_pjname').value.trim(),
+   note:$('#ctp_f_linenote').value.trim(), mapImage:ctpMapValueForSave()
+ };
+ if(isEdit) payload.no=ctpEditingNo;
+ try{
+   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+   const j=await res.json();
+   if(j.ok){
+     currentTripId=j.tripId||currentTripId;
+     toast(isEdit?'✅ Đã lưu sửa dòng chi phí':'✅ Đã thêm dòng chi phí');
+     ['ctp_f_desc','ctp_f_km','ctp_f_linecode','ctp_f_linename','ctp_f_linenote'].forEach(id=>$('#'+id).value='');
+     $('#ctp_f_qty').value='1'; $('#ctp_f_rate').value=''; $('#ctp_f_amount').value='';
+     ctpEditingNo=null; $('#btnCtpAddLine span').textContent='+ Thêm dòng chi phí'; $('#btnCtpCancelEdit').style.display='none';
+     await ctpLoadAll(); $('#ctp_tripSelect').value=currentTripId; ctpLoadTripIntoForm();
+   } else toast(j.error||(isEdit?'Lỗi lưu sửa':'Lỗi thêm dòng'),true);
+ }catch(err){ toast('Không kết nối được',true); }
+};
+
+$('#btnCtpDeleteTrip').onclick=async()=>{
+ if(!currentTripId){ toast('Chưa có đợt công tác nào để xoá',true); return; }
+ if(!confirm('Xoá HẲN toàn bộ đợt công tác này (mọi dòng chi phí)? Không thể hoàn tác.')) return;
+ try{
+   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+     body:JSON.stringify({token:CFG.token,action:'deleteExpenseTrip',tripId:currentTripId,adminPassword:adminPasswordRuntime})});
+   const j=await res.json();
+   if(j.ok){ toast(`✅ Đã xoá đợt công tác (${j.count||0} dòng)`); await ctpLoadAll(); }
+   else toast(j.error||'Lỗi xoá',true);
+ }catch(err){ toast('Không kết nối được',true); }
+};
+
+/* In / xuất PDF công tác phí — GIỮ NGUYÊN bố cục mẫu "Chi tiết" trong file
+   Mau_Cong Tac Phi_Chung.xlsx (cột A-O phần người đề nghị tự nhập), cộng
+   thêm trang bản đồ đã chọn in kèm. Dùng window.print() của chính trang —
+   không cần thư viện PDF ngoài, người dùng chọn "Lưu dưới dạng PDF" ở hộp
+   thoại in của trình duyệt nếu muốn PDF thay vì in giấy. */
+$('#btnCtpPrint').onclick=()=>{
+ const lines=ctpCurrentLines();
+ if(!lines.length){ toast('Chưa có dòng chi phí nào để in',true); return; }
+ const total=lines.reduce((s,r)=>s+(Number(r.amount)||0),0);
+ const F='font-family:\'Times New Roman\',serif';
+ const tdS=`padding:4px 6px;border:1px solid #999;font-size:11px;${F}`;
+ const thS=`padding:4px 6px;border:1px solid #999;font-size:11px;font-weight:700;text-align:center;background:#f0f0f0;${F}`;
+ const rowsHtml=lines.map((r,i)=>`<tr>
+   <td style="${tdS};text-align:center">${i+1}</td>
+   <td style="${tdS}">${esc($('#ctp_f_requester_list')?ctpRequesterValue():'')}</td>
+   <td style="${tdS}">${esc(r.dept||'')}</td>
+   <td style="${tdS}">${esc(r.expenseType)}</td>
+   <td style="${tdS}">${esc(r.description)}</td>
+   <td style="${tdS};text-align:center">${r.lineFromDate?fmtDMYFull(r.lineFromDate):''}</td>
+   <td style="${tdS};text-align:center">${r.lineToDate?fmtDMYFull(r.lineToDate):''}</td>
+   <td style="${tdS};text-align:center">${r.km||''}</td>
+   <td style="${tdS};text-align:center">${r.quantity||''}</td>
+   <td style="${tdS};text-align:right">${(r.rate||0).toLocaleString('vi-VN')}</td>
+   <td style="${tdS};text-align:right">${(r.amount||0).toLocaleString('vi-VN')}</td>
+   <td style="${tdS}">${esc(r.projectCode)}</td>
+   <td style="${tdS}">${esc(r.projectName)}</td>
+   <td style="${tdS}">${esc(r.serviceType)}</td>
+   <td style="${tdS}">${esc(r.note)}</td>
+ </tr>`).join('');
+ const mapSrc = ctpUploadedMapDataUrl || (($('#ctp_mapSelect').value)?('./maps/'+encodeURIComponent($('#ctp_mapSelect').value)):'');
+ const first=lines[0]||{};
+ $('#ctpPrintArea').innerHTML=`
+  <div style="padding:24px;${F}">
+   <p>Ngày/ Date: …………${fmtDMYFull(first.requestDate)||''}…………………….………</p>
+   <p style="font-weight:700">Kính gởi/ To: Ban Giám Đốc Cty Cổ Phần TMDV Sao Nam An (Soeco's Mgt Board)</p>
+   <p>Họ tên người đề nghị thanh toán/ Requester Name: <b>${esc(first.requesterName||'')}</b></p>
+   <p>Bộ phận/ Dept: ${esc(first.dept||'')}</p>
+   <p>Địa điểm công tác/ Working Place: ${esc(first.workingPlace||'')}</p>
+   <p>Thời gian công tác/ Working days: Từ …………${first.fromDate?fmtDMYFull(first.fromDate):''}……………. đến: ………${first.toDate?fmtDMYFull(first.toDate):''}…………….. </p>
+   <p>Mã vụ việc/PJ code: ${esc(first.projectCode||'')}</p>
+   <table style="border-collapse:collapse;width:100%;margin-top:10px">
+    <thead><tr>
+     <th style="${thS}">STT</th><th style="${thS}">Tên NV</th><th style="${thS}">Bộ phận</th><th style="${thS}">Nội dung chi phí</th>
+     <th style="${thS}">Diễn giải thanh toán</th><th style="${thS}">Từ Ngày</th><th style="${thS}">Đến Ngày</th><th style="${thS}">Km</th>
+     <th style="${thS}">Số lượng</th><th style="${thS}">Định mức</th><th style="${thS}">Thành tiền</th><th style="${thS}">Mã vụ việc</th>
+     <th style="${thS}">Tên DA</th><th style="${thS}">Loại dịch vụ</th><th style="${thS}">Ghi chú</th>
+    </tr></thead>
+    <tbody>${rowsHtml}
+     <tr><td colspan="10" style="${tdS};text-align:right;font-weight:700">TỔNG CỘNG</td><td style="${tdS};text-align:right;font-weight:700">${total.toLocaleString('vi-VN')}</td><td colspan="4" style="${tdS}"></td></tr>
+    </tbody>
+   </table>
+   <p style="margin-top:10px">Bằng chữ: ${soThanhChu(total)}</p>
+   <table style="width:100%;margin-top:40px;border:none"><tr>
+    <td style="border:none;text-align:center;font-weight:700;width:50%">Người đề nghị<br><br><br><br>${esc(first.requesterName||'')}</td>
+    <td style="border:none;text-align:center;font-weight:700;width:50%">Phụ trách bộ phận</td>
+   </tr></table>
+   ${mapSrc?`<div style="page-break-before:always;padding-top:20px"><h3>Bản đồ khoảng cách di chuyển</h3><img src="${mapSrc}" style="max-width:100%"></div>`:''}
+  </div>`;
+ // Đổ cùng nội dung vào cả vùng in thật (#ctpPrintArea, chỉ hiện khi in) lẫn
+ // khung xem trước trên màn hình — xem đúng những gì sắp in trước khi bấm in.
+ $('#ctpPreviewBody').innerHTML=$('#ctpPrintArea').innerHTML;
+ $('#ctpPreviewModal').classList.add('show');
+};
+$('#btnCtpDoPrint').onclick=()=>window.print();
+$('#btnCloseCtpPreview').onclick=()=>$('#ctpPreviewModal').classList.remove('show');
+$('#ctpPreviewModal').onclick=e=>{if(e.target===$('#ctpPreviewModal'))$('#ctpPreviewModal').classList.remove('show')};
 
 refreshBanner();
 loadEngineers();
