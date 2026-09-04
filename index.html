@@ -1066,6 +1066,10 @@ let editingNo=null;
 // không theo No thật). Việc gửi sửa lên server vẫn luôn dùng editingNo (No
 // thật, cố định, không đổi) — không liên quan tới số hiển thị này.
 let editingDisplayNo=null;
+// Số lần đã sửa (editCount) của phiếu TẠI THỜI ĐIỂM mở form sửa — dùng để
+// phát hiện xung đột: nếu lúc gửi mà số này trên Sheet đã khác (có người
+// khác vừa sửa xong trong lúc mình đang gõ), sẽ cảnh báo trước khi ghi đè.
+let editingStartEditCount=0;
 function submitBtnIdle(){
  const btn=$('#btnSubmit');
  btn.innerHTML=editingNo
@@ -1077,6 +1081,7 @@ function startEdit(no,displayNo){
  if(!rec){toast('Không tìm thấy phiếu để sửa',true);return}
  editingNo=no;
  editingDisplayNo=displayNo||no;
+ editingStartEditCount=Number(rec.editCount)||0;
  setDateValue(rec.date||new Date().toISOString().slice(0,10));
  setFieldOrOther('f_customer','wrap_customer_other','f_customer_other',rec.customer||'');
  setFieldOrOther('f_system','wrap_system_other','f_system_other',rec.system||'');
@@ -1163,6 +1168,23 @@ $('#tkForm').onsubmit=async e=>{
      if(ok){ renderManager(); renderHistory(); }
      else{ toast('Sai mật khẩu quản trị',true); return; }
    }
+ }
+
+ // Chống XUNG ĐỘT khi 2 thiết bị cùng sửa 1 phiếu: tra nhanh (chỉ 1 dòng,
+ // không tải cả danh sách) editCount HIỆN TẠI trên Sheet ngay trước khi lưu.
+ // Nếu khác với lúc mở form sửa — tức có người khác vừa sửa xong trong lúc
+ // mình đang gõ — cho xem thử họ sửa thành gì rồi hỏi lại trước khi ghi đè,
+ // tránh làm mất nội dung của người kia mà không hay biết.
+ if(isEdit && CFG.url){
+   try{
+     const cres=await fetch(`${CFG.url}?action=getOne&token=${encodeURIComponent(CFG.token)}&no=${encodeURIComponent(no)}`);
+     const cj=await cres.json();
+     if(cj.ok && Number(cj.data.editCount||0)!==Number(editingStartEditCount||0)){
+       const proceed=confirm(`⚠️ Phiếu #${displayNo} vừa bị người khác sửa trong lúc bạn đang sửa!\n\nHọ vừa sửa thành:\nKhách hàng: ${cj.data.customer}\nSự cố: ${cj.data.issue}\nHướng xử lý: ${cj.data.remark||'—'}\nTrạng thái: ${cj.data.status}\n\nBạn có chắc vẫn muốn LƯU ĐÈ bằng nội dung bạn vừa sửa không?`);
+       if(!proceed) return;
+       editingStartEditCount=cj.data.editCount; // khỏi bị chặn lại nếu họ cố ý bấm gửi lần nữa
+     }
+   }catch(err){ /* mất mạng lúc kiểm tra xung đột — bỏ qua, cứ gửi tiếp, lỗi thật (nếu có) sẽ báo ở bước gửi bên dưới */ }
  }
 
  // Khóa nút NGAY từ đây (trước khi làm gì khác) để lần bấm thứ 2, thứ 3 (do
