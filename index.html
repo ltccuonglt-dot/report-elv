@@ -670,7 +670,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     </div>
     <div class="divider"></div>
     <div class="section-title" style="margin-bottom:8px">Sao lưu dữ liệu</div>
-    <p class="desc" style="margin-top:-4px">Backup <b>KHÔNG</b> tự cập nhật theo mỗi lần gửi/sửa/xóa phiếu — chỉ cập nhật khi bạn bấm nút này. Nhờ vậy nếu lỡ xóa/sửa nhầm phiếu ở Sheet chính, backup (từ lần đồng bộ gần nhất) vẫn còn dữ liệu cũ để xem/chép lại. ⚠️ Nút này GHI ĐÈ backup — nếu backup đang lưu trữ các kỳ cũ (do "Xóa toàn bộ dữ liệu" tự lưu vào), bấm nút này sẽ XÓA MẤT lưu trữ đó, chỉ nên bấm khi backup chưa có kỳ cũ nào.</p>
+    <p class="desc" style="margin-top:-4px">Backup <b>KHÔNG</b> tự cập nhật theo mỗi lần gửi/sửa/xóa phiếu — chỉ cập nhật khi bạn bấm nút này. Nút chỉ <b>THÊM</b> phiếu backup chưa có (tự kiểm tra trước, phiếu nào đã có rồi thì bỏ qua, không tạo trùng) — an toàn bấm bao nhiêu lần cũng được, kể cả đồng bộ dần từng ít một trong ngày, không xóa/ghi đè dữ liệu cũ trong backup.</p>
     <button type="button" class="btn" id="btnSyncBackup" style="margin-bottom:16px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span>Đồng bộ Sheet chính → Backup</span>
     </button>
@@ -1661,13 +1661,12 @@ async function loadPeriodInfo(){
 }
 $('#btnSyncBackup').onclick=async()=>{
  if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
- if(!confirm('Ghi đè toàn bộ file backup cho khớp với Sheet chính?')) return;
  const btn=$('#btnSyncBackup'); btn.disabled=true;
  try{
    const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
      body:JSON.stringify({token:CFG.token,action:'syncBackup',adminPassword:adminPasswordRuntime})});
    const j=await res.json();
-   if(j.ok) toast(`✅ Đã đồng bộ ${j.count} phiếu sang backup`);
+   if(j.ok) toast(j.count?`✅ Đã thêm ${j.count} phiếu mới vào backup${j.skipped?` (${j.skipped} phiếu đã có sẵn, bỏ qua)`:''}`:'Backup đã đủ, không có phiếu mới để thêm');
    else toast(j.error||'Lỗi đồng bộ backup',true);
  }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
  btn.disabled=false;
