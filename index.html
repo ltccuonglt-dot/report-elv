@@ -686,6 +686,9 @@ const DEFAULT_STORE='Report -ELV';
 // Mật khẩu quản trị — riêng biệt với mã token Google Sheet ở trên.
 // Chỉ ai biết mật khẩu này mới vào được màn Cài đặt (⚙️).
 const ADMIN_PASSWORD='Cuongok09';
+// Khớp EDIT_LIMIT bên Code.gs — người dùng thường chỉ sửa 1 phiếu tối đa
+// bấy nhiêu lần, sửa thêm phải nhập đúng mật khẩu quản trị ngay lúc đó.
+const EDIT_LIMIT=5;
 const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get token(){return localStorage.getItem('kt_token')||DEFAULT_TOKEN},get store(){return localStorage.getItem('kt_store')||DEFAULT_STORE}};
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const LS_HIST='kt_history_v1';
@@ -1067,6 +1070,20 @@ $('#tkForm').onsubmit=async e=>{
  const isEdit=!!editingNo;
  const no=editingNo||'—';
  const displayNo=editingDisplayNo||no; // chỉ để hiện chữ, xem chú thích ở khai báo editingDisplayNo
+
+ // Kiểm tra TRƯỚC giới hạn sửa (khớp EDIT_LIMIT bên Code.gs) — nếu không
+ // chặn ở đây, phiếu đã hết lượt sửa vẫn hiện "✅ đã cập nhật" giả (do gửi
+ // ngầm bên dưới), làm tưởng thành công nhưng lúc tải lại thì dữ liệu vẫn y
+ // như cũ — rất khó hiểu ("lúc được lúc không"). Hết lượt thì hỏi ngay mật
+ // khẩu quản trị tại chỗ để sửa tiếp, khỏi phải thoát ra vào lại Cài đặt.
+ if(isEdit && !isAdminUnlocked){
+   const editingRec=mgrData.find(r=>String(r.no)===String(no));
+   if(editingRec && (Number(editingRec.editCount)||0)>=EDIT_LIMIT){
+     const pin=prompt(`Phiếu #${displayNo} đã sửa đủ ${EDIT_LIMIT} lần. Nhập mật khẩu quản trị để sửa tiếp:`);
+     if(pin===ADMIN_PASSWORD){ isAdminUnlocked=true; renderManager(); renderHistory(); }
+     else{ if(pin!==null) toast('Sai mật khẩu quản trị',true); return; }
+   }
+ }
 
  /* Hiện "thành công" NGAY LẬP TỨC — không bắt đứng nhìn màn hình chờ máy chủ
     phản hồi (Apps Script + đồng bộ Sheet backup có thể mất vài giây). Việc
