@@ -441,8 +441,17 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     <button class="icon-btn" id="btnPageReload" aria-label="Làm mới trang" title="Làm mới trang (tải bản mới nhất)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
     </button>
-    <button class="icon-btn" id="btnAdminTools" aria-label="Chấm công & Công tác phí" title="Chấm công & Công tác phí (chỉ quản trị)" style="display:none">
+    <!-- Mọi nút chức năng CHỈ ADMIN trong header đều theo 1 khuôn: icon-btn +
+         data-admin-action="tên" — luôn hiện sẵn, bấm vào tự hỏi mật khẩu quản
+         trị (nếu chưa mở khoá), đúng thì chạy hàm đã đăng ký qua
+         registerAdminAction(). Thêm tính năng quản trị mới sau này chỉ cần
+         thêm 1 button như dưới đây + 1 lần gọi registerAdminAction(), không
+         phải sửa lại phần hỏi mật khẩu/gắn sự kiện. -->
+    <button class="icon-btn" data-admin-action="chamcong-ctp" aria-label="Chấm công & Công tác phí" title="Chấm công & Công tác phí (yêu cầu mật khẩu quản trị)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+    </button>
+    <button class="icon-btn" data-admin-action="aeon-report" aria-label="Báo cáo AEON Huế / Thanh Khê" title="Báo cáo AEON Huế / Thanh Khê (yêu cầu mật khẩu quản trị)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
     </button>
     <button class="icon-btn" id="btnSettings" aria-label="Cài đặt">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -1125,7 +1134,7 @@ async function verifyAdminPassword(pin){
  if(!pin) return false;
  try{
    const j=await DB.verifyAdmin(pin);
-   if(j.ok){ isAdminUnlocked=true; adminPasswordRuntime=pin; $('#btnAdminTools').style.display='flex'; return true; }
+   if(j.ok){ isAdminUnlocked=true; adminPasswordRuntime=pin; return true; }
  }catch(err){}
  return false;
 }
@@ -2942,8 +2951,9 @@ $('#btnSaveSettings').onclick=async()=>{const url=$('#s_url').value.trim(),token
  else{toast('Đã lưu (thử nghiệm)');modal.classList.remove('show')}};
 
 /* ================= Chấm công & Công tác phí (chỉ admin) =================
-   Toàn bộ khối này chỉ chạy được sau khi isAdminUnlocked=true (nút mở khối
-   này — #btnAdminTools — bị ẩn tới lúc đó). Dữ liệu KHÔNG lẫn với mgrData
+   Nút mở khối này luôn hiện sẵn trong header (data-admin-action="chamcong-ctp"),
+   nhưng chỉ thật sự mở được sau khi requireAdminThen() xác nhận đúng mật
+   khẩu (xem registerAdminAction phía trên). Dữ liệu KHÔNG lẫn với mgrData
    của phiếu kỹ thuật, tải riêng qua action listAttendance/listExpenses (bắt
    buộc đúng adminPassword mới đọc được, xem Code.gs). */
 const WEEKDAY_VN=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
@@ -3006,7 +3016,103 @@ function soThanhChu(soVND){
 }
 
 /* ---- Mở/đóng modal + chuyển tab ---- */
-$('#btnAdminTools').onclick=()=>{
+/* ===== Khung nút quản trị trong header (mở rộng được) =====
+   Mọi nút chức năng chỉ-admin trong header (Chấm công/CTP, Báo cáo AEON, và
+   BẤT KỲ nút nào thêm sau này) đều LUÔN hiện sẵn ngay cạnh Cài đặt — không
+   cần mở Cài đặt trước như trước đây. Bấm vào: nếu đã mở khoá quản trị
+   (isAdminUnlocked) thì chạy luôn; chưa thì hỏi mật khẩu tại chỗ (prompt),
+   đúng thì chạy VÀ giữ mở khoá cho các nút admin khác dùng lại tới khi tải
+   lại trang.
+   Thêm tính năng quản trị mới sau này: chỉ cần (1) thêm 1
+   <button class="icon-btn" data-admin-action="ten-moi"> trong header, và
+   (2) gọi registerAdminAction('ten-moi', hamMoTinhNang) — không phải đụng gì
+   tới đoạn hỏi mật khẩu/gắn sự kiện dưới đây. */
+const ADMIN_ACTIONS={};
+function registerAdminAction(name,fn){ ADMIN_ACTIONS[name]=fn; }
+async function requireAdminThen(action){
+ if(isAdminUnlocked){ action(); return; }
+ const pin=prompt('Nhập mật khẩu quản trị:');
+ if(pin===null) return;
+ const ok=await verifyAdminPassword(pin);
+ if(ok) action(); else toast('Sai mật khẩu quản trị',true);
+}
+$$('.icon-btn[data-admin-action]').forEach(btn=>{
+ btn.onclick=()=>requireAdminThen(()=>{
+   const fn=ADMIN_ACTIONS[btn.dataset.adminAction];
+   if(fn) fn(); else toast('Tính năng chưa sẵn sàng',true);
+ });
+});
+/* ===== Báo cáo AEON Huế / Thanh Khê =====
+   Đúng định dạng 10 cột của 2 file mẫu gốc trong
+   "G:\My Drive\AEON Mall Báo Cáo Kỹ Thuật\Service_Support_Ticket_Report_2026_AEON *.xlsx"
+   (No, Date, Customer, System, Issue, Priority, Engineer, Support, Status,
+   Remark — không có cột Work Type như file Xuất Excel thường của app), tách
+   riêng theo từng cơ sở + 1 sheet so sánh nhanh. Lọc theo tên khách hàng
+   chứa "hue"/"huế" hoặc "thanh khê"/"thanh khe" (không phân biệt hoa
+   thường/dấu) — phòng khi sau này có phiếu thật của 2 cơ sở này. */
+function normVN(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+function aeonSiteStyledSheet(rows){
+ const head=['No','Date','Customer','System','Issue','Priority','Engineer','Support','Status','Remark'];
+ const cols=['no','date','customer','system','issue','priority','engineer','support','status','remark'];
+ const centerCols=[0,1,3,5,7,8];
+ const aoa=[head, ...rows.map(r=>cols.map(c=>r[c]||''))];
+ const ws=XLSX.utils.aoa_to_sheet(aoa);
+ const thinBorder=(rgb)=>({top:{style:'thin',color:{rgb}},bottom:{style:'thin',color:{rgb}},left:{style:'thin',color:{rgb}},right:{style:'thin',color:{rgb}}});
+ const headerStyle={font:{name:'Times New Roman',sz:12,bold:true,color:{rgb:'FFFFFF'}},fill:{patternType:'solid',fgColor:{rgb:'1F4E78'}},alignment:{horizontal:'center',vertical:'center'},border:thinBorder('FFFFFF')};
+ const baseCellStyle={font:{name:'Times New Roman',sz:12},alignment:{vertical:'middle',wrapText:true},border:thinBorder('D9D9D9')};
+ for(let c=0;c<head.length;c++){ const ref=XLSX.utils.encode_cell({r:0,c}); if(ws[ref]) ws[ref].s=headerStyle; }
+ for(let r=1;r<=rows.length;r++){
+   for(let c=0;c<cols.length;c++){
+     const ref=XLSX.utils.encode_cell({r,c}); if(!ws[ref]) continue;
+     const st=Object.assign({},baseCellStyle);
+     if(centerCols.includes(c)) st.alignment=Object.assign({},baseCellStyle.alignment,{horizontal:'center'});
+     ws[ref].s=st;
+   }
+ }
+ ws['!cols']=[{wch:6},{wch:12},{wch:18},{wch:14},{wch:42},{wch:10},{wch:20},{wch:10},{wch:12},{wch:36}];
+ ws['!rows']=[{hpt:22}]; ws['!freeze']={xSplit:0,ySplit:1};
+ return ws;
+}
+function aeonCompareSheet(hue,tk){
+ const stat=rows=>{
+   const online=rows.filter(r=>!(r.support||'').toLowerCase().includes('site')).length;
+   const pr={Low:0,Medium:0,High:0}; rows.forEach(r=>{const p=(r.priority||'').trim(); if(pr[p]!=null)pr[p]++;});
+   return {total:rows.length, online, onsite:rows.length-online, low:pr.Low, medium:pr.Medium, high:pr.High};
+ };
+ const a=stat(hue), b=stat(tk);
+ const aoa=[
+   ['So sánh AEON Huế và AEON Thanh Khê', '', ''],
+   ['', 'AEON Huế', 'AEON Thanh Khê'],
+   ['Tổng số phiếu', a.total, b.total],
+   ['Online', a.online, b.online],
+   ['On-Site', a.onsite, b.onsite],
+   ['Ưu tiên Low', a.low, b.low],
+   ['Ưu tiên Medium', a.medium, b.medium],
+   ['Ưu tiên High', a.high, b.high],
+ ];
+ const ws=XLSX.utils.aoa_to_sheet(aoa);
+ ws['!cols']=[{wch:22},{wch:16},{wch:18}];
+ ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:2}}];
+ const titleStyle={font:{name:'Times New Roman',sz:14,bold:true,color:{rgb:'FFFFFF'}},fill:{patternType:'solid',fgColor:{rgb:'7C2D8F'}},alignment:{horizontal:'center',vertical:'center'}};
+ const headStyle={font:{name:'Times New Roman',sz:12,bold:true},fill:{patternType:'solid',fgColor:{rgb:'F0E3F5'}},alignment:{horizontal:'center'}};
+ ws['A1'].s=titleStyle;
+ ['B2','C2'].forEach(ref=>ws[ref]&&(ws[ref].s=headStyle));
+ for(let r=2;r<8;r++){ const ref='A'+(r+1); if(ws[ref]) ws[ref].s={font:{name:'Times New Roman',sz:12,bold:true}}; }
+ return ws;
+}
+registerAdminAction('aeon-report',()=>{
+ if(typeof XLSX==='undefined'){ toast('Chưa tải được thư viện xuất Excel, thử lại sau',true); return; }
+ const hue=mgrData.filter(r=>/hue|hu\u1ebf/.test(normVN(r.customer)));
+ const tk=mgrData.filter(r=>/thanh\s*kh(e|\u00ea)/.test(normVN(r.customer)));
+ if(!hue.length && !tk.length){ toast('Chưa có phiếu nào của AEON Huế / Thanh Khê trong dữ liệu hiện tại',true); return; }
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,aeonCompareSheet(hue,tk),'So sánh');
+ XLSX.utils.book_append_sheet(wb,aeonSiteStyledSheet(hue),'AEON Hue');
+ XLSX.utils.book_append_sheet(wb,aeonSiteStyledSheet(tk),'AEON Thanh Khe');
+ XLSX.writeFile(wb,`Service_Support_Ticket_Report_AEON-vs-ThanhKhe_${new Date().toISOString().slice(0,10)}.xlsx`);
+ toast(`✅ Đã xuất báo cáo — Huế: ${hue.length} phiếu, Thanh Khê: ${tk.length} phiếu`);
+});
+registerAdminAction('chamcong-ctp',()=>{
  ccPopulateSelects();
  ctpRenderRequesterChecklist('');
  ctpPopulateMapSelect();
@@ -3014,7 +3120,7 @@ $('#btnAdminTools').onclick=()=>{
  $('#adminToolsModal').classList.add('show');
  ccLoadList();
  ctpLoadAll();
-};
+});
 $('#btnCloseAdminTools').onclick=()=>$('#adminToolsModal').classList.remove('show');
 $('#adminToolsModal').onclick=e=>{if(e.target===$('#adminToolsModal'))$('#adminToolsModal').classList.remove('show')};
 $$('.admtab').forEach(b=>b.onclick=()=>{
