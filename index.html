@@ -528,7 +528,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         </button>
         <button type="button" class="hdr-menu-item" data-admin-action="aeon-report" data-admin-group="aeon" title="Yêu cầu mật khẩu quản trị riêng">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
-          <span>Báo cáo AEON Huế / Thanh Khê</span>
+          <span>Báo cáo AEON</span>
         </button>
         <button type="button" class="hdr-menu-item" id="btnSettings">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -1004,7 +1004,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     </div>
 
     <div class="pw-change-block">
-      <div class="pw-change-title">Báo cáo AEON Huế / Thanh Khê</div>
+      <div class="pw-change-title">Báo cáo AEON</div>
       <label class="field"><span class="lab">Mật khẩu hiện tại</span><input type="password" id="s_pwOld_aeon" autocomplete="off" /></label>
       <label class="field"><span class="lab">Mật khẩu mới</span><input type="password" id="s_pwNew_aeon" autocomplete="off" placeholder="Tối thiểu 4 ký tự" /></label>
       <label class="field"><span class="lab">Nhập lại mật khẩu mới</span><input type="password" id="s_pwNew2_aeon" autocomplete="off" /></label>
@@ -1298,17 +1298,16 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
   </div>
 </div>
 
-<!-- ===== Báo cáo AEON Huế / Thanh Khê (tool riêng, dữ liệu riêng — bảng aeon_tickets,
+<!-- ===== Báo cáo AEON (tool riêng, dữ liệu riêng — bảng aeon_tickets,
      không lẫn với phiếu kỹ thuật đang vận hành trong tickets) ===== -->
 <div class="modal" id="aeonReportModal">
   <div class="sheet sheet-wide">
-    <h2>Báo cáo AEON Huế / Thanh Khê</h2>
-    <p class="desc" style="margin-top:-6px">Dữ liệu lưu ở bảng riêng, tách khỏi phiếu kỹ thuật đang vận hành. Mỗi cơ sở là 1 dự án riêng — chọn đúng cơ sở muốn xem, không gộp so sánh.</p>
+    <h2>Báo cáo AEON</h2>
+    <p class="desc" style="margin-top:-6px">Dữ liệu lưu ở bảng riêng, tách khỏi phiếu kỹ thuật đang vận hành. Mỗi cơ sở AEON là 1 dự án riêng — chọn đúng cơ sở muốn xem, không gộp so sánh.</p>
 
-    <div class="seg" id="aeon_site_filter" style="margin-bottom:14px">
-      <button type="button" data-v="hue" class="on">AEON Huế</button>
-      <button type="button" data-v="tk">AEON Thanh Khê</button>
-    </div>
+    <label class="field" style="margin-bottom:14px"><span class="lab">Cơ sở AEON đang xem</span>
+      <select id="aeon_site_filter"></select>
+    </label>
     <div class="section-title" style="margin-bottom:8px">Dashboard</div>
     <div class="stats" id="aeonDashStats"></div>
     <div class="card" id="aeonDonutWrap" style="margin-bottom:0"></div>
@@ -1318,11 +1317,9 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     <div class="cc-add-grid">
       <label class="field"><span class="lab">Ngày</span><input type="date" id="aeon_f_date"></label>
       <label class="field"><span class="lab">Cơ sở</span>
-        <select id="aeon_f_customer">
-          <option value="AEON Mall HUE">AEON Mall Huế</option>
-          <option value="AEON Mall Thanh Khe">AEON Mall Thanh Khê</option>
-        </select>
+        <select id="aeon_f_customer"></select>
       </label>
+      <label class="field" id="wrap_aeon_customer_other" style="display:none"><span class="lab">Nhập tên cơ sở mới</span><input type="text" id="aeon_f_customer_other" placeholder="VD: AEON Mall Hải Phòng Lê Chân"></label>
       <label class="field"><span class="lab">Hệ thống</span><input type="text" id="aeon_f_system" value="CCTV"></label>
       <label class="field"><span class="lab">Ưu tiên</span>
         <select id="aeon_f_priority"><option value="Low">Low</option><option value="Medium" selected>Medium</option><option value="High">High</option></select>
@@ -3928,15 +3925,13 @@ document.addEventListener('click',(e)=>{
 $$('#hdrMenuPop .hdr-menu-item').forEach(b=>b.addEventListener('click',()=>{
  $('#hdrMenuPop').hidden=true; $('#btnHdrMenu').setAttribute('aria-expanded','false');
 }));
-/* ===== Báo cáo AEON Huế / Thanh Khê =====
-   Đúng định dạng 10 cột của 2 file mẫu gốc trong
+/* ===== Báo cáo AEON =====
+   Đúng định dạng 10 cột của các file mẫu gốc trong
    "G:\My Drive\AEON Mall Báo Cáo Kỹ Thuật\Service_Support_Ticket_Report_2026_AEON *.xlsx"
    (No, Date, Customer, System, Issue, Priority, Engineer, Support, Status,
-   Remark — không có cột Work Type như file Xuất Excel thường của app), tách
-   riêng theo từng cơ sở + 1 sheet so sánh nhanh. Lọc theo tên khách hàng
-   chứa "hue"/"huế" hoặc "thanh khê"/"thanh khe" (không phân biệt hoa
-   thường/dấu) — phòng khi sau này có phiếu thật của 2 cơ sở này. */
-function normVN(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+   Remark — không có cột Work Type như file Xuất Excel thường của app). Có
+   NHIỀU cơ sở AEON khác nhau (không chỉ Huế/Thanh Khê) — cơ sở lấy động theo
+   đúng dữ liệu thật (aeonSitesList), không hard-code tên site nào. */
 function aeonSiteStyledSheet(rows){
  const head=['No','Date','Customer','System','Issue','Priority','Engineer','Support','Status','Remark'];
  const cols=['no','date','customer','system','issue','priority','engineer','support','status','remark'];
@@ -3959,59 +3954,51 @@ function aeonSiteStyledSheet(rows){
  ws['!rows']=[{hpt:22}]; ws['!freeze']={xSplit:0,ySplit:1};
  return ws;
 }
-function aeonCompareSheet(hue,tk){
- const stat=rows=>{
-   const online=rows.filter(r=>!(r.support||'').toLowerCase().includes('site')).length;
-   const pr={Low:0,Medium:0,High:0}; rows.forEach(r=>{const p=(r.priority||'').trim(); if(pr[p]!=null)pr[p]++;});
-   return {total:rows.length, online, onsite:rows.length-online, low:pr.Low, medium:pr.Medium, high:pr.High};
- };
- const a=stat(hue), b=stat(tk);
- const aoa=[
-   ['So sánh AEON Huế và AEON Thanh Khê', '', ''],
-   ['', 'AEON Huế', 'AEON Thanh Khê'],
-   ['Tổng số phiếu', a.total, b.total],
-   ['Online', a.online, b.online],
-   ['On-Site', a.onsite, b.onsite],
-   ['Ưu tiên Low', a.low, b.low],
-   ['Ưu tiên Medium', a.medium, b.medium],
-   ['Ưu tiên High', a.high, b.high],
- ];
- const ws=XLSX.utils.aoa_to_sheet(aoa);
- ws['!cols']=[{wch:22},{wch:16},{wch:18}];
- ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:2}}];
- const titleStyle={font:{name:'Times New Roman',sz:14,bold:true,color:{rgb:'FFFFFF'}},fill:{patternType:'solid',fgColor:{rgb:'7C2D8F'}},alignment:{horizontal:'center',vertical:'center'}};
- const headStyle={font:{name:'Times New Roman',sz:12,bold:true},fill:{patternType:'solid',fgColor:{rgb:'F0E3F5'}},alignment:{horizontal:'center'}};
- ws['A1'].s=titleStyle;
- ['B2','C2'].forEach(ref=>ws[ref]&&(ws[ref].s=headStyle));
- for(let r=2;r<8;r++){ const ref='A'+(r+1); if(ws[ref]) ws[ref].s={font:{name:'Times New Roman',sz:12,bold:true}}; }
- return ws;
-}
 /* Dữ liệu đọc từ bảng riêng aeon_tickets (không phải mgrData/tickets sống) —
-   đúng kiến trúc "mỗi tool 1 bảng riêng, chỉ mượn ELV làm popup hiển thị". */
+   đúng kiến trúc "mỗi tool 1 bảng riêng, chỉ mượn ELV làm popup hiển thị".
+   KHÔNG hard-code chỉ 2 cơ sở (Huế/Thanh Khê) — thực tế có nhiều cơ sở AEON
+   khác nhau, danh sách cơ sở lấy ĐỘNG theo đúng dữ liệu thật đang có. */
 let aeonData=[];
 let aeonEditingId=null;
 
-function aeonSplit(){
- return {
-   hue:aeonData.filter(r=>/hue|huế/.test(normVN(r.customer))),
-   tk:aeonData.filter(r=>/thanh\s*kh(e|ê)/.test(normVN(r.customer)))
- };
+// Danh sách cơ sở AEON — lấy từ dữ liệu thật (distinct customer), sắp xếp
+// theo tên. Dùng chung cho cả dropdown lọc báo cáo lẫn dropdown thêm/sửa phiếu.
+function aeonSitesList(){
+ return [...new Set(aeonData.map(r=>r.customer).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+}
+function aeonPopulateSiteFilter(){
+ const sel=$('#aeon_site_filter');
+ const cur=sel.value;
+ const sites=aeonSitesList();
+ sel.innerHTML=sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+ sel.value=sites.includes(cur)?cur:(sites[0]||'');
+}
+function aeonPopulateCustomerSelect(){
+ const sites=aeonSitesList();
+ $('#aeon_f_customer').innerHTML=sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('')+'<option value="__other">Khác…</option>';
+}
+$('#aeon_f_customer').onchange=e=>$('#wrap_aeon_customer_other').style.display=e.target.value==='__other'?'block':'none';
+function aeonCustomerValue(){
+ const v=$('#aeon_f_customer').value;
+ return v==='__other' ? $('#aeon_f_customer_other').value.trim() : v;
 }
 
 async function aeonLoadAndRender(){
  const res=await DB.listAeonTickets();
  if(!res.ok){ toast(res.error||'Không tải được dữ liệu AEON',true); return; }
  aeonData=res.data;
+ aeonPopulateSiteFilter();
+ aeonPopulateCustomerSelect();
  renderAeonReport();
 }
+$('#aeon_site_filter').onchange=renderAeonReport;
 
 function renderAeonReport(){
- const {hue,tk}=aeonSplit();
- // Mỗi cơ sở là 1 dự án riêng — KHÔNG so sánh 2 site với nhau. Dashboard +
+ // Mỗi cơ sở là 1 dự án riêng — KHÔNG so sánh nhiều site với nhau. Dashboard +
  // donut + bảng danh sách đều chỉ hiện đúng 1 site đang chọn, y hệt cấu trúc
  // Dashboard chính của Report ELV (.stats 3 ô Tổng/Online/On-Site + donut).
- const site=segVal('aeon_site_filter');
- const filtered=site==='tk'?tk:hue;
+ const site=$('#aeon_site_filter').value;
+ const filtered=aeonData.filter(r=>r.customer===site);
 
  const online=filtered.filter(r=>!(r.support||'').toLowerCase().includes('site')).length;
  const onsite=filtered.length-online;
@@ -4053,8 +4040,6 @@ function renderAeonReport(){
  $$('#aeonListBody .btn-row-edit').forEach(b=>b.onclick=()=>aeonEditRow(b.dataset.no));
  $$('#aeonListBody .btn-row-delete').forEach(b=>b.onclick=()=>aeonDeleteRow(b.dataset.no));
 }
-$$('#aeon_site_filter button').forEach(b=>b.onclick=()=>{ segSet('aeon_site_filter',b.dataset.v); renderAeonReport(); });
-
 // Danh sách kỹ sư ở đây dùng CHUNG đúng 6 kỹ sư chính của Report ELV
 // (engineerList) — có "Khác…" để gõ tay khi đổi người/kỹ sư ngoài danh sách.
 function aeonPopulateEngineerSelect(){
@@ -4093,7 +4078,7 @@ $$('.aeon-translate-btn').forEach(b=>b.onclick=()=>aeonTranslateField(b.dataset.
 
 function aeonResetForm(){
  aeonEditingId=null;
- $('#aeon_f_date').value=''; $('#aeon_f_customer').value='AEON Mall HUE'; $('#aeon_f_system').value='CCTV';
+ $('#aeon_f_date').value=''; setFieldOrOther('aeon_f_customer','wrap_aeon_customer_other','aeon_f_customer_other',$('#aeon_site_filter').value||''); $('#aeon_f_system').value='CCTV';
  $('#aeon_f_priority').value='Medium'; $('#aeon_f_issue').value='';
  setFieldOrOther('aeon_f_engineer','wrap_aeon_engineer_other','aeon_f_engineer_other','');
  $('#aeon_f_support').value='Online'; $('#aeon_f_status').value='Done'; $('#aeon_f_remark').value='';
@@ -4105,7 +4090,7 @@ function aeonEditRow(no){
  const r=aeonData.find(x=>String(x.no)===String(no));
  if(!r) return;
  aeonEditingId=no;
- $('#aeon_f_date').value=r.date||''; $('#aeon_f_customer').value=r.customer||'AEON Mall HUE';
+ $('#aeon_f_date').value=r.date||''; setFieldOrOther('aeon_f_customer','wrap_aeon_customer_other','aeon_f_customer_other',r.customer||'');
  $('#aeon_f_system').value=r.system||''; $('#aeon_f_priority').value=r.priority||'Medium';
  $('#aeon_f_issue').value=r.issue||'';
  setFieldOrOther('aeon_f_engineer','wrap_aeon_engineer_other','aeon_f_engineer_other',r.engineer||'');
@@ -4117,7 +4102,7 @@ function aeonEditRow(no){
 $('#btnAeonCancelEdit').onclick=aeonResetForm;
 
 $('#btnAeonAddRow').onclick=async()=>{
- const payload={date:$('#aeon_f_date').value, customer:$('#aeon_f_customer').value, system:$('#aeon_f_system').value,
+ const payload={date:$('#aeon_f_date').value, customer:aeonCustomerValue(), system:$('#aeon_f_system').value,
    issue:$('#aeon_f_issue').value, priority:$('#aeon_f_priority').value, engineer:aeonEngineerValue(),
    support:$('#aeon_f_support').value, status:$('#aeon_f_status').value, remark:$('#aeon_f_remark').value||null};
  if(!payload.date || !payload.issue){ toast('Cần nhập Ngày và Vấn đề',true); return; }
@@ -4146,16 +4131,18 @@ registerAdminAction('aeon-report',async()=>{
  await aeonLoadAndRender();
  $('#aeonReportModal').classList.add('show');
 });
+// Chỉ xuất ĐÚNG 1 cơ sở đang chọn trên dropdown — không gộp nhiều cơ sở vào
+// chung 1 file/sheet (mỗi cơ sở là 1 dự án riêng, xuất lộn xộn dễ nhầm số liệu).
 $('#btnAeonExportExcel').onclick=()=>{
  if(typeof XLSX==='undefined'){ toast('Chưa tải được thư viện xuất Excel, thử lại sau',true); return; }
- const {hue,tk}=aeonSplit();
- if(!hue.length && !tk.length){ toast('Chưa có phiếu nào của AEON Huế / Thanh Khê',true); return; }
+ const site=$('#aeon_site_filter').value;
+ const rows=aeonData.filter(r=>r.customer===site);
+ if(!rows.length){ toast(`Chưa có phiếu nào của ${site}`,true); return; }
  const wb=XLSX.utils.book_new();
- XLSX.utils.book_append_sheet(wb,aeonCompareSheet(hue,tk),'So sánh');
- XLSX.utils.book_append_sheet(wb,aeonSiteStyledSheet(hue),'AEON Hue');
- XLSX.utils.book_append_sheet(wb,aeonSiteStyledSheet(tk),'AEON Thanh Khe');
- XLSX.writeFile(wb,`Service_Support_Ticket_Report_AEON-vs-ThanhKhe_${vnTodayIso()}.xlsx`);
- toast(`✅ Đã xuất báo cáo — Huế: ${hue.length} phiếu, Thanh Khê: ${tk.length} phiếu`);
+ XLSX.utils.book_append_sheet(wb,aeonSiteStyledSheet(rows),'Report');
+ const safeName=site.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'');
+ XLSX.writeFile(wb,`Service_Support_Ticket_Report_${safeName}_${vnTodayIso()}.xlsx`);
+ toast(`✅ Đã xuất báo cáo ${site} — ${rows.length} phiếu`);
 };
 // Backup AEON — THỦ CÔNG (khác Chấm công/CTP tự động), bấm khi cần ngay
 // trong popup này, dùng luôn mật khẩu 'aeon' đã mở khoá, không cần Cài đặt.
