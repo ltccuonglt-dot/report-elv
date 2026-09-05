@@ -14,9 +14,15 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- defer: tải song song lúc trình duyệt còn đang phân tích HTML/CSS, không
+     chặn hiển thị trang (trước đây 3 thư viện này chặn cứng — điện thoại
+     mạng chậm phải tải xong CẢ BA mới bắt đầu vẽ được gì lên màn hình). Thực
+     thi đúng thứ tự này ngay trước DOMContentLoaded — script chính bên dưới
+     bọc trong 'DOMContentLoaded' để đảm bảo luôn chạy SAU khi cả 3 đã sẵn
+     sàng (window.XLSX/supabase/jspdf), giữ đúng thứ tự phụ thuộc như cũ. -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <style>
 :root{
   --ground:#f2eef4; --surface:#ffffff; --surface-2:#f8f5fa;
@@ -389,7 +395,11 @@ table.rpt select.status-sel:disabled{opacity:.5}
 .user-row-info{display:flex;flex-direction:column;gap:2px;min-width:0}
 .user-row-info b{font-size:13.5px}
 .user-role-tag{font-size:11px;font-weight:600;color:var(--brand-ink);background:var(--brand-soft);display:inline-block;padding:2px 8px;border-radius:999px;width:fit-content}
-.user-row-actions{display:flex;gap:6px;flex:none}
+.user-row-actions{display:flex;gap:6px;flex:none;flex-wrap:wrap;justify-content:flex-end}
+.user-role-tags{display:flex;flex-wrap:wrap;gap:4px}
+.role-check-list{display:flex;flex-direction:column;gap:6px;padding:8px 0}
+.role-check-opt{display:flex!important;align-items:center;gap:8px;font-size:13.5px;font-weight:500;cursor:pointer}
+.role-check-opt input{width:auto!important}
 table.rpt tr.weekend-row{background:var(--danger-soft)}
 table.rpt tr.weekend-row .dow-tag{color:var(--danger)}
 .dow-tag{font-size:9.5px;font-weight:800;letter-spacing:.3px;opacity:.85}
@@ -1013,12 +1023,12 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         <div class="pw-change-title">Thêm người dùng mới</div>
         <label class="field"><span class="lab">Tên đăng nhập</span><input type="text" id="s_newuser_name" autocomplete="off"></label>
         <label class="field"><span class="lab">Mật khẩu</span><input type="password" id="s_newuser_pw" autocomplete="off" placeholder="Tối thiểu 4 ký tự"></label>
-        <label class="field"><span class="lab">Vai trò</span>
-          <select id="s_newuser_role">
-            <option value="chamcong_ctp">Admin cụm Chấm công &amp; CTP</option>
-            <option value="aeon">Admin cụm AEON</option>
-            <option value="administrator">Administrator (toàn quyền, được xoá)</option>
-          </select>
+        <label class="field"><span class="lab">Được vào tool nào (chọn 1 hoặc nhiều)</span>
+          <div class="role-check-list">
+            <label class="role-check-opt"><input type="checkbox" class="s-newuser-roles" value="chamcong_ctp"><span>Chấm công &amp; CTP</span></label>
+            <label class="role-check-opt"><input type="checkbox" class="s-newuser-roles" value="aeon"><span>AEON</span></label>
+            <label class="role-check-opt"><input type="checkbox" class="s-newuser-roles" value="administrator"><span>Administrator (toàn quyền, được xoá)</span></label>
+          </div>
         </label>
         <button type="button" class="btn btn-primary" id="btnUsersAdd" style="margin-bottom:6px"><span>+ Thêm người dùng</span></button>
       </div>
@@ -1330,6 +1340,12 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 </div>
 
 <script>
+// Bọc toàn bộ script chính trong DOMContentLoaded — vì 3 thư viện ngoài
+// (XLSX/Supabase/jsPDF) giờ tải kiểu "defer" (không chặn hiển thị trang),
+// nên phải đợi đúng lúc chúng đã sẵn sàng (ngay trước DOMContentLoaded)
+// trước khi chạy code dùng tới window.supabase/XLSX/jspdf ở top-level (vd
+// const sb=window.supabase.createClient(...) ngay khi tải trang).
+document.addEventListener('DOMContentLoaded', function(){
 "use strict";
 /* ===== CẤU HÌNH — mở app, bấm ⚙️ để dán link, KHÔNG cần sửa file ===== */
 // Kết nối mặc định — để mở app trên BẤT KỲ điện thoại/trình duyệt nào cũng
@@ -1364,7 +1380,7 @@ async function verifyAdminPassword(pin,group,username){
  try{
    if(username){
      const login=await DB.loginUser(username,pin);
-     if(!login.ok || !(GROUP_ALLOWED_ROLES[group]||[]).includes(login.role)) return false;
+     if(!login.ok || !(login.roles||[]).some(r=>(GROUP_ALLOWED_ROLES[group]||[]).includes(r))) return false;
      adminUnlocked[group]=true; adminPassword[group]=pin; return true;
    }
    const ok = group==='aeon' ? (await DB.verifyAeonPassword(pin)).ok
@@ -1652,30 +1668,33 @@ const DB={
  async loginUser(username,password){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
    const {data,error}=await sb.rpc('login_user',{p_username:username,p_password:password});
-   return (error||!data||!data.length) ? {ok:false,error:error?.message||'Sai tên đăng nhập hoặc mật khẩu'} : {ok:true,username:data[0].username,role:data[0].role};
+   return (error||!data||!data.length) ? {ok:false,error:error?.message||'Sai tên đăng nhập hoặc mật khẩu'} : {ok:true,username:data[0].username,roles:data[0].roles};
  },
  async listUsers(adminPassword){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
    const {data,error}=await sb.rpc('list_users',{p_req_username:'',p_req_password:adminPassword});
    return error?{ok:false,error:error.message}:{ok:true,data};
  },
- async addUser(username,password,role,adminPassword){
+ // 1 tài khoản (1 username+password) có thể được PHÂN CÔNG vào nhiều tool
+ // cùng lúc — roles là MẢNG, không phải 1 giá trị đơn.
+ async addUser(username,password,roles,adminPassword){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
-   const {data,error}=await sb.rpc('admin_add_user',{p_req_username:'',p_req_password:adminPassword,p_new_username:username,p_new_password:password,p_new_role:role});
+   const {data,error}=await sb.rpc('admin_add_user',{p_req_username:'',p_req_password:adminPassword,p_new_username:username,p_new_password:password,p_new_roles:roles});
    return error?{ok:false,error:error.message}:{ok:true,data};
  },
- // username KHÔNG còn là khoá duy nhất — nhiều cụm có thể dùng chung 1 tên
- // đăng nhập, khác nhau ở role + mật khẩu (vd "admin" cho cả 3 cụm). Xoá/đổi
- // mật khẩu phải chỉ rõ ĐÚNG role đi kèm, không thì có thể đụng nhầm tài
- // khoản khác cụm đang trùng tên.
- async deleteUser(username,role,adminPassword){
+ async setUserRoles(username,roles,adminPassword){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
-   const {data,error}=await sb.rpc('admin_delete_user',{p_req_username:'',p_req_password:adminPassword,p_target_username:username,p_target_role:role});
+   const {data,error}=await sb.rpc('admin_set_user_roles',{p_req_username:'',p_req_password:adminPassword,p_target_username:username,p_new_roles:roles});
    return error?{ok:false,error:error.message}:{ok:true,data};
  },
- async resetUserPassword(username,role,newPassword,adminPassword){
+ async deleteUser(username,adminPassword){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
-   const {data,error}=await sb.rpc('admin_reset_user_password',{p_req_username:'',p_req_password:adminPassword,p_target_username:username,p_target_role:role,p_new_password:newPassword});
+   const {data,error}=await sb.rpc('admin_delete_user',{p_req_username:'',p_req_password:adminPassword,p_target_username:username});
+   return error?{ok:false,error:error.message}:{ok:true,data};
+ },
+ async resetUserPassword(username,newPassword,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('admin_reset_user_password',{p_req_username:'',p_req_password:adminPassword,p_target_username:username,p_new_password:newPassword});
    return error?{ok:false,error:error.message}:{ok:true};
  },
  async listAttendance(employee,year,month,adminPassword){
@@ -2113,22 +2132,24 @@ async function renameEngineer(oldName,newName){
 }
 
 // ===== Người dùng (app_users) — Administrator quản lý ai được đăng nhập
-// từng cụm (AEON / Chấm công-CTP) và ai là Administrator (được xoá) =====
-const USER_ROLE_LABEL={administrator:'Administrator (toàn quyền)',aeon:'Admin cụm AEON',chamcong_ctp:'Admin cụm Chấm công & CTP'};
-// 1 username có thể dùng chung cho NHIỀU role (khác mật khẩu) — mọi thao
-// tác trên 1 dòng đều phải mang theo ĐÚNG cặp username+role (không chỉ
-// username) để không đụng nhầm tài khoản khác cụm đang trùng tên.
+// tool nào (1 tài khoản có thể được phân công vào NHIỀU tool cùng lúc, xem
+// mảng roles) và ai là Administrator (duy nhất được xoá dữ liệu) =====
+const USER_ROLE_LABEL={administrator:'Administrator (toàn quyền)',aeon:'Admin AEON',chamcong_ctp:'Admin Chấm công & CTP'};
 function usersRenderList(list){
  $('#usersList').innerHTML = (list&&list.length) ? list.map(u=>`
-   <div class="user-row" data-username="${esc(u.username)}" data-role="${esc(u.role)}">
-     <div class="user-row-info"><b>${esc(u.username)}</b><span class="user-role-tag">${esc(USER_ROLE_LABEL[u.role]||u.role)}</span></div>
+   <div class="user-row" data-username="${esc(u.username)}">
+     <div class="user-row-info"><b>${esc(u.username)}</b>
+       <div class="user-role-tags">${(u.roles||[]).map(r=>`<span class="user-role-tag">${esc(USER_ROLE_LABEL[r]||r)}</span>`).join('')}</div>
+     </div>
      <div class="user-row-actions">
-       <button type="button" class="btn-mini user-reset-btn" data-username="${esc(u.username)}" data-role="${esc(u.role)}">Đổi mật khẩu</button>
-       <button type="button" class="btn-mini btn-danger user-del-btn" data-username="${esc(u.username)}" data-role="${esc(u.role)}">Xoá</button>
+       <button type="button" class="btn-mini user-roles-btn" data-username="${esc(u.username)}" data-roles="${esc((u.roles||[]).join(','))}">Sửa quyền</button>
+       <button type="button" class="btn-mini user-reset-btn" data-username="${esc(u.username)}">Đổi mật khẩu</button>
+       <button type="button" class="btn-mini btn-danger user-del-btn" data-username="${esc(u.username)}">Xoá</button>
      </div>
    </div>`).join('') : '<span class="hint">Chưa có người dùng nào.</span>';
- $$('#usersList .user-reset-btn').forEach(b=>b.onclick=()=>usersResetPassword(b.dataset.username,b.dataset.role));
- $$('#usersList .user-del-btn').forEach(b=>b.onclick=()=>usersDelete(b.dataset.username,b.dataset.role));
+ $$('#usersList .user-reset-btn').forEach(b=>b.onclick=()=>usersResetPassword(b.dataset.username));
+ $$('#usersList .user-del-btn').forEach(b=>b.onclick=()=>usersDelete(b.dataset.username));
+ $$('#usersList .user-roles-btn').forEach(b=>b.onclick=()=>usersEditRoles(b.dataset.username,b.dataset.roles.split(',').filter(Boolean)));
 }
 async function usersLoadList(){
  const pw=$('#s_users_adminpw').value;
@@ -2139,30 +2160,46 @@ async function usersLoadList(){
  $('#usersListWrap').style.display='block';
  usersRenderList(j.data);
 }
-async function usersResetPassword(username,role){
- const newPw=prompt(`Mật khẩu mới cho "${username}" (${USER_ROLE_LABEL[role]||role}) (tối thiểu 4 ký tự):`);
+async function usersResetPassword(username){
+ const newPw=prompt(`Mật khẩu mới cho "${username}" (tối thiểu 4 ký tự):`);
  if(newPw===null) return;
  if(newPw.length<4){ toast('Mật khẩu quá ngắn (tối thiểu 4 ký tự)',true); return; }
- const j=await DB.resetUserPassword(username,role,newPw,$('#s_users_adminpw').value);
- if(j.ok) toast(`✅ Đã đổi mật khẩu cho ${username} (${USER_ROLE_LABEL[role]||role})`); else toast(j.error||'Lỗi đổi mật khẩu',true);
+ const j=await DB.resetUserPassword(username,newPw,$('#s_users_adminpw').value);
+ if(j.ok) toast(`✅ Đã đổi mật khẩu cho ${username}`); else toast(j.error||'Lỗi đổi mật khẩu',true);
 }
-async function usersDelete(username,role){
- if(!confirm(`Xoá tài khoản "${username}" (${USER_ROLE_LABEL[role]||role})?`)) return;
- const j=await DB.deleteUser(username,role,$('#s_users_adminpw').value);
+async function usersDelete(username){
+ if(!confirm(`Xoá tài khoản "${username}"?`)) return;
+ const j=await DB.deleteUser(username,$('#s_users_adminpw').value);
  if(j.ok){ toast('✅ Đã xoá tài khoản'); usersRenderList(j.data); } else toast(j.error||'Lỗi xoá',true);
+}
+// Phân công lại 1 tài khoản ĐÃ CÓ vào tool nào — hỏi qua confirm() từng tool
+// 1 lần (đơn giản, không cần dựng modal riêng): giữ nguyên tool nào bấm OK,
+// bỏ tool nào bấm Cancel.
+async function usersEditRoles(username,currentRoles){
+ const ALL=[['chamcong_ctp','Chấm công & CTP'],['aeon','AEON'],['administrator','Administrator (toàn quyền, được xoá)']];
+ const chosen=[];
+ for(const [val,label] of ALL){
+   const has=currentRoles.includes(val);
+   if(confirm(`Tài khoản "${username}" — CHO VÀO "${label}"?\n\n(Hiện đang: ${has?'CÓ':'KHÔNG'} quyền này)`)) chosen.push(val);
+ }
+ if(!chosen.length){ toast('Phải chọn ít nhất 1 tool, huỷ không lưu',true); return; }
+ const j=await DB.setUserRoles(username,chosen,$('#s_users_adminpw').value);
+ if(j.ok){ toast(`✅ Đã cập nhật quyền cho ${username}`); usersRenderList(j.data); } else toast(j.error||'Lỗi cập nhật quyền',true);
 }
 $('#btnUsersLoad').onclick=usersLoadList;
 $('#btnUsersAdd').onclick=async()=>{
  const name=$('#s_newuser_name').value.trim();
  const pw=$('#s_newuser_pw').value;
- const role=$('#s_newuser_role').value;
+ const roles=$$('.s-newuser-roles:checked').map(c=>c.value);
  const adminPw=$('#s_users_adminpw').value;
  if(!adminPw){ toast('Nhập mật khẩu Administrator ở trên trước',true); return; }
  if(!name){ toast('Nhập tên đăng nhập',true); return; }
  if(pw.length<4){ toast('Mật khẩu tối thiểu 4 ký tự',true); return; }
- const j=await DB.addUser(name,pw,role,adminPw);
+ if(!roles.length){ toast('Chọn ít nhất 1 tool cho tài khoản này',true); return; }
+ const j=await DB.addUser(name,pw,roles,adminPw);
  if(j.ok){
    toast('✅ Đã thêm người dùng'); $('#s_newuser_name').value=''; $('#s_newuser_pw').value='';
+   $$('.s-newuser-roles').forEach(c=>c.checked=false);
    $('#usersListWrap').style.display='block'; usersRenderList(j.data);
  } else toast(j.error||'Lỗi thêm người dùng',true);
 };
@@ -4984,6 +5021,7 @@ loadEngineers();
 // tạo trùng phiếu (so sánh mgrData khi gửi phiếu) luôn có dữ liệu mà so
 // sánh ngay từ phiếu đầu tiên, không phải đợi người dùng mở màn khác trước.
 loadManager();
+});
 </script>
 </body>
 </html>
