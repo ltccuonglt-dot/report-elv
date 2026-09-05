@@ -1100,6 +1100,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         <select id="cc_clr_month" style="flex:1"></select>
         <select id="cc_clr_year" style="flex:1"></select>
       </div>
+      <select id="cc_clr_employee" style="margin-bottom:8px"><option value="">— Chọn kỹ sư cần xoá —</option></select>
       <button type="button" class="btn btn-danger" id="btnCcClearMonth" style="margin-bottom:6px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Xoá chấm công tháng đã chọn ở trên (làm lại tháng mới)</span>
       </button>
@@ -1632,9 +1633,9 @@ const DB={
    const {error}=await sb.rpc('delete_attendance',{p_id:Number(id),p_admin_password:adminPassword});
    return error?{ok:false,error:error.message}:{ok:true};
  },
- async clearAttendanceMonth(year,month,adminPassword){
+ async clearAttendanceMonth(year,month,adminPassword,employee){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
-   const {data,error}=await sb.rpc('clear_attendance_month',{p_year:Number(year),p_month:Number(month),p_admin_password:adminPassword});
+   const {data,error}=await sb.rpc('clear_attendance_month',{p_year:Number(year),p_month:Number(month),p_admin_password:adminPassword,p_employee:employee||null});
    return error?{ok:false,error:error.message}:{ok:true,count:data};
  },
  // Công tác phí — Supabase làm chính. add_expense_line trả {trip_id,line_id}
@@ -3950,6 +3951,13 @@ function ccPopulateSelects(){
  if(!cmSel.dataset.built){ let opts=''; for(let m=1;m<=12;m++) opts+=`<option value="${pad2(m)}" ${pad2(m)===pad2(now.getMonth()+1)?'selected':''}>Tháng ${m}</option>`; cmSel.innerHTML=opts; cmSel.dataset.built='1'; }
  const cySel=$('#cc_clr_year');
  if(!cySel.dataset.built){ let opts=''; for(let y=now.getFullYear()-1;y<=now.getFullYear()+1;y++) opts+=`<option value="${y}" ${y===now.getFullYear()?'selected':''}>Năm ${y}</option>`; cySel.innerHTML=opts; cySel.dataset.built='1'; }
+ // Bắt buộc chọn ĐÚNG 1 kỹ sư mới cho xoá — không còn kiểu "xoá tất cả" nữa,
+ // tránh xoá nhầm sạch cả tháng của mọi người chỉ vì định xoá 1 người.
+ const ceSel=$('#cc_clr_employee'); const curCe=ceSel.value;
+ ceSel.innerHTML='<option value="">— Chọn kỹ sư cần xoá —</option>'
+   +'<option value="__all">⚠️ Tất cả nhân viên</option>'
+   +engineerList.map(n=>`<option value="${esc(n)}" ${n===curCe?'selected':''}>${esc(n)}</option>`).join('');
+ if(curCe) ceSel.value=curCe;
  if(!$('#cc_f_date').value) $('#cc_f_date').value=vnTodayIso();
 }
 $('#cc_f_project').onchange=e=>$('#wrap_cc_project_other').style.display=e.target.value==='__other'?'block':'none';
@@ -4244,13 +4252,20 @@ $('#btnCcDoExport').onclick=()=>{
 // (vd đang xem tháng cũ để tra cứu, lỡ tay xoá luôn).
 $('#btnCcClearMonth').onclick=async()=>{
  const year=$('#cc_clr_year').value, month=$('#cc_clr_month').value;
- if(!confirm(`Xoá TOÀN BỘ chấm công tháng ${Number(month)}/${year} (mọi nhân viên)? Nhớ đã xuất Excel xong chưa — không thể hoàn tác.`)) return;
- const j=await DB.clearAttendanceMonth(year,month,adminPassword.chamcong_ctp);
- if(j.ok){ toast(`✅ Đã xoá ${j.count||0} dòng tháng ${Number(month)}/${year}`); ccLoadList(); renderCcMonthAudit(); }
+ const engSel=$('#cc_clr_employee').value;
+ if(!engSel){ toast('Chọn kỹ sư cần xoá (hoặc chọn "Tất cả nhân viên" nếu chắc chắn muốn xoá hết)',true); return; }
+ const isAll=engSel==='__all';
+ const confirmMsg=isAll
+   ? `⚠️ Xoá TOÀN BỘ chấm công tháng ${Number(month)}/${year} CỦA MỌI NHÂN VIÊN? Nhớ đã xuất Excel xong chưa — không thể hoàn tác.`
+   : `Xoá chấm công tháng ${Number(month)}/${year} CỦA RIÊNG "${engSel}"? Không ảnh hưởng người khác. Nhớ đã xuất Excel xong chưa — không thể hoàn tác.`;
+ if(!confirm(confirmMsg)) return;
+ const j=await DB.clearAttendanceMonth(year,month,adminPassword.chamcong_ctp,isAll?'':engSel);
+ if(j.ok){ toast(`✅ Đã xoá ${j.count||0} dòng tháng ${Number(month)}/${year}${isAll?'':' của '+engSel}`); ccLoadList(); renderCcMonthAudit(); }
  else toast(j.error||'Lỗi xoá',true);
 };
 $('#cc_clr_month').onchange=renderCcMonthAudit;
 $('#cc_clr_year').onchange=renderCcMonthAudit;
+$('#cc_clr_employee').onchange=renderCcMonthAudit;
 
 // Đồng bộ TAY chấm công của 1 kỹ sư từ Supabase sang tab riêng của người đó
 // trong file "Report Chấm Công" (mỗi kỹ sư 1 tab, đúng bố cục mẫu công ty).
@@ -4276,22 +4291,31 @@ $('#btnCcSyncEngineer').onclick=async()=>{
 async function renderCcMonthAudit(){
  const box=$('#ccMonthAudit'); if(!box) return;
  box.textContent='Đang kiểm tra...'; box.className='period-notice';
+ const engSel=$('#cc_clr_employee').value;
+ const scopeAll=!engSel || engSel==='__all';
  const all=await DB.listAttendance(null,null,null,adminPassword.chamcong_ctp);
  if(!all.ok){ box.textContent='Không kiểm tra được (lỗi tải dữ liệu).'; return; }
+ const rows=scopeAll ? all.data : all.data.filter(r=>r.employee===engSel);
  const byMonth={};
- all.data.forEach(r=>{ const ym=(r.date||'').slice(0,7); if(ym) byMonth[ym]=(byMonth[ym]||0)+1; });
+ rows.forEach(r=>{ const ym=(r.date||'').slice(0,7); if(ym) byMonth[ym]=(byMonth[ym]||0)+1; });
  const months=Object.keys(byMonth).sort();
  const targetYm=`${$('#cc_clr_year').value}-${$('#cc_clr_month').value}`;
  const targetCount=byMonth[targetYm]||0;
+ const who=scopeAll?'(mọi nhân viên)':`của "${engSel}"`;
  const listStr=months.length
    ? months.map(ym=>{ const [y,m]=ym.split('-'); return `Tháng ${Number(m)}/${y} (${byMonth[ym]} dòng)`; }).join(', ')
-   : 'không còn tháng nào có dữ liệu';
+   : `không còn tháng nào có dữ liệu ${who}`;
+ if(!engSel){
+   box.className='period-notice';
+   box.textContent='Chọn kỹ sư cần xoá ở trên trước (hoặc "Tất cả nhân viên") để xem tình trạng tháng đã chọn.';
+   return;
+ }
  if(targetCount===0){
    box.className='period-notice';
-   box.textContent=`✅ Tháng ${Number($('#cc_clr_month').value)}/${$('#cc_clr_year').value} đã sạch, sẵn sàng chấm công mới. Các tháng còn dữ liệu: ${listStr}.`;
+   box.textContent=`✅ Tháng ${Number($('#cc_clr_month').value)}/${$('#cc_clr_year').value} đã sạch ${who}, sẵn sàng chấm công mới. Các tháng còn dữ liệu ${who}: ${listStr}.`;
  } else {
    box.className='period-notice soon';
-   box.textContent=`⚠️ Tháng ${Number($('#cc_clr_month').value)}/${$('#cc_clr_year').value} còn ${targetCount} dòng, chưa sạch. Các tháng còn dữ liệu: ${listStr}.`;
+   box.textContent=`⚠️ Tháng ${Number($('#cc_clr_month').value)}/${$('#cc_clr_year').value} còn ${targetCount} dòng ${who}, chưa sạch. Các tháng còn dữ liệu ${who}: ${listStr}.`;
  }
 }
 
