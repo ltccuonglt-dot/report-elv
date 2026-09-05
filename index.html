@@ -1059,6 +1059,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         <button type="button" class="btn-mini" id="btnCcSyncEngineer">🔄 Đồng bộ từ Supabase sang Sheet</button>
       </div>
       <p class="hint" style="margin-bottom:10px">Chọn tên kỹ sư rồi bấm nút — app lấy TOÀN BỘ chấm công của người đó từ Supabase (nguồn thật) ghi đè lại đúng tab riêng của người đó trong file "Report Chấm Công" (mỗi kỹ sư 1 tab).</p>
+      <div id="ccSyncStatus" class="period-notice" style="margin-bottom:10px;display:none"></div>
 
       <button type="button" class="btn" id="btnCcAutoFill" style="margin:10px 0">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
@@ -1292,7 +1293,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <label class="field"><span class="lab">Ưu tiên</span>
         <select id="aeon_f_priority"><option value="Low">Low</option><option value="Medium" selected>Medium</option><option value="High">High</option></select>
       </label>
-      <label class="field" style="grid-column:1/-1"><span class="lab">Vấn đề</span><input type="text" id="aeon_f_issue"></label>
+      <label class="field" style="grid-column:1/-1"><span class="lab">Vấn đề <button type="button" class="btn-mini aeon-translate-btn" data-target="aeon_f_issue" style="margin-left:6px">🌐 Dịch sang tiếng Anh</button></span><input type="text" id="aeon_f_issue"></label>
       <label class="field"><span class="lab">Kỹ sư</span><select id="aeon_f_engineer"></select></label>
       <label class="field" id="wrap_aeon_engineer_other" style="display:none"><span class="lab">Nhập tên kỹ sư</span><input type="text" id="aeon_f_engineer_other" placeholder="VD: Kỹ sư khác không có trong danh sách"></label>
       <label class="field"><span class="lab">Hình thức hỗ trợ</span>
@@ -1301,7 +1302,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <label class="field"><span class="lab">Trạng thái</span>
         <select id="aeon_f_status"><option value="Done">Done</option><option value="In Progress">In Progress</option><option value="Pending">Pending</option></select>
       </label>
-      <label class="field" style="grid-column:1/-1"><span class="lab">Ghi chú</span><input type="text" id="aeon_f_remark"></label>
+      <label class="field" style="grid-column:1/-1"><span class="lab">Ghi chú <button type="button" class="btn-mini aeon-translate-btn" data-target="aeon_f_remark" style="margin-left:6px">🌐 Dịch sang tiếng Anh</button></span><input type="text" id="aeon_f_remark"></label>
     </div>
     <div style="display:flex;gap:10px;margin:10px 0">
       <button type="button" class="btn btn-primary" id="btnAeonAddRow"><span>+ Thêm phiếu</span></button>
@@ -3856,6 +3857,29 @@ function aeonEngineerValue(){
  return v==='__other' ? $('#aeon_f_engineer_other').value.trim() : v;
 }
 
+// Viết tiếng Việt rồi bấm dịch sang tiếng Anh NGAY TRONG Ô đó (thay thế nội
+// dung, vẫn sửa tay lại được trước khi bấm Cập nhật) — dùng API dịch miễn
+// phí MyMemory (không cần key). Luôn báo rõ đang dịch/lỗi, không im lặng.
+async function aeonTranslateField(inputId){
+ const input=$('#'+inputId);
+ const text=input.value.trim();
+ if(!text){ toast('Nhập nội dung tiếng Việt trước đã',true); return; }
+ const btn=$(`.aeon-translate-btn[data-target="${inputId}"]`);
+ const oldText=btn.textContent; btn.disabled=true; btn.textContent='Đang dịch...';
+ try{
+   const res=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=vi|en`);
+   if(!res.ok) throw new Error('Lỗi kết nối dịch vụ dịch');
+   const j=await res.json();
+   const translated=j?.responseData?.translatedText;
+   if(!translated) throw new Error('Không dịch được, thử lại');
+   input.value=translated;
+   toast('✅ Đã dịch sang tiếng Anh — kiểm tra lại rồi bấm Cập nhật/Thêm phiếu');
+ }catch(err){
+   toast(err.message||'Lỗi dịch, kiểm tra mạng rồi thử lại',true);
+ } finally { btn.disabled=false; btn.textContent=oldText; }
+}
+$$('.aeon-translate-btn').forEach(b=>b.onclick=()=>aeonTranslateField(b.dataset.target));
+
 function aeonResetForm(){
  aeonEditingId=null;
  $('#aeon_f_date').value=''; $('#aeon_f_customer').value='AEON Mall HUE'; $('#aeon_f_system').value='CCTV';
@@ -4273,19 +4297,26 @@ function ccRenderDraft(){
 }
 
 $('#btnCcCancelDraft').onclick=()=>{ ccDraft=[]; $('#ccDraftBox').style.display='none'; };
+// Bọc try/catch/finally đầy đủ (trước đây thiếu — 1 lỗi bất ngờ giữa chừng
+// là nút kẹt "..." mãi, tưởng đứng máy) — luôn báo rõ tiến độ + kết quả,
+// không im lặng, giống mọi nút đồng bộ/lưu hàng loạt khác trong app.
 $('#btnCcSaveDraft').onclick=async()=>{
  if(!ccDraft.length){ toast('Không có gì để lưu',true); return; }
  if(!confirm(`Lưu ${ccDraft.length} dòng chấm công?`)) return;
- const btn=$('#btnCcSaveDraft'); btn.disabled=true;
+ const btn=$('#btnCcSaveDraft'); btn.disabled=true; const oldText=btn.textContent;
  let ok=0, fail=0;
- for(const row of ccDraft){
-   const j=await DB.addAttendance(row,adminPassword.chamcong_ctp);
-   if(j.ok) ok++; else fail++;
- }
- btn.disabled=false;
- toast(fail?`⚠️ Đã lưu ${ok} dòng, lỗi ${fail} dòng`:`✅ Đã lưu ${ok} dòng`, !!fail);
- ccDraft=[]; $('#ccDraftBox').style.display='none';
- ccLoadList();
+ try{
+   for(let i=0;i<ccDraft.length;i++){
+     btn.textContent=`Đang lưu ${i+1}/${ccDraft.length}...`;
+     const j=await DB.addAttendance(ccDraft[i],adminPassword.chamcong_ctp);
+     if(j.ok) ok++; else fail++;
+   }
+   toast(fail?`⚠️ Đã lưu ${ok} dòng, lỗi ${fail} dòng`:`✅ Đã lưu ${ok} dòng`, !!fail);
+   ccDraft=[]; $('#ccDraftBox').style.display='none';
+   ccLoadList();
+ }catch(err){
+   toast(`⚠️ Lỗi khi lưu (đã lưu ${ok}/${ccDraft.length} dòng trước khi lỗi) — kiểm tra mạng rồi thử lại`,true);
+ } finally { btn.disabled=false; btn.textContent=oldText; }
 };
 
 function ccCheckMonthReminder(){
@@ -4395,17 +4426,31 @@ $('#cc_clr_employee').onchange=renderCcMonthAudit;
 // trong file "Report Chấm Công" (mỗi kỹ sư 1 tab, đúng bố cục mẫu công ty).
 // Lấy TOÀN BỘ lịch sử của người đó (không giới hạn theo tháng đang xem) rồi
 // ghi đè lại tab — đảm bảo tab luôn khớp đúng dữ liệu thật trên Supabase.
+// Luôn hiện trạng thái RÕ RÀNG trong lúc chạy + khi xong (không được im
+// lặng) — dùng ô #ccSyncStatus tồn tại lâu (không tự mất như toast) + toast
+// kèm theo, giống hệt kiểu "Đồng bộ backup AEON". Có try/catch/finally đầy
+// đủ để nút KHÔNG BAO GIỜ bị kẹt ở "Đang đồng bộ…" kể cả khi lỗi mạng/lỗi
+// bất ngờ (trước đây thiếu catch, lỗi ném ra là nút kẹt mãi, trông như đứng
+// im không phản hồi).
 $('#btnCcSyncEngineer').onclick=async()=>{
  const eng=$('#cc_sync_employee').value;
  if(!eng){ toast('Chọn tên kỹ sư cần đồng bộ',true); return; }
  if(!CFG.url){ toast('Chưa cấu hình Apps Script URL',true); return; }
  const btn=$('#btnCcSyncEngineer'); btn.disabled=true; const oldText=btn.textContent; btn.textContent='Đang đồng bộ…';
+ const box=$('#ccSyncStatus'); box.style.display='block'; box.className='period-notice';
+ box.textContent=`⏳ Đang đồng bộ chấm công của ${eng}...`;
  try{
    const res=await DB.listAttendance(eng,null,null,adminPassword.chamcong_ctp);
-   if(!res.ok){ toast(res.error||'Lỗi tải dữ liệu từ Supabase',true); return; }
+   if(!res.ok){ throw new Error(res.error||'Lỗi tải dữ liệu từ Supabase'); }
    const j=await DB.syncAttendanceEngineerToSheet(eng,res.data,adminPassword.chamcong_ctp);
-   if(j.ok) toast(`✅ Đã đồng bộ ${j.count||0} dòng chấm công của ${eng} sang Google Sheet`);
-   else toast(j.error||'Lỗi đồng bộ',true);
+   if(!j.ok){ throw new Error(j.error||'Lỗi đồng bộ'); }
+   box.className='period-notice';
+   box.textContent=`✅ Đã đồng bộ ${j.count||0} dòng chấm công của ${eng} sang Google Sheet lúc ${vnNow().toLocaleTimeString('vi-VN')}.`;
+   toast(`✅ Đã đồng bộ ${j.count||0} dòng chấm công của ${eng} sang Google Sheet`);
+ }catch(err){
+   box.className='period-notice overdue';
+   box.textContent='❌ Lỗi đồng bộ: '+err.message;
+   toast(err.message||'Lỗi đồng bộ',true);
  } finally { btn.disabled=false; btn.textContent=oldText; }
 };
 
