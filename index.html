@@ -330,6 +330,8 @@ table.rpt select.status-sel:disabled{opacity:.5}
 .ctp-grid input.ctp-cell,.ctp-grid select.ctp-cell{width:100%;box-sizing:border-box;font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
 .ctp-grid input.ctp-cell:disabled{background:var(--surface-2);color:var(--muted)}
 .ctp-grid td.num{text-align:right}
+.ctp-days-toggle{display:flex!important;align-items:center;gap:4px;margin-top:4px;font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap;cursor:pointer}
+.ctp-days-toggle input{width:auto!important;flex:none}
 .ctp-menu-pop{position:absolute;top:calc(100% + 6px);right:0;z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow);padding:10px;min-width:220px}
 .ctp-menu-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px}
 .btn-row-view,.btn-row-photos,.btn-row-edit,.btn-row-delete{border:1.5px solid var(--line);background:var(--surface-2);color:var(--muted);width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
@@ -1468,7 +1470,7 @@ function mapExpenseLine(row){
    expenseType:row.expense_type, description:row.description, lineFromDate:row.line_from_date, lineToDate:row.line_to_date,
    km:row.km, quantity:row.quantity, rate:row.rate, amount:row.amount, serviceType:row.service_type,
    projectCode:row.project_code, projectName:row.project_name, note:row.note, mapImage:row.map_image,
-   updatedAt:row.updated_at};
+   multiplyByDays:row.multiply_by_days, updatedAt:row.updated_at};
 }
 const DB={
  async verifyAdmin(pass){
@@ -4669,8 +4671,7 @@ async function ctpApplyMapKmToFuelLines(){
  for(let i=0;i<ctpLocalRows.length;i++){
    if((ctpLocalRows[i].expenseType||'').includes('xăng')){
      ctpLocalRows[i].km=km;
-     const days=ctpDaysBetween(ctpLocalRows[i].lineFromDate,ctpLocalRows[i].lineToDate);
-     Object.assign(ctpLocalRows[i],ctpCalcQtyAmount(ctpLocalRows[i].expenseType,ctpLocalRows[i].km,ctpLocalRows[i].rate,days));
+     Object.assign(ctpLocalRows[i],ctpCalcQtyAmount(ctpLocalRows[i].expenseType,ctpLocalRows[i].km,ctpLocalRows[i].rate,ctpLocalRows[i].multiplyByDays,ctpLocalRows[i].lineFromDate,ctpLocalRows[i].lineToDate));
      if(!ctpLocalRows[i].noteOther) ctpLocalRows[i].note=ctpFuelNoteFor(ctpLocalRows[i]);
      await ctpPersistRow(i);
      applied++;
@@ -4721,6 +4722,9 @@ $('#ctp_mapUpload').onchange=()=>{
 // Số ngày THẬT của dòng (Từ ngày → Đến ngày, tính cả 2 đầu) — dòng xăng kéo
 // dài nhiều ngày thì tiền xăng nhân theo đúng số ngày đó (đi-về mỗi ngày của
 // chuyến công tác), không chỉ tính 1 lượt duy nhất dù khai nhiều ngày.
+// Số ngày THẬT của dòng (Từ ngày → Đến ngày, tính cả 2 đầu) — CHỈ dùng khi
+// người dùng chủ động tick "Tính theo từng ngày" (mặc định TẮT — mỗi dòng
+// xăng mặc định luôn đúng 1 khứ hồi, không tự nhân theo ngày).
 function ctpDaysBetween(from,to){
  if(!from||!to) return 1;
  const d1=new Date(from+'T00:00:00'), d2=new Date(to+'T00:00:00');
@@ -4728,24 +4732,28 @@ function ctpDaysBetween(from,to){
  return diff>=0 ? diff+1 : 1;
 }
 // Số lượng KHÔNG cho gõ tay (đúng mẫu — luôn tự tính): 1 cho mọi loại chi
-// phí thường (1 lần/1 ngày công), riêng xăng tự tính km/30 (lít) NHÂN THEO
-// SỐ NGÀY của dòng (đi-về mỗi ngày trong khoảng Từ-Đến ngày).
-function ctpCalcQtyAmount(expenseType,km,rate,days){
+// phí thường (1 lần/1 ngày công), riêng xăng tự tính km/30 (lít) *2 (1 lượt
+// đi + 1 lượt về) — nhân thêm theo số ngày CHỈ khi multiplyByDays được tick.
+function ctpCalcQtyAmount(expenseType,km,rate,multiplyByDays,lineFromDate,lineToDate){
  const isFuel=(expenseType||'').includes('xăng');
  rate=Number(rate)||0;
  if(isFuel){
-   const d=Math.max(1,Number(days)||1);
-   const q=(Number(km)||0)/30*d;
+   const days=multiplyByDays?ctpDaysBetween(lineFromDate,lineToDate):1;
+   const q=(Number(km)||0)/30*days;
    return {quantity:q?Number(q.toFixed(3)):0, amount:Math.round(q*2*rate)};
  }
  return {quantity:1, amount:Math.round(1*rate)};
 }
-// Ghi chú dòng xăng tự sinh công thức (đúng mẫu: "(Xkm/30*2 lượt *Giá *Nngày)")
-// — tự cập nhật theo Km/Giá/Số ngày, trừ khi người dùng đã tự gõ đè riêng.
+// Ghi chú dòng xăng tự sinh công thức — "(Xkm/30*2 lượt *Giá)" bình thường,
+// thêm "*Nngày" khi có tick tính theo ngày — tự cập nhật theo Km/Giá/tick,
+// trừ khi người dùng đã tự gõ đè riêng.
 function ctpFuelNoteFor(row){
  const km=Number(row.km)||0, rate=Number(row.rate)||0;
- const days=ctpDaysBetween(row.lineFromDate,row.lineToDate);
- return `(${km}km/30*2 lượt *${rate.toLocaleString('vi-VN')} *${days}ngày)`;
+ if(row.multiplyByDays){
+   const days=ctpDaysBetween(row.lineFromDate,row.lineToDate);
+   return `(${km}km/30*2 lượt *${rate.toLocaleString('vi-VN')} *${days}ngày)`;
+ }
+ return `(${km}km/30*2 lượt *${rate.toLocaleString('vi-VN')})`;
 }
 // "Công tác phí" (phụ cấp/ngày) đúng mẫu công ty là mức CỐ ĐỊNH 100,000đ,
 // không cho gõ tay đổi khác (khác với xăng/các loại khác — định mức đó biến
@@ -4954,7 +4962,10 @@ function ctpRowHtml(r,i){
    </td>
    <td data-label="Từ ngày"><input class="ctp-cell" data-f="lineFromDate" type="date" value="${esc(r.lineFromDate||'')}"></td>
    <td data-label="Đến ngày"><input class="ctp-cell" data-f="lineToDate" type="date" value="${esc(r.lineToDate||'')}"></td>
-   <td class="num" data-label="Km">${isFuel?`<input class="ctp-cell" data-f="km" type="number" step="0.1" value="${r.km||''}">`:''}</td>
+   <td class="num" data-label="Km">${isFuel?`<input class="ctp-cell" data-f="km" type="number" step="0.1" value="${r.km||''}">
+     <label class="ctp-days-toggle" title="Mặc định TẮT — chỉ tính 1 lượt đi + 1 lượt về. Bật lên nếu muốn nhân tiền xăng theo đúng số ngày Từ-Đến ngày.">
+       <input type="checkbox" class="ctp-cell" data-f="multiplyByDays" ${r.multiplyByDays?'checked':''}><span>Tính theo ngày</span>
+     </label>`:''}</td>
    <td class="num" data-label="SL">${r.quantity||0}</td>
    <td class="num" data-label="Định mức">${fixedRate!=null
      ? `${fixedRate.toLocaleString('vi-VN')}<span class="hint" style="display:block;font-weight:400">(cố định)</span>`
@@ -4970,7 +4981,7 @@ function ctpRowHtml(r,i){
 function ctpRenderLinesFromLocal(){
  $('#ctpLineBody').innerHTML=ctpLocalRows.map((r,i)=>ctpRowHtml(r,i)).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:14px">Chưa có dòng chi phí nào — bấm "+ Thêm dòng"</td></tr>`;
  $$('#ctpLineBody .ctp-cell').forEach(el=>{
-   const evt=el.tagName==='SELECT'?'change':'blur';
+   const evt=(el.tagName==='SELECT'||el.type==='checkbox')?'change':'blur';
    el.addEventListener(evt,()=>ctpCellChanged(Number(el.closest('tr').dataset.i),el.dataset.f,el));
  });
  $$('#ctpLineBody .btn-row-delete').forEach(b=>b.onclick=()=>ctpDeleteLocalRow(Number(b.dataset.i)));
@@ -4988,14 +4999,14 @@ async function ctpCellChanged(i,field,el){
    ctpRenderLinesFromLocal();
    return;
  }
- row[field]=el.type==='number'?(Number(el.value)||0):el.value;
+ row[field]=el.type==='checkbox'?el.checked:(el.type==='number'?(Number(el.value)||0):el.value);
  if(field==='description') row.descOther=true; // gõ tay trong ô "Khác" -> chắc chắn đang ở chế độ tự gõ
  if(field==='note' && (row.expenseType||'').includes('xăng')) row.noteOther=true; // gõ tay đè công thức xăng
- if(field==='expenseType'||field==='km'||field==='rate'||field==='lineFromDate'||field==='lineToDate'){
+ const RECALC_FIELDS=['expenseType','km','rate','lineFromDate','lineToDate','multiplyByDays'];
+ if(RECALC_FIELDS.includes(field)){
    const fixedRate=ctpFixedRateFor(row.expenseType);
    if(fixedRate!=null) row.rate=fixedRate; // "Công tác phí" luôn 100,000, không cho gõ tay đổi khác
-   const days=ctpDaysBetween(row.lineFromDate,row.lineToDate);
-   Object.assign(row,ctpCalcQtyAmount(row.expenseType,row.km,row.rate,days));
+   Object.assign(row,ctpCalcQtyAmount(row.expenseType,row.km,row.rate,row.multiplyByDays,row.lineFromDate,row.lineToDate));
  }
  // Đổi loại chi phí/ngày dòng — nếu đang KHÔNG ở chế độ "Khác" tự gõ, tự cập
  // nhật lại Diễn giải theo đúng câu mẫu mới (vd đổi ngày thì câu xăng ghép
@@ -5003,11 +5014,10 @@ async function ctpCellChanged(i,field,el){
  if((field==='expenseType'||field==='lineFromDate'||field==='lineToDate') && !row.descOther){
    row.description=ctpDescriptionFor(row);
  }
- // Ghi chú công thức xăng — tự cập nhật theo Km/Giá/Số ngày, trừ khi đang gõ
- // tay đè riêng (noteOther). Đổi sang loại KHÔNG phải xăng thì giữ nguyên
- // ghi chú cũ, không xoá/đụng vào (loại khác không có công thức tự sinh).
- if((field==='expenseType'||field==='km'||field==='rate'||field==='lineFromDate'||field==='lineToDate')
-    && (row.expenseType||'').includes('xăng') && !row.noteOther){
+ // Ghi chú công thức xăng — tự cập nhật theo Km/Giá/Số ngày/tick, trừ khi
+ // đang gõ tay đè riêng (noteOther). Đổi sang loại KHÔNG phải xăng thì giữ
+ // nguyên ghi chú cũ, không xoá/đụng vào (loại khác không có công thức tự sinh).
+ if(RECALC_FIELDS.includes(field) && (row.expenseType||'').includes('xăng') && !row.noteOther){
    row.note=ctpFuelNoteFor(row);
  }
  await ctpPersistRow(i);
@@ -5024,7 +5034,7 @@ async function ctpPersistRow(i){
    km:Number(row.km)||0, quantity:Number(row.quantity)||0, rate:Number(row.rate)||0, amount:Number(row.amount)||0,
    serviceType:row.serviceType||segVal('ctp_f_tripservice'),
    projectCode:(row.projectCode||'').trim()||$('#ctp_f_pjcode').value.trim(), projectName:(row.projectName||'').trim()||$('#ctp_f_pjname').value.trim(),
-   note:row.note||'', mapImage:ctpMapValueForSave()
+   note:row.note||'', mapImage:ctpMapValueForSave(), multiplyByDays:!!row.multiplyByDays
  };
  if(row.no){
    const j=await DB.updateExpenseLine(row.no,payload,adminPassword.chamcong_ctp);
@@ -5100,13 +5110,12 @@ $('#btnCtpSaveTrip').onclick=async()=>{
 // dòng đó khác với phần còn lại của đợt công tác.
 function ctpBuildBlankRow(expenseTypeVal,engineerName){
  const fixedRate=ctpFixedRateFor(expenseTypeVal);
- const row={no:null, requesterName:engineerName, expenseType:expenseTypeVal, km:0, note:'',
+ const row={no:null, requesterName:engineerName, expenseType:expenseTypeVal, km:0, note:'', multiplyByDays:false,
    lineFromDate:$('#ctp_f_fromdate').value, lineToDate:$('#ctp_f_todate').value,
    projectCode:$('#ctp_f_pjcode').value.trim(), projectName:$('#ctp_f_pjname').value.trim(),
    serviceType:segVal('ctp_f_tripservice')};
  row.rate=fixedRate!=null?fixedRate:(expenseTypeVal.includes('xăng')?(ctpFuelRate||0):0);
- const days=ctpDaysBetween(row.lineFromDate,row.lineToDate);
- Object.assign(row,ctpCalcQtyAmount(row.expenseType,row.km,row.rate,days));
+ Object.assign(row,ctpCalcQtyAmount(row.expenseType,row.km,row.rate,row.multiplyByDays,row.lineFromDate,row.lineToDate));
  row.description=ctpDescriptionFor(row);
  if(expenseTypeVal.includes('xăng')) row.note=ctpFuelNoteFor(row);
  return row;
