@@ -1193,6 +1193,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <div class="section-title" style="margin-bottom:8px">Dòng chi phí — bấm trực tiếp vào ô để sửa, tự lưu như Excel</div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
         <button type="button" class="btn btn-primary" id="btnCtpAddLine"><span>+ Thêm dòng</span></button>
+        <button type="button" class="btn" id="btnCtpAddLineMoto" title="Tạo sẵn 2 dòng cùng lúc: Công tác phí + Xăng, cho người đi xe máy"><span>🏍️ + Công tác phí &amp; Xăng (2 dòng)</span></button>
         <div class="ctp-menu-wrap" style="position:relative;margin-left:auto">
           <button type="button" class="btn-mini" id="btnCtpMoreMenu" aria-haspopup="true" aria-expanded="false">Tuỳ chọn bảng ▾</button>
           <div class="ctp-menu-pop" id="ctpMoreMenuPop" hidden>
@@ -4833,18 +4834,42 @@ function ctpRenderLines(){
 // tác phí cố định), Mã vụ việc/Tên DA/Loại dịch vụ dòng này, Ghi chú); chỗ
 // nào CỐ ĐỊNH thì chỉ hiện chữ (STT, Bộ phận luôn "TEC", Số lượng/Thành tiền
 // luôn tự tính).
+// Diễn giải: đúng theo yêu cầu, CỐ ĐỊNH theo đúng câu mẫu của từng loại chi
+// phí (lấy từ CTP_TYPES/mẫu công ty, không gõ tự do nữa) — chọn qua dropdown
+// thay vì gõ tay; ai cần câu khác thì chọn "Khác…" mới hiện ô gõ tay. Riêng
+// xăng câu mẫu có NGÀY THẬT ghép vào nên tính động theo Từ/Đến ngày của dòng.
+function ctpDescriptionFor(row){
+ const t=CTP_TYPES.find(x=>x.v===row.expenseType);
+ if((row.expenseType||'').includes('xăng')){
+   const f=row.lineFromDate||$('#ctp_f_fromdate').value, to=row.lineToDate||$('#ctp_f_todate').value;
+   return `Xăng xe lượt đi và về từ ngày ${f?fmtDMYFull(f):'…'} đến ngày ${to?fmtDMYFull(to):'…'}`;
+ }
+ return t?t.desc:'';
+}
 function ctpRowHtml(r,i){
  const isFuel=(r.expenseType||'').includes('xăng');
  const fixedRate=ctpFixedRateFor(r.expenseType);
+ const fixedDesc=ctpDescriptionFor(r);
+ // descOther là CỜ RIÊNG (không suy ra từ so sánh text) — chọn "Khác…" phải
+ // ở lại chế độ gõ tay dù nội dung gõ vào TÌNH CỜ trùng câu mẫu, và ngược lại
+ // đổi loại/ngày không tự nhảy vào chế độ "Khác" chỉ vì câu mẫu đổi khác đi.
+ if(r.descOther==null) r.descOther = r.description!==fixedDesc; // suy đoán 1 LẦN cho dòng cũ tải từ DB lên
+ const usingOther=!!r.descOther;
  return `<tr data-i="${i}">
    <td class="num" data-label="STT">${i+1}</td>
    <td data-label="Tên NV"><select class="ctp-cell" data-f="requesterName">${engineerList.map(n=>`<option value="${esc(n)}" ${n===r.requesterName?'selected':''}>${esc(n)}</option>`).join('')}</select></td>
    <td data-label="Bộ phận">TEC</td>
    <td data-label="Nội dung"><select class="ctp-cell" data-f="expenseType">${CTP_TYPES.map(t=>`<option value="${esc(t.v)}" ${t.v===r.expenseType?'selected':''}>${esc(t.desc)}</option>`).join('')}</select></td>
-   <td class="issue-cell" data-label="Diễn giải"><input class="ctp-cell" data-f="description" type="text" value="${esc(r.description||'')}"></td>
+   <td class="issue-cell" data-label="Diễn giải">
+     <select class="ctp-cell" data-f="descSelect">
+       <option value="${esc(fixedDesc)}" ${usingOther?'':'selected'}>${esc(fixedDesc)}</option>
+       <option value="__other" ${usingOther?'selected':''}>Khác…</option>
+     </select>
+     ${usingOther?`<input class="ctp-cell" data-f="description" type="text" value="${esc(r.description||'')}" placeholder="Nhập diễn giải khác" style="margin-top:6px">`:''}
+   </td>
    <td data-label="Từ ngày"><input class="ctp-cell" data-f="lineFromDate" type="date" value="${esc(r.lineFromDate||'')}"></td>
    <td data-label="Đến ngày"><input class="ctp-cell" data-f="lineToDate" type="date" value="${esc(r.lineToDate||'')}"></td>
-   <td class="num" data-label="Km"><input class="ctp-cell" data-f="km" type="number" step="0.1" value="${r.km||''}" ${isFuel?'':'disabled'}></td>
+   <td class="num" data-label="Km">${isFuel?`<input class="ctp-cell" data-f="km" type="number" step="0.1" value="${r.km||''}">`:''}</td>
    <td class="num" data-label="SL">${r.quantity||0}</td>
    <td class="num" data-label="Định mức">${fixedRate!=null
      ? `${fixedRate.toLocaleString('vi-VN')}<span class="hint" style="display:block;font-weight:400">(cố định)</span>`
@@ -4869,12 +4894,27 @@ function ctpRenderLinesFromLocal(){
 }
 async function ctpCellChanged(i,field,el){
  const row=ctpLocalRows[i]; if(!row) return;
+ // Diễn giải: chọn "Khác…" chỉ MỞ ô gõ tay ra (chưa đổi description ngay,
+ // để giá trị cũ còn đó cho tới khi gõ), chọn lại đúng câu mẫu thì set
+ // thẳng description = câu đó (không cần ô gõ tay nữa).
+ if(field==='descSelect'){
+   if(el.value==='__other'){ row.descOther=true; }
+   else { row.descOther=false; row.description=el.value; await ctpPersistRow(i); }
+   ctpRenderLinesFromLocal();
+   return;
+ }
  row[field]=el.type==='number'?(Number(el.value)||0):el.value;
+ if(field==='description') row.descOther=true; // gõ tay trong ô "Khác" -> chắc chắn đang ở chế độ tự gõ
  if(field==='expenseType'||field==='km'||field==='rate'){
    const fixedRate=ctpFixedRateFor(row.expenseType);
    if(fixedRate!=null) row.rate=fixedRate; // "Công tác phí" luôn 100,000, không cho gõ tay đổi khác
    Object.assign(row,ctpCalcQtyAmount(row.expenseType,row.km,row.rate));
-   if(field==='expenseType' && !row.description){ const t=CTP_TYPES.find(x=>x.v===row.expenseType); if(t) row.description=t.desc; }
+ }
+ // Đổi loại chi phí/ngày dòng — nếu đang KHÔNG ở chế độ "Khác" tự gõ, tự cập
+ // nhật lại Diễn giải theo đúng câu mẫu mới (vd đổi ngày thì câu xăng ghép
+ // đúng ngày mới); nếu đang gõ tay riêng thì giữ nguyên, không đụng vào.
+ if((field==='expenseType'||field==='lineFromDate'||field==='lineToDate') && !row.descOther){
+   row.description=ctpDescriptionFor(row);
  }
  await ctpPersistRow(i);
  ctpRenderLinesFromLocal();
@@ -4961,23 +5001,40 @@ $('#btnCtpSaveTrip').onclick=async()=>{
 /* Thêm 1 dòng trống vào bảng rồi lưu ngay (đúng kiểu Excel — thêm dòng là
    có ngay, sửa từng ô sau đó tự lưu). Tên NV mặc định lấy người đầu tiên
    trong danh sách "Người đề nghị" phía trên (đổi lại ngay trong ô nếu cần). */
-$('#btnCtpAddLine').onclick=async()=>{
- if(!$('#ctp_f_reqdate').value){ toast('Chọn ngày đề nghị ở phần đợt công tác trước',true); return; }
- const defaultEng=ctpRequesterValue().split(' - ')[0]||engineerList[0]||'';
- const defType=CTP_TYPES[0];
- // Dòng mới mặc định lấy theo thông tin chung của cả đợt (ngày, mã vụ việc,
- // tên DA, loại dịch vụ) — vẫn sửa riêng được từng dòng ngay trong bảng nếu
- // dòng đó khác với phần còn lại của đợt công tác.
- const fixedRate=ctpFixedRateFor(defType.v);
- const row={no:null, requesterName:defaultEng, expenseType:defType.v, description:defType.desc, km:0, note:'',
+// Dòng mới mặc định lấy theo thông tin chung của cả đợt (ngày, mã vụ việc,
+// tên DA, loại dịch vụ) — vẫn sửa riêng được từng dòng ngay trong bảng nếu
+// dòng đó khác với phần còn lại của đợt công tác.
+function ctpBuildBlankRow(expenseTypeVal,engineerName){
+ const fixedRate=ctpFixedRateFor(expenseTypeVal);
+ const row={no:null, requesterName:engineerName, expenseType:expenseTypeVal, km:0, note:'',
    lineFromDate:$('#ctp_f_fromdate').value, lineToDate:$('#ctp_f_todate').value,
    projectCode:$('#ctp_f_pjcode').value.trim(), projectName:$('#ctp_f_pjname').value.trim(),
    serviceType:segVal('ctp_f_tripservice')};
  row.rate=fixedRate!=null?fixedRate:0;
  Object.assign(row,ctpCalcQtyAmount(row.expenseType,row.km,row.rate));
- ctpLocalRows.push(row);
+ row.description=ctpDescriptionFor(row);
+ return row;
+}
+$('#btnCtpAddLine').onclick=async()=>{
+ if(!$('#ctp_f_reqdate').value){ toast('Chọn ngày đề nghị ở phần đợt công tác trước',true); return; }
+ const defaultEng=ctpRequesterValue().split(' - ')[0]||engineerList[0]||'';
+ ctpLocalRows.push(ctpBuildBlankRow(CTP_TYPES[0].v,defaultEng));
  await ctpPersistRow(ctpLocalRows.length-1);
  ctpRenderLinesFromLocal();
+};
+// Đi xe máy = luôn cần 2 dòng cùng lúc cho 1 người (Công tác phí + Xăng) —
+// tạo sẵn cả 2 trong 1 lần bấm thay vì phải bấm "+ Thêm dòng" 2 lần rồi tự
+// đổi loại từng dòng, đỡ mất công cho việc lặp lại mỗi ngày đi làm.
+$('#btnCtpAddLineMoto').onclick=async()=>{
+ if(!$('#ctp_f_reqdate').value){ toast('Chọn ngày đề nghị ở phần đợt công tác trước',true); return; }
+ const defaultEng=ctpRequesterValue().split(' - ')[0]||engineerList[0]||'';
+ const fuelType=CTP_TYPES.find(t=>t.v.includes('xăng')).v;
+ ctpLocalRows.push(ctpBuildBlankRow('Công tác phí',defaultEng));
+ await ctpPersistRow(ctpLocalRows.length-1);
+ ctpLocalRows.push(ctpBuildBlankRow(fuelType,defaultEng));
+ await ctpPersistRow(ctpLocalRows.length-1);
+ ctpRenderLinesFromLocal();
+ toast('✅ Đã thêm 2 dòng: Công tác phí + Xăng — nhớ điền Km cho dòng xăng');
 };
 
 $('#btnCtpDeleteTrip').onclick=()=>{
