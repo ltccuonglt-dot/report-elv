@@ -1198,8 +1198,10 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <th>Ngày</th><th>Cơ sở</th><th>Vấn đề</th><th>Ưu tiên</th><th>Kỹ sư</th><th>Hỗ trợ</th><th>Trạng thái</th><th>Ghi chú</th><th></th>
     </tr></thead><tbody id="aeonListBody"></tbody></table></div>
 
-    <div style="display:flex;gap:10px;margin-top:14px">
+    <div id="aeonBackupStatus" class="period-notice" style="margin-top:10px;display:none"></div>
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
       <button type="button" class="btn btn-primary" id="btnAeonExportExcel"><span>⬇️ Xuất Excel</span></button>
+      <button type="button" class="btn" id="btnAeonSyncBackup" title="Chép toàn bộ phiếu AEON sang Google Sheet backup (thủ công, không tự động)"><span>🔄 Đồng bộ backup</span></button>
       <button type="button" class="btn btn-ghost" id="btnCloseAeonReport">Đóng</button>
     </div>
   </div>
@@ -1444,6 +1446,14 @@ const DB={
      return await res.json();
    }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
  },
+ async backupAeonTicketsToSheet(rows,adminPassword){
+   if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
+   try{
+     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+       body:JSON.stringify({token:CFG.token,action:'backupAeonTickets',rows,adminPassword})});
+     return await res.json();
+   }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
+ },
  async backupAttendanceToSheet(rows,adminPassword){
    if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
    try{
@@ -1631,7 +1641,7 @@ $('#f_date').addEventListener('change',updateDateDisplay);
    quy ước Tuần dùng ở bộ lọc Quản lý/Lịch sử. ===== */
 let dpViewYear=0, dpViewMonth=0;
 function dpOpen(){
- const cur=$('#f_date').value; const base=cur?new Date(cur+'T00:00:00'):new Date();
+ const cur=$('#f_date').value; const base=cur?new Date(cur+'T00:00:00'):vnNow();
  dpViewYear=base.getFullYear(); dpViewMonth=base.getMonth();
  dpRender();
  $('#f_date_panel').hidden=false; $('#f_date_field').classList.add('open');
@@ -1642,7 +1652,7 @@ function dpRender(){
  const startOffset=(first.getDay()+6)%7; // Thứ 2 = 0 ... Chủ nhật = 6
  const daysInMonth=new Date(dpViewYear,dpViewMonth+1,0).getDate();
  const daysInPrevMonth=new Date(dpViewYear,dpViewMonth,0).getDate();
- const todayIso=new Date().toISOString().slice(0,10);
+ const todayIso=vnTodayIso();
  const selIso=$('#f_date').value;
  $('#f_dp_title').textContent=`Tháng ${dpViewMonth+1}, ${dpViewYear}`;
  let html='';
@@ -1663,8 +1673,7 @@ $('#f_dp_next').onclick=e=>{ e.stopPropagation(); dpViewMonth++; if(dpViewMonth>
 document.addEventListener('click',e=>{ if(!$('#f_date_field').contains(e.target)) dpClose(); });
 
 /* ngày + banner */
-(function(){const d=new Date();
- setDateValue(d.toISOString().slice(0,10));})();
+(function(){ setDateValue(vnTodayIso()); })();
 function refreshBanner(){const b=$('#banner'),t=$('#bannerText');
  if(sb){b.className='banner live';t.textContent='Đã kết nối'}
  else{b.className='banner';t.textContent='Chế độ thử nghiệm — chưa kết nối.'}}
@@ -1702,6 +1711,14 @@ $$('.seg').forEach(seg=>seg.querySelectorAll('button').forEach(b=>b.onclick=()=>
    tuần trong 1 tháng có thể là 4, 5 hoặc 6 tùy tháng), Tháng (1-12), Năm.
    Không chọn gì = xem tất cả. Chọn Tuần thì Ngày tự giới hạn trong khoảng
    ngày của tuần đó. */
+// Mọi nơi cần "hôm nay/bây giờ" PHẢI dùng đúng giờ Việt Nam thật, không phụ
+// thuộc múi giờ máy đang chạy app — đặc biệt `new Date().toISOString()` LUÔN
+// trả về giờ UTC, nên gần nửa đêm giờ VN (UTC+7) sẽ tính SAI SANG NGÀY HÔM
+// TRƯỚC. vnNow() trả về 1 Date mà các hàm getFullYear/getMonth/getDate/
+// getHours/getMinutes đọc ra đúng giờ VN (dù máy đặt múi giờ khác), còn
+// vnTodayIso() tiện dùng thẳng cho các input[type=date] mặc định "hôm nay".
+function vnNow(){ return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Ho_Chi_Minh'})); }
+function vnTodayIso(){ const d=vnNow(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
 function pad2(n){return String(n).padStart(2,'0')}
 function daysInMonth(year,month){ return new Date(Number(year),Number(month),0).getDate(); } // month: 1-12
 function isoDow(year,month,day){ const d=new Date(Number(year),Number(month)-1,day).getDay(); return d===0?7:d; } // 1=Thứ 2 ... 7=CN
@@ -1725,7 +1742,7 @@ function weekDayRange(week,year,month){ // week: '1'..'N' → [ngày bắt đầ
  return monthWeekRanges(year,month)[Number(week)-1];
 }
 function buildYearOptions(){
- const now=new Date();
+ const now=vnNow();
  const years=new Set(mgrData.map(r=>(r.date||'').slice(0,4)).filter(Boolean));
  for(let i=0;i<10;i++) years.add(String(now.getFullYear()+i)); // luôn có sẵn 10 năm (năm nay + 9 năm sau) để xem/lên lịch trước, dù chưa có phiếu nào
  const list=[...years].sort((a,b)=>a-b); // từ nhỏ đến lớn
@@ -1743,7 +1760,7 @@ function buildMonthOptions(){
  });
 }
 function buildDayOptions(){
- const now=new Date();
+ const now=vnNow();
  ['mgr','hist','dash'].forEach(pfx=>{
    const fYear=$('#'+pfx+'Year').value||now.getFullYear();
    const fMonth=$('#'+pfx+'Month').value||pad2(now.getMonth()+1);
@@ -1759,7 +1776,7 @@ function buildDayOptions(){
  });
 }
 function buildWeekOptions(){
- const now=new Date();
+ const now=vnNow();
  ['mgr','hist','dash'].forEach(pfx=>{
    const fYear=$('#'+pfx+'Year').value||now.getFullYear();
    const fMonth=$('#'+pfx+'Month').value||pad2(now.getMonth()+1);
@@ -2196,7 +2213,7 @@ async function startEdit(no,displayNo){
  editingNo=no;
  editingDisplayNo=displayNo||no;
  editingStartEditCount=Number(rec.editCount)||0;
- setDateValue(rec.date||new Date().toISOString().slice(0,10));
+ setDateValue(rec.date||vnTodayIso());
  setFieldOrOther('f_customer','wrap_customer_other','f_customer_other',rec.customer||'');
  setFieldOrOther('f_system','wrap_system_other','f_system_other',rec.system||'');
  $('#f_issue').value=rec.issue||'';
@@ -2222,7 +2239,7 @@ function cancelEdit(){
  editingDisplayNo=null;
  $('#editBanner').style.display='none';
  $('#tkForm').reset();
- setDateValue(new Date().toISOString().slice(0,10));
+ setDateValue(vnTodayIso());
  $('#wrap_customer_other').style.display='none';$('#wrap_system_other').style.display='none';
  setEngineerValue('');
  segSet('f_priority','Medium');segSet('f_support','Online');segSet('f_status','Done');segSet('f_workType','Bảo trì');
@@ -2343,7 +2360,7 @@ $('#tkForm').onsubmit=async e=>{
      const h=JSON.parse(localStorage.getItem(LS_HIST)||'[]');h.unshift(rec);localStorage.setItem(LS_HIST,JSON.stringify(h.slice(0,120)));
      toast(sb?'✅ Đã gửi phiếu!':'✅ Đã lưu (thử nghiệm)');
      $('#f_issue').value='';$('#f_remark').value='';
-     setDateValue(new Date().toISOString().slice(0,10));
+     setDateValue(vnTodayIso());
      bbFront={url:null,name:null}; renderBbFrontPreview();
      bbBack={url:null,name:null}; renderBbBackPreview();
      otherPhotos=[]; existingOtherPhotosCount=0; renderOtherPhotosList();
@@ -2588,7 +2605,7 @@ async function loadManager(){const list=$('#managerList');
  // Lần đầu mở app (chưa có gì lưu sẵn) — tải NHANH đúng tháng hiện tại
  // trước (nhẹ, ít dữ liệu hơn hẳn toàn bộ lịch sử) để có gì đó hiện ra ngay,
  // rồi mới tải đầy đủ toàn bộ lịch sử ở phía sau.
- const now=new Date();
+ const now=vnNow();
  let gotPriority=false;
  try{
    const j=await DB.listTickets(now.getFullYear(),now.getMonth()+1);
@@ -2939,7 +2956,7 @@ $('#btnExport').onclick=()=>{
  const fnamePart=[fYear,fMonth,fDay,fWeek?'tuan'+fWeek:''].filter(Boolean).join('-')||'tatca';
  const fnameParts=[fnamePart];
  if(mgrEngineerFilter) fnameParts.push(mgrEngineerFilter.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,''));
- XLSX.writeFile(wb,`report-elv-${fnameParts.join('-')}-${new Date().toISOString().slice(0,10)}.xlsx`);
+ XLSX.writeFile(wb,`report-elv-${fnameParts.join('-')}-${vnTodayIso()}.xlsx`);
  const filterDesc=[];
  if(fYear) filterDesc.push(`năm ${fYear}`); if(fMonth) filterDesc.push(`tháng ${Number(fMonth)}`); if(fDay) filterDesc.push(`ngày ${Number(fDay)}`); if(fWeek) filterDesc.push(`tuần ${fWeek}`);
  if(mgrEngineerFilter) filterDesc.push(`kỹ sư ${mgrEngineerFilter}`);
@@ -3156,8 +3173,8 @@ $('#btnClearAllData').onclick=async()=>{
    tạo thêm 1 bản sao mới trên Drive, vừa trùng vừa tốn dung lượng Drive. */
 function isSupabaseStorageUrl(u){ return /\/storage\/v1\/object\/public\/ticket-attachments\//.test(u||''); }
 async function findOldTicketAttachments(){
- const cutoff=new Date(); cutoff.setMonth(cutoff.getMonth()-6);
- const cutoffStr=cutoff.toISOString().slice(0,10);
+ const cutoff=vnNow(); cutoff.setMonth(cutoff.getMonth()-6);
+ const cutoffStr=`${cutoff.getFullYear()}-${pad2(cutoff.getMonth()+1)}-${pad2(cutoff.getDate())}`;
  // Lấy TẤT CẢ phiếu cũ (không lọc sẵn theo cột ảnh) — vì có phiếu không có
  // ảnh biên bản/PDF nhưng vẫn có "ảnh khác" trong bảng ticket_photos; lọc
  // trước ở đây sẽ bỏ sót đúng nhóm phiếu đó.
@@ -3593,8 +3610,32 @@ $('#btnAeonExportExcel').onclick=()=>{
  XLSX.utils.book_append_sheet(wb,aeonCompareSheet(hue,tk),'So sánh');
  XLSX.utils.book_append_sheet(wb,aeonSiteStyledSheet(hue),'AEON Hue');
  XLSX.utils.book_append_sheet(wb,aeonSiteStyledSheet(tk),'AEON Thanh Khe');
- XLSX.writeFile(wb,`Service_Support_Ticket_Report_AEON-vs-ThanhKhe_${new Date().toISOString().slice(0,10)}.xlsx`);
+ XLSX.writeFile(wb,`Service_Support_Ticket_Report_AEON-vs-ThanhKhe_${vnTodayIso()}.xlsx`);
  toast(`✅ Đã xuất báo cáo — Huế: ${hue.length} phiếu, Thanh Khê: ${tk.length} phiếu`);
+};
+// Backup AEON — THỦ CÔNG (khác Chấm công/CTP tự động), bấm khi cần ngay
+// trong popup này, dùng luôn mật khẩu 'aeon' đã mở khoá, không cần Cài đặt.
+$('#btnAeonSyncBackup').onclick=async()=>{
+ const btn=$('#btnAeonSyncBackup'); btn.disabled=true;
+ const box=$('#aeonBackupStatus'); box.style.display='block'; box.className='period-notice';
+ box.textContent='Đang đọc dữ liệu AEON từ Supabase...';
+ try{
+   if(!aeonData.length) throw new Error('Chưa có phiếu nào để sao lưu');
+   let added=0, updated=0;
+   for(let i=0;i<aeonData.length;i+=50){
+     const batch=aeonData.slice(i,i+50);
+     box.textContent=`Đang sao lưu ${Math.min(i+batch.length,aeonData.length)}/${aeonData.length} phiếu...`;
+     const j=await DB.backupAeonTicketsToSheet(batch,adminPassword.aeon);
+     if(!j.ok) throw new Error(j.error||'Lỗi ghi vào Sheet');
+     added+=j.added||0; updated+=j.updated||0;
+   }
+   box.textContent=`✅ Đã sao lưu ${aeonData.length} phiếu AEON (thêm mới ${added}, cập nhật ${updated}).`;
+   toast(`✅ Đã sao lưu ${aeonData.length} phiếu AEON sang Google Sheet`);
+ }catch(err){
+   box.className='period-notice overdue'; box.textContent='Lỗi: '+err.message;
+   toast('⚠️ Sao lưu thất bại',true);
+ }
+ btn.disabled=false;
 };
 $('#btnCloseAeonReport').onclick=()=>$('#aeonReportModal').classList.remove('show');
 $('#aeonReportModal').onclick=e=>{if(e.target===$('#aeonReportModal'))$('#aeonReportModal').classList.remove('show')};
@@ -3665,12 +3706,12 @@ function ccPopulateSelects(){
  const empSel=$('#cc_employee'); const curE=empSel.value;
  empSel.innerHTML='<option value="">— Chọn nhân viên để tạo nháp/xem riêng —</option>'+engineerList.map(n=>`<option value="${esc(n)}" ${n===curE?'selected':''}>${esc(n)}</option>`).join('');
  $('#cc_f_employee').innerHTML=engineerList.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
- const now=new Date();
+ const now=vnNow();
  const mSel=$('#cc_month');
  if(!mSel.dataset.built){ let opts=''; for(let m=1;m<=12;m++) opts+=`<option value="${pad2(m)}" ${pad2(m)===pad2(now.getMonth()+1)?'selected':''}>Tháng ${m}</option>`; mSel.innerHTML=opts; mSel.dataset.built='1'; }
  const ySel=$('#cc_year');
  if(!ySel.dataset.built){ let opts=''; for(let y=now.getFullYear()-1;y<=now.getFullYear()+1;y++) opts+=`<option value="${y}" ${y===now.getFullYear()?'selected':''}>Năm ${y}</option>`; ySel.innerHTML=opts; ySel.dataset.built='1'; }
- if(!$('#cc_f_date').value) $('#cc_f_date').value=now.toISOString().slice(0,10);
+ if(!$('#cc_f_date').value) $('#cc_f_date').value=vnTodayIso();
 }
 
 async function ccLoadList(){
@@ -3814,7 +3855,7 @@ $('#btnCcSaveDraft').onclick=async()=>{
 };
 
 function ccCheckMonthReminder(){
- const now=new Date(); const box=$('#ccMonthReminder');
+ const now=vnNow(); const box=$('#ccMonthReminder');
  if(now.getDate()<=5){
    box.style.display='block'; box.className='period-notice soon';
    box.textContent=`📌 Đầu tháng ${now.getMonth()+1}/${now.getFullYear()} — nhớ xuất Excel chấm công tháng trước rồi bấm "Xoá chấm công tháng này" (chọn đúng tháng cũ ở trên) để làm lại tháng mới cho gọn Sheet.`;
@@ -4029,7 +4070,7 @@ $('#ctp_tripSelect').onchange=()=>{ currentTripId=$('#ctp_tripSelect').value||nu
 
 function ctpNewTrip(){
  currentTripId=null;
- $('#ctp_f_reqdate').value=new Date().toISOString().slice(0,10);
+ $('#ctp_f_reqdate').value=vnTodayIso();
  ctpRenderRequesterChecklist('');
  $('#ctp_f_place').value='';
  $('#ctp_f_fromdate').value=''; $('#ctp_f_todate').value='';
