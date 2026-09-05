@@ -432,6 +432,14 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
    bảng dữ liệu dài) sẽ bị cắt mất phần dưới, không cách nào xem/cuộn tới.
    Giới hạn chiều cao còn lại của màn hình + tự cuộn bên trong toàn bộ sheet. */
 .sheet{background:var(--surface);width:100%;max-width:480px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:22px 22px 0 0;padding:20px 18px calc(env(safe-area-inset-bottom) + 20px);animation:up .3s ease}
+/* Báo cáo AEON / Chấm công-CTP dùng khung rộng hơn hẳn modal thường (nhiều
+   cột dữ liệu) — mặc định tự co theo màn hình thật đang mở (96vw, tối đa
+   1440px). Chọn cố định 1 độ phân giải trong Cài đặt (data-display trên
+   <html>) thì ép đúng khổ đó luôn, không tự co theo cửa sổ trình duyệt nữa —
+   dùng khi mở app trên máy khác nhưng vẫn muốn xem đúng như màn hình quen. */
+.sheet-wide{max-width:min(1440px,96vw)}
+[data-display="1366"] .sheet-wide{max-width:1280px}
+[data-display="1920"] .sheet-wide{max-width:1780px}
 @media (min-width:520px){.sheet{border-radius:22px;margin-bottom:16px}}
 @keyframes up{from{transform:translateY(100%)}to{transform:none}}
 .sheet h2{font-size:17px;margin:0 0 4px;font-weight:700}
@@ -865,6 +873,17 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <button type="button" class="btn btn-primary" id="btnAddEngineer" style="width:auto;padding:12px 18px;margin:0;flex:none">Thêm</button>
     </div>
     <div class="divider"></div>
+    <div class="section-title" style="margin-bottom:8px">Chế độ hiển thị (popup Báo cáo AEON / Chấm công-CTP)</div>
+    <p class="desc" style="margin-top:-4px">Mặc định popup tự co giãn theo đúng cửa sổ trình duyệt. Chọn cố định 1 độ phân giải bên dưới nếu muốn popup luôn hiện đúng khổ quen thuộc, không tự co giãn nữa.</p>
+    <label class="field">
+      <span class="lab">Độ phân giải màn hình</span>
+      <select id="s_display">
+        <option value="auto">Tự động (theo cửa sổ thật)</option>
+        <option value="1366">1366 x 768</option>
+        <option value="1920">1920 x 1080</option>
+      </select>
+    </label>
+    <div class="divider"></div>
     <div class="section-title" style="margin-bottom:8px">Sao lưu dữ liệu sang Google Sheet</div>
     <p class="desc" style="margin-top:-4px">Dữ liệu phiếu hiện lưu chính ở Supabase; Google Sheet đóng vai trò <b>bản sao lưu</b>. Bấm nút này để chép toàn bộ phiếu (kèm link ảnh Biên bản, PDF và ảnh khác — kể cả ảnh đã chuyển sang Drive) sang file Sheet backup, tab <b>"Tickets"</b>. Phiếu đã có sẽ được cập nhật lại, không tạo dòng trùng — bấm bao nhiêu lần cũng an toàn. Sau khi sao lưu, mục <b>Lịch sử</b> có thể tra cứu lại dữ liệu này kể cả khi đã xoá khỏi Supabase.</p>
     <div id="syncBackupStatus" class="period-notice" style="margin-bottom:10px;display:none"></div>
@@ -950,7 +969,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
 <!-- ===== Chấm công & Công tác phí (chỉ admin) ===== -->
 <div class="modal" id="adminToolsModal">
-  <div class="sheet" style="max-width:min(1440px,96vw)">
+  <div class="sheet sheet-wide">
     <h2>Chấm công &amp; Công tác phí</h2>
     <p class="desc" style="margin-top:-6px">Chỉ quản trị viên thấy được mục này. Dữ liệu lưu riêng, không lẫn với phiếu kỹ thuật.</p>
     <div class="admtabs">
@@ -994,13 +1013,27 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <div class="cc-add-grid">
         <label class="field"><span class="lab">Ngày</span><input type="date" id="cc_f_date"></label>
         <label class="field"><span class="lab">Nhân viên</span><select id="cc_f_employee"></select></label>
-        <label class="field"><span class="lab">Dự án / Nội dung</span><input type="text" id="cc_f_project" placeholder="VD: Làm việc tại văn phòng"></label>
+        <label class="field"><span class="lab">Dự án / Nội dung</span>
+          <select id="cc_f_project">
+            <option>Làm việc tại văn phòng</option>
+            <option value="__other">Khác…</option>
+          </select>
+        </label>
+        <label class="field" id="wrap_cc_project_other" style="display:none"><span class="lab">Nhập dự án/nội dung</span><input type="text" id="cc_f_project_other" placeholder="VD: Tên dự án/khách hàng"></label>
         <label class="field"><span class="lab">Mã dự án</span><input type="text" id="cc_f_code" placeholder="Không bắt buộc"></label>
-        <label class="field"><span class="lab">Địa chỉ làm việc</span><input type="text" id="cc_f_addr"></label>
-        <label class="field"><span class="lab">Giờ vào</span><input type="time" id="cc_f_in"></label>
-        <label class="field"><span class="lab">Giờ ra</span><input type="time" id="cc_f_out"></label>
-        <label class="field"><span class="lab">Số công</span><input type="number" step="0.5" id="cc_f_days" value="1"></label>
-        <label class="field" style="grid-column:1/-1"><span class="lab">Nội dung công việc</span><input type="text" id="cc_f_work"></label>
+        <label class="field"><span class="lab">Địa chỉ làm việc</span><select id="cc_f_addr"></select></label>
+        <label class="field" id="wrap_cc_addr_other" style="display:none"><span class="lab">Nhập địa chỉ</span><input type="text" id="cc_f_addr_other" placeholder="VD: Quận 1, TP.HCM"></label>
+        <label class="field"><span class="lab">Giờ vào</span><input type="time" id="cc_f_in" value="08:00"></label>
+        <label class="field"><span class="lab">Giờ ra</span><input type="time" id="cc_f_out" value="17:00"></label>
+        <label class="field"><span class="lab">Số công <span class="hint" style="font-weight:400">(Thứ 7 tự về 0)</span></span><input type="number" step="0.5" id="cc_f_days" value="1"></label>
+        <label class="field" style="grid-column:1/-1"><span class="lab">Nội dung công việc</span>
+          <select id="cc_f_work">
+            <option>Trực thông tin sự cố</option>
+            <option>Trực chờ thông tin sáng thứ 7</option>
+            <option value="__other">Khác…</option>
+          </select>
+        </label>
+        <label class="field" id="wrap_cc_work_other" style="display:none;grid-column:1/-1"><span class="lab">Nhập nội dung công việc</span><input type="text" id="cc_f_work_other"></label>
         <label class="field"><span class="lab">Sale phụ trách</span><input type="text" id="cc_f_sale"></label>
         <label class="field"><span class="lab">Ghi chú</span><input type="text" id="cc_f_note"></label>
       </div>
@@ -1022,10 +1055,15 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg><span>Xem trước &amp; Xuất Excel chấm công</span>
       </button>
       <p class="hint" style="margin-bottom:10px">Xuất đúng bảng chấm công tháng đang xem hiện tại (theo bộ lọc Tháng/Năm/Nhân viên phía trên) ra file Excel, giữ nguyên định dạng mẫu công ty.</p>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <select id="cc_clr_month" style="flex:1"></select>
+        <select id="cc_clr_year" style="flex:1"></select>
+      </div>
       <button type="button" class="btn btn-danger" id="btnCcClearMonth" style="margin-bottom:6px">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Xoá chấm công tháng này (làm lại tháng mới)</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Xoá chấm công tháng đã chọn ở trên (làm lại tháng mới)</span>
       </button>
-      <p class="hint" style="margin-bottom:10px">Xoá HẲN toàn bộ dòng chấm công của tháng đang xem (mọi nhân viên) — dùng sau khi đã xuất Excel lưu lại, để bắt đầu chấm công tháng mới. Không thể hoàn tác.</p>
+      <p class="hint" style="margin-bottom:10px">Chọn đúng tháng/năm muốn xoá ở trên (độc lập với bộ lọc xem phía trên) — dùng sau khi đã xuất Excel lưu lại. Không thể hoàn tác.</p>
+      <div id="ccMonthAudit" class="period-notice" style="margin-bottom:10px"></div>
     </div>
 
     <!-- ===== TAB CÔNG TÁC PHÍ ===== -->
@@ -1166,7 +1204,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 <!-- ===== Báo cáo AEON Huế / Thanh Khê (tool riêng, dữ liệu riêng — bảng aeon_tickets,
      không lẫn với phiếu kỹ thuật đang vận hành trong tickets) ===== -->
 <div class="modal" id="aeonReportModal">
-  <div class="sheet" style="max-width:min(1440px,96vw)">
+  <div class="sheet sheet-wide">
     <h2>Báo cáo AEON Huế / Thanh Khê</h2>
     <p class="desc" style="margin-top:-6px">Dữ liệu lưu ở bảng riêng, tách khỏi phiếu kỹ thuật đang vận hành. Mỗi cơ sở là 1 dự án riêng — chọn đúng cơ sở muốn xem, không gộp so sánh.</p>
 
@@ -2982,7 +3020,21 @@ $('#btnExport').onclick=()=>{
 /* cổng khóa admin — chỉ ai biết mã bảo mật mới vào được Cài đặt */
 const gate=$('#adminGateModal');
 function openSettingsModal(){$('#s_url').value=CFG.url;$('#s_token').value=CFG.token;$('#s_token').classList.add('masked');$('#s_store').value=CFG.store;
+ $('#s_display').value=localStorage.getItem('kt_display_mode')||'auto';
  const cs=$('#connStatus');cs.className='status-dot'+(CFG.url?' live':'');cs.querySelector('span').textContent=CFG.url?'Đã kết nối':'Chưa kết nối';modal.classList.add('show');loadEngineers();loadPeriodInfo();}
+// Áp dụng ngay từ lúc tải trang (không cần mở Cài đặt trước) — nhớ lựa chọn
+// qua các lần mở app sau bằng localStorage.
+function applyDisplayMode(mode){
+ if(mode && mode!=='auto') document.documentElement.dataset.display=mode;
+ else delete document.documentElement.dataset.display;
+}
+applyDisplayMode(localStorage.getItem('kt_display_mode'));
+$('#s_display').onchange=()=>{
+ const mode=$('#s_display').value;
+ localStorage.setItem('kt_display_mode',mode);
+ applyDisplayMode(mode);
+ toast(mode==='auto'?'✅ Đã đặt lại tự động co giãn':`✅ Đã cố định hiển thị ${mode==='1366'?'1366x768':'1920x1080'}`);
+};
 
 /* ===== Kỳ dữ liệu 6 tháng — nhắc admin xóa hết phiếu cũ định kỳ =====
    Giữ nguyên 1 Sheet duy nhất (không chia nhỏ) — chỉ nhắc + cho admin bấm
@@ -3682,6 +3734,7 @@ registerAdminAction('chamcong-ctp',()=>{
  $('#adminToolsModal').classList.add('show');
  ccLoadList();
  ctpLoadAll();
+ renderCcMonthAudit();
  maybeAutoBackupChamCongCtp(); // không chờ — không được làm chậm việc mở modal
 });
 
@@ -3741,17 +3794,60 @@ $$('.admtab').forEach(b=>b.onclick=()=>{
 let ccCurrentList=[];
 let ccDraft=[];
 
+// Tỉnh/thành Việt Nam sau đợt sáp nhập 12/6/2025 (34 tỉnh/thành, theo Nghị
+// quyết 306/NQ-CP) + tên tỉnh CŨ trước sáp nhập (cho ai quen gọi tên cũ) —
+// dùng cho dropdown "Địa chỉ làm việc" thay vì gõ tay tự do.
+const VN_PROVINCES_NEW_BY_REGION=[
+ ['Trung du miền núi Bắc Bộ',['Tuyên Quang','Cao Bằng','Lai Châu','Lào Cai','Thái Nguyên','Điện Biên','Lạng Sơn','Sơn La','Phú Thọ']],
+ ['Đồng bằng sông Hồng',['Hà Nội','Hải Phòng','Bắc Ninh','Quảng Ninh','Hưng Yên','Ninh Bình']],
+ ['Bắc Trung Bộ',['Thanh Hóa','Nghệ An','Hà Tĩnh','Quảng Trị','Huế']],
+ ['Nam Trung Bộ & Tây Nguyên',['Đà Nẵng','Quảng Ngãi','Gia Lai','Đắk Lắk','Khánh Hòa','Lâm Đồng']],
+ ['Đông Nam Bộ',['Đồng Nai','Tây Ninh','TP. Hồ Chí Minh']],
+ ['Đồng bằng sông Cửu Long',['Đồng Tháp','An Giang','Vĩnh Long','Cần Thơ','Cà Mau']],
+];
+const VN_PROVINCES_OLD=['Hà Giang','Yên Bái','Bắc Kạn','Hòa Bình','Vĩnh Phúc','Hải Dương','Bắc Giang','Thái Bình',
+ 'Hà Nam','Nam Định','Quảng Bình','Quảng Nam','Kon Tum','Bình Định','Phú Yên','Ninh Thuận','Đắk Nông','Bình Thuận',
+ 'Bình Phước','Long An','Bình Dương','Bà Rịa - Vũng Tàu','Tiền Giang','Kiên Giang','Bến Tre','Trà Vinh','Sóc Trăng',
+ 'Hậu Giang','Bạc Liêu'];
+function buildWorkAddressOptions(){
+ let html='<option value="">— Chọn địa điểm —</option><option value="Văn phòng Soeco">🏢 SOECO (Văn phòng)</option>';
+ VN_PROVINCES_NEW_BY_REGION.forEach(([region,list])=>{
+   html+=`<optgroup label="${esc(region)}">`+list.map(p=>`<option>${esc(p)}</option>`).join('')+`</optgroup>`;
+ });
+ html+=`<optgroup label="Tỉnh/thành cũ (trước sáp nhập 6/2025)">`+VN_PROVINCES_OLD.map(p=>`<option>${esc(p)}</option>`).join('')+`</optgroup>`;
+ html+='<option value="__other">Khác…</option>';
+ $('#cc_f_addr').innerHTML=html;
+}
+
 function ccPopulateSelects(){
  const empSel=$('#cc_employee'); const curE=empSel.value;
  empSel.innerHTML='<option value="">— Chọn nhân viên để tạo nháp/xem riêng —</option>'+engineerList.map(n=>`<option value="${esc(n)}" ${n===curE?'selected':''}>${esc(n)}</option>`).join('');
  $('#cc_f_employee').innerHTML=engineerList.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+ if(!$('#cc_f_addr').dataset.built){ buildWorkAddressOptions(); $('#cc_f_addr').dataset.built='1'; ccResetAddForm(); }
  const now=vnNow();
  const mSel=$('#cc_month');
  if(!mSel.dataset.built){ let opts=''; for(let m=1;m<=12;m++) opts+=`<option value="${pad2(m)}" ${pad2(m)===pad2(now.getMonth()+1)?'selected':''}>Tháng ${m}</option>`; mSel.innerHTML=opts; mSel.dataset.built='1'; }
  const ySel=$('#cc_year');
  if(!ySel.dataset.built){ let opts=''; for(let y=now.getFullYear()-1;y<=now.getFullYear()+1;y++) opts+=`<option value="${y}" ${y===now.getFullYear()?'selected':''}>Năm ${y}</option>`; ySel.innerHTML=opts; ySel.dataset.built='1'; }
+ // Select tháng/năm RIÊNG cho nút "Xoá chấm công tháng này" — tách biệt khỏi
+ // bộ lọc xem ở trên, tránh xoá nhầm tháng đang xem chứ không phải tháng
+ // định xoá. Mặc định trỏ đúng tháng/năm hiện tại (giờ VN thật).
+ const cmSel=$('#cc_clr_month');
+ if(!cmSel.dataset.built){ let opts=''; for(let m=1;m<=12;m++) opts+=`<option value="${pad2(m)}" ${pad2(m)===pad2(now.getMonth()+1)?'selected':''}>Tháng ${m}</option>`; cmSel.innerHTML=opts; cmSel.dataset.built='1'; }
+ const cySel=$('#cc_clr_year');
+ if(!cySel.dataset.built){ let opts=''; for(let y=now.getFullYear()-1;y<=now.getFullYear()+1;y++) opts+=`<option value="${y}" ${y===now.getFullYear()?'selected':''}>Năm ${y}</option>`; cySel.innerHTML=opts; cySel.dataset.built='1'; }
  if(!$('#cc_f_date').value) $('#cc_f_date').value=vnTodayIso();
 }
+$('#cc_f_project').onchange=e=>$('#wrap_cc_project_other').style.display=e.target.value==='__other'?'block':'none';
+$('#cc_f_addr').onchange=e=>$('#wrap_cc_addr_other').style.display=e.target.value==='__other'?'block':'none';
+$('#cc_f_work').onchange=e=>$('#wrap_cc_work_other').style.display=e.target.value==='__other'?'block':'none';
+// Chọn Ngày là Thứ 7 → Số công tự về 0 (mặc định không tính công thứ 7 nữa);
+// các ngày khác tự về 1 — đỡ phải tự sửa tay mỗi lần đổi ngày.
+$('#cc_f_date').onchange=()=>{
+ const v=$('#cc_f_date').value; if(!v) return;
+ const dow=new Date(v+'T00:00:00').getDay();
+ $('#cc_f_days').value=dow===6?0:1;
+};
 
 async function ccLoadList(){
  const year=$('#cc_year').value, month=$('#cc_month').value, emp=$('#cc_employee').value;
@@ -3814,20 +3910,30 @@ function ccEditRow(no){
  if(!r) return;
  ccEditingNo=no;
  $('#cc_f_date').value=r.date||''; $('#cc_f_employee').value=r.employee||'';
- $('#cc_f_project').value=r.projectContent||''; $('#cc_f_code').value=r.projectCode||''; $('#cc_f_addr').value=r.workAddress||'';
+ setFieldOrOther('cc_f_project','wrap_cc_project_other','cc_f_project_other',r.projectContent||'');
+ $('#cc_f_code').value=r.projectCode||'';
+ setFieldOrOther('cc_f_addr','wrap_cc_addr_other','cc_f_addr_other',r.workAddress||'');
  $('#cc_f_in').value=r.timeIn||''; $('#cc_f_out').value=r.timeOut||''; $('#cc_f_days').value=r.workDays||1;
- $('#cc_f_work').value=r.workContent||''; $('#cc_f_sale').value=r.salePhuTrach||''; $('#cc_f_note').value=r.note||'';
+ setFieldOrOther('cc_f_work','wrap_cc_work_other','cc_f_work_other',r.workContent||'');
+ $('#cc_f_sale').value=r.salePhuTrach||''; $('#cc_f_note').value=r.note||'';
  $('#btnCcAddRow span').textContent='💾 Lưu sửa dòng #'+no;
  $('#btnCcCancelEdit').style.display='inline-block';
  $('#cc_f_date').scrollIntoView({behavior:'smooth',block:'center'});
 }
-$('#btnCcCancelEdit').onclick=()=>{
+function ccResetAddForm(){
  ccEditingNo=null;
- ['cc_f_project','cc_f_code','cc_f_addr','cc_f_in','cc_f_out','cc_f_work','cc_f_sale','cc_f_note'].forEach(id=>$('#'+id).value='');
- $('#cc_f_days').value='1';
+ $('#cc_f_date').value=vnTodayIso();
+ $('#cc_f_project').value='Làm việc tại văn phòng'; $('#wrap_cc_project_other').style.display='none'; $('#cc_f_project_other').value='';
+ $('#cc_f_code').value='';
+ $('#cc_f_addr').value='Văn phòng Soeco'; $('#wrap_cc_addr_other').style.display='none'; $('#cc_f_addr_other').value='';
+ $('#cc_f_in').value='08:00'; $('#cc_f_out').value='17:00';
+ $('#cc_f_days').value=new Date($('#cc_f_date').value+'T00:00:00').getDay()===6?0:1;
+ $('#cc_f_work').value='Trực thông tin sự cố'; $('#wrap_cc_work_other').style.display='none'; $('#cc_f_work_other').value='';
+ $('#cc_f_sale').value=''; $('#cc_f_note').value='';
  $('#btnCcAddRow span').textContent='+ Thêm dòng';
  $('#btnCcCancelEdit').style.display='none';
-};
+}
+$('#btnCcCancelEdit').onclick=ccResetAddForm;
 
 async function ccDeleteRow(no){
  if(!confirm('Xoá dòng chấm công này?')) return;
@@ -3839,18 +3945,19 @@ $('#btnCcAddRow').onclick=async()=>{
  const date=$('#cc_f_date').value;
  if(!date){ toast('Chọn ngày',true); return; }
  const isEdit=!!ccEditingNo;
- const payload={date, employee:$('#cc_f_employee').value, projectContent:$('#cc_f_project').value.trim(),
-   projectCode:$('#cc_f_code').value.trim(), workAddress:$('#cc_f_addr').value.trim(),
+ let projectContent=$('#cc_f_project').value; if(projectContent==='__other') projectContent=$('#cc_f_project_other').value.trim();
+ let workAddress=$('#cc_f_addr').value; if(workAddress==='__other') workAddress=$('#cc_f_addr_other').value.trim();
+ let workContent=$('#cc_f_work').value; if(workContent==='__other') workContent=$('#cc_f_work_other').value.trim();
+ const payload={date, employee:$('#cc_f_employee').value, projectContent,
+   projectCode:$('#cc_f_code').value.trim(), workAddress,
    timeIn:$('#cc_f_in').value, timeOut:$('#cc_f_out').value, workDays:Number($('#cc_f_days').value)||0,
-   workContent:$('#cc_f_work').value.trim(), salePhuTrach:$('#cc_f_sale').value.trim(), note:$('#cc_f_note').value.trim()};
+   workContent, salePhuTrach:$('#cc_f_sale').value.trim(), note:$('#cc_f_note').value.trim()};
  const j=isEdit
    ? await DB.updateAttendance(ccEditingNo,payload,adminPassword.chamcong_ctp)
    : await DB.addAttendance(payload,adminPassword.chamcong_ctp);
  if(j.ok){
    toast(isEdit?'✅ Đã lưu sửa dòng chấm công':'✅ Đã thêm dòng chấm công');
-   ['cc_f_project','cc_f_code','cc_f_addr','cc_f_in','cc_f_out','cc_f_work','cc_f_sale','cc_f_note'].forEach(id=>$('#'+id).value='');
-   $('#cc_f_days').value='1';
-   ccEditingNo=null; $('#btnCcAddRow span').textContent='+ Thêm dòng'; $('#btnCcCancelEdit').style.display='none';
+   ccResetAddForm();
    ccLoadList();
  } else toast(j.error||(isEdit?'Lỗi lưu sửa':'Lỗi thêm dòng'),true);
 };
@@ -4004,13 +4111,43 @@ $('#btnCcDoExport').onclick=()=>{
  $('#ccExportPreviewModal').classList.remove('show');
 };
 
+// Tháng/năm để XOÁ giờ chọn RIÊNG (cc_clr_month/cc_clr_year), không dùng
+// chung với bộ lọc XEM ở trên nữa — tránh bấm nhầm xoá đúng tháng đang xem
+// (vd đang xem tháng cũ để tra cứu, lỡ tay xoá luôn).
 $('#btnCcClearMonth').onclick=async()=>{
- const year=$('#cc_year').value, month=$('#cc_month').value;
+ const year=$('#cc_clr_year').value, month=$('#cc_clr_month').value;
  if(!confirm(`Xoá TOÀN BỘ chấm công tháng ${Number(month)}/${year} (mọi nhân viên)? Nhớ đã xuất Excel xong chưa — không thể hoàn tác.`)) return;
  const j=await DB.clearAttendanceMonth(year,month,adminPassword.chamcong_ctp);
- if(j.ok){ toast(`✅ Đã xoá ${j.count||0} dòng tháng ${Number(month)}/${year}`); ccLoadList(); }
+ if(j.ok){ toast(`✅ Đã xoá ${j.count||0} dòng tháng ${Number(month)}/${year}`); ccLoadList(); renderCcMonthAudit(); }
  else toast(j.error||'Lỗi xoá',true);
 };
+$('#cc_clr_month').onchange=renderCcMonthAudit;
+$('#cc_clr_year').onchange=renderCcMonthAudit;
+
+// Báo tháng đang chọn để xoá đã "sạch" (0 dòng) chưa, và liệt kê TẤT CẢ
+// tháng hiện còn dữ liệu (đọc toàn bộ chấm công, không lọc, rồi tự gom nhóm
+// theo tháng-năm phía client) — để biết tháng nào chưa xuất/xoá.
+async function renderCcMonthAudit(){
+ const box=$('#ccMonthAudit'); if(!box) return;
+ box.textContent='Đang kiểm tra...'; box.className='period-notice';
+ const all=await DB.listAttendance(null,null,null,adminPassword.chamcong_ctp);
+ if(!all.ok){ box.textContent='Không kiểm tra được (lỗi tải dữ liệu).'; return; }
+ const byMonth={};
+ all.data.forEach(r=>{ const ym=(r.date||'').slice(0,7); if(ym) byMonth[ym]=(byMonth[ym]||0)+1; });
+ const months=Object.keys(byMonth).sort();
+ const targetYm=`${$('#cc_clr_year').value}-${$('#cc_clr_month').value}`;
+ const targetCount=byMonth[targetYm]||0;
+ const listStr=months.length
+   ? months.map(ym=>{ const [y,m]=ym.split('-'); return `Tháng ${Number(m)}/${y} (${byMonth[ym]} dòng)`; }).join(', ')
+   : 'không còn tháng nào có dữ liệu';
+ if(targetCount===0){
+   box.className='period-notice';
+   box.textContent=`✅ Tháng ${Number($('#cc_clr_month').value)}/${$('#cc_clr_year').value} đã sạch, sẵn sàng chấm công mới. Các tháng còn dữ liệu: ${listStr}.`;
+ } else {
+   box.className='period-notice soon';
+   box.textContent=`⚠️ Tháng ${Number($('#cc_clr_month').value)}/${$('#cc_clr_year').value} còn ${targetCount} dòng, chưa sạch. Các tháng còn dữ liệu: ${listStr}.`;
+ }
+}
 
 /* ================= TAB CÔNG TÁC PHÍ ================= */
 let ctpAllLines=[];
