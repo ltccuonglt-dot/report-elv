@@ -1085,6 +1085,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
       <div class="divider"></div>
       <div class="section-title" style="margin-bottom:8px">Danh sách tháng đang xem (<span id="ccListCount">0</span> dòng)</div>
+      <select id="cc_list_employee" style="margin-bottom:8px"><option value="">— Tất cả nhân viên —</option></select>
       <div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột</div>
       <div class="rpt-wrap"><table class="rpt" id="ccListTable"><thead><tr>
         <th>Ngày</th><th>Thứ</th><th>Nhân viên</th><th>Dự án/Nội dung</th><th>Mã DA</th><th>Địa chỉ</th>
@@ -3935,6 +3936,11 @@ function ccPopulateSelects(){
  const empSel=$('#cc_employee'); const curE=empSel.value;
  empSel.innerHTML='<option value="">— Chọn nhân viên để tạo nháp/xem riêng —</option>'+engineerList.map(n=>`<option value="${esc(n)}" ${n===curE?'selected':''}>${esc(n)}</option>`).join('');
  $('#cc_f_employee').innerHTML=engineerList.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+ // Bộ lọc kỹ sư đặt NGAY cạnh "Danh sách tháng đang xem" — tiện xem/đổi
+ // nhanh mà không phải cuộn lên bộ lọc chính ở đầu tab, luôn đồng bộ 2
+ // chiều với #cc_employee (đổi bên nào cũng ra cùng 1 kết quả).
+ const listEmpSel=$('#cc_list_employee'); const curListE=listEmpSel.value||curE;
+ listEmpSel.innerHTML='<option value="">— Tất cả nhân viên —</option>'+engineerList.map(n=>`<option value="${esc(n)}" ${n===curListE?'selected':''}>${esc(n)}</option>`).join('');
  const syncSel=$('#cc_sync_employee'); const curSync=syncSel.value;
  syncSel.innerHTML=engineerList.map(n=>`<option value="${esc(n)}" ${n===curSync?'selected':''}>${esc(n)}</option>`).join('');
  if(!$('#cc_f_addr').dataset.built){ buildWorkAddressOptions('cc_f_addr'); $('#cc_f_addr').dataset.built='1'; ccResetAddForm(); }
@@ -3984,12 +3990,14 @@ $('#cc_f_date').onchange=()=>{
 
 async function ccLoadList(){
  const year=$('#cc_year').value, month=$('#cc_month').value, emp=$('#cc_employee').value;
+ $('#cc_list_employee').value=emp; // luôn đồng bộ 2 ô chọn kỹ sư (đầu tab + cạnh danh sách)
  const j=await DB.listAttendance(emp||null,year,month,adminPassword.chamcong_ctp);
  if(!j.ok){ toast(j.error||'Lỗi tải chấm công',true); return; }
  ccCurrentList=j.data||[];
  ccRenderList();
  ccCheckMonthReminder();
 }
+$('#cc_list_employee').onchange=()=>{ $('#cc_employee').value=$('#cc_list_employee').value; ccLoadList(); };
 $('#btnCcLoad').onclick=ccLoadList;
 
 // Dashboard chấm công — cùng cấu trúc .stats + donut như Dashboard chính của
