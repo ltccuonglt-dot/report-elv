@@ -1237,7 +1237,8 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         <select id="aeon_f_priority"><option value="Low">Low</option><option value="Medium" selected>Medium</option><option value="High">High</option></select>
       </label>
       <label class="field" style="grid-column:1/-1"><span class="lab">Vấn đề</span><input type="text" id="aeon_f_issue"></label>
-      <label class="field"><span class="lab">Kỹ sư</span><input type="text" id="aeon_f_engineer"></label>
+      <label class="field"><span class="lab">Kỹ sư</span><select id="aeon_f_engineer"></select></label>
+      <label class="field" id="wrap_aeon_engineer_other" style="display:none"><span class="lab">Nhập tên kỹ sư</span><input type="text" id="aeon_f_engineer_other" placeholder="VD: Kỹ sư khác không có trong danh sách"></label>
       <label class="field"><span class="lab">Hình thức hỗ trợ</span>
         <select id="aeon_f_support"><option value="Online">Online</option><option value="On-Site">On-Site</option></select>
       </label>
@@ -3655,10 +3656,24 @@ function renderAeonReport(){
 }
 $$('#aeon_site_filter button').forEach(b=>b.onclick=()=>{ segSet('aeon_site_filter',b.dataset.v); renderAeonReport(); });
 
+// Danh sách kỹ sư ở đây dùng CHUNG đúng 6 kỹ sư chính của Report ELV
+// (engineerList) — có "Khác…" để gõ tay khi đổi người/kỹ sư ngoài danh sách.
+function aeonPopulateEngineerSelect(){
+ const cur=$('#aeon_f_engineer').value;
+ $('#aeon_f_engineer').innerHTML='<option value="">— Chọn kỹ sư —</option>'+engineerList.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')+'<option value="__other">Khác…</option>';
+ if(cur) $('#aeon_f_engineer').value=cur;
+}
+$('#aeon_f_engineer').onchange=e=>$('#wrap_aeon_engineer_other').style.display=e.target.value==='__other'?'block':'none';
+function aeonEngineerValue(){
+ const v=$('#aeon_f_engineer').value;
+ return v==='__other' ? $('#aeon_f_engineer_other').value.trim() : v;
+}
+
 function aeonResetForm(){
  aeonEditingId=null;
  $('#aeon_f_date').value=''; $('#aeon_f_customer').value='AEON Mall HUE'; $('#aeon_f_system').value='CCTV';
- $('#aeon_f_priority').value='Medium'; $('#aeon_f_issue').value=''; $('#aeon_f_engineer').value='';
+ $('#aeon_f_priority').value='Medium'; $('#aeon_f_issue').value='';
+ setFieldOrOther('aeon_f_engineer','wrap_aeon_engineer_other','aeon_f_engineer_other','');
  $('#aeon_f_support').value='Online'; $('#aeon_f_status').value='Done'; $('#aeon_f_remark').value='';
  $('#btnAeonAddRow span').textContent='+ Thêm phiếu';
  $('#btnAeonCancelEdit').style.display='none';
@@ -3670,7 +3685,8 @@ function aeonEditRow(no){
  aeonEditingId=no;
  $('#aeon_f_date').value=r.date||''; $('#aeon_f_customer').value=r.customer||'AEON Mall HUE';
  $('#aeon_f_system').value=r.system||''; $('#aeon_f_priority').value=r.priority||'Medium';
- $('#aeon_f_issue').value=r.issue||''; $('#aeon_f_engineer').value=r.engineer||'';
+ $('#aeon_f_issue').value=r.issue||'';
+ setFieldOrOther('aeon_f_engineer','wrap_aeon_engineer_other','aeon_f_engineer_other',r.engineer||'');
  $('#aeon_f_support').value=r.support||'Online'; $('#aeon_f_status').value=r.status||'Done'; $('#aeon_f_remark').value=r.remark||'';
  $('#btnAeonAddRow span').textContent='💾 Lưu sửa phiếu #'+no;
  $('#btnAeonCancelEdit').style.display='inline-block';
@@ -3680,7 +3696,7 @@ $('#btnAeonCancelEdit').onclick=aeonResetForm;
 
 $('#btnAeonAddRow').onclick=async()=>{
  const payload={date:$('#aeon_f_date').value, customer:$('#aeon_f_customer').value, system:$('#aeon_f_system').value,
-   issue:$('#aeon_f_issue').value, priority:$('#aeon_f_priority').value, engineer:$('#aeon_f_engineer').value,
+   issue:$('#aeon_f_issue').value, priority:$('#aeon_f_priority').value, engineer:aeonEngineerValue(),
    support:$('#aeon_f_support').value, status:$('#aeon_f_status').value, remark:$('#aeon_f_remark').value||null};
  if(!payload.date || !payload.issue){ toast('Cần nhập Ngày và Vấn đề',true); return; }
  const res=aeonEditingId
@@ -3700,6 +3716,7 @@ async function aeonDeleteRow(no){
 }
 
 registerAdminAction('aeon-report',async()=>{
+ aeonPopulateEngineerSelect();
  await aeonLoadAndRender();
  $('#aeonReportModal').classList.add('show');
 });
