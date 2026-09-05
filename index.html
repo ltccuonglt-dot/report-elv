@@ -1221,6 +1221,14 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <div style="text-align:right;font-weight:800;margin:10px 0" id="ctpTotalBox">Tổng cộng: 0 đ</div>
 
       <div class="divider"></div>
+      <div class="section-title" style="margin-bottom:8px">Giá xăng cố định tháng này</div>
+      <p class="hint" style="margin-top:-4px">Đổi khi giá xăng thị trường thay đổi (thường 1 lần/tháng) — dòng xăng MỚI tạo sau đó tự lấy đúng giá này làm Định mức (vẫn sửa riêng được từng dòng nếu cần).</p>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input type="number" id="ctp_fuel_rate_input" step="1" placeholder="VD: 22850" style="flex:1">
+        <button type="button" class="btn-mini" id="btnCtpSaveFuelRate">💾 Lưu giá xăng</button>
+      </div>
+
+      <div class="divider"></div>
       <div class="section-title" style="margin-bottom:8px">Chọn bản đồ in kèm</div>
       <select id="ctp_mapSelect" style="margin-bottom:8px"></select>
       <input type="file" id="ctp_mapUpload" accept="image/*" style="margin-bottom:8px">
@@ -1712,6 +1720,18 @@ const DB={
  async resetUserPassword(username,newPassword,adminPassword){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
    const {data,error}=await sb.rpc('admin_reset_user_password',{p_req_username:'',p_req_password:adminPassword,p_target_username:username,p_new_password:newPassword});
+   return error?{ok:false,error:error.message}:{ok:true};
+ },
+ // Giá xăng cố định (đ/lít), admin Chấm công-CTP tự đổi mỗi khi giá thị
+ // trường thay đổi — đọc công khai (không cần mật khẩu), ghi thì cần.
+ async getCtpFuelRate(){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('get_ctp_fuel_rate');
+   return error?{ok:false,error:error.message}:{ok:true,rate:Number(data)||0};
+ },
+ async setCtpFuelRate(rate,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('set_ctp_fuel_rate',{p_admin_password:adminPassword,p_rate:rate});
    return error?{ok:false,error:error.message}:{ok:true};
  },
  async listAttendance(employee,year,month,adminPassword){
@@ -4631,10 +4651,31 @@ function ctpPopulateMapSelect(){
  $('#ctp_mapSelect').innerHTML='<option value="">— Không chọn bản đồ —</option>'+staticOpts+dbOpts;
  if(cur) $('#ctp_mapSelect').value=cur;
 }
+// Tên map luôn đúng dạng "Tên dự án Xkm" (ép khi tạo map, xem btnCtpSaveMap)
+// — tách số km ngay trong tên đó, tự điền vào Km của (các) dòng xăng đang có
+// trong đợt này, đỡ phải tra lại/gõ tay số km mỗi lần chọn map.
+async function ctpApplyMapKmToFuelLines(){
+ const sel=$('#ctp_mapSelect');
+ const label=sel.selectedOptions[0]?.textContent||'';
+ const m=label.match(/(\d+(?:[.,]\d+)?)\s*km/i);
+ if(!m) return;
+ const km=Number(m[1].replace(',','.'));
+ if(!km) return;
+ let applied=0;
+ for(let i=0;i<ctpLocalRows.length;i++){
+   if((ctpLocalRows[i].expenseType||'').includes('xăng')){
+     ctpLocalRows[i].km=km;
+     Object.assign(ctpLocalRows[i],ctpCalcQtyAmount(ctpLocalRows[i].expenseType,ctpLocalRows[i].km,ctpLocalRows[i].rate));
+     await ctpPersistRow(i);
+     applied++;
+   }
+ }
+ if(applied){ ctpRenderLinesFromLocal(); toast(`✅ Đã tự điền ${km}km theo map vào ${applied} dòng xăng`); }
+}
 $('#ctp_mapSelect').onchange=()=>{
  const f=$('#ctp_mapSelect').value;
  ctpUploadedMapDataUrl=null; $('#ctp_mapUpload').value='';
- if(f){ $('#ctp_mapPreview').src=mapSrcFor(f); $('#ctp_mapPreviewWrap').style.display='block'; }
+ if(f){ $('#ctp_mapPreview').src=mapSrcFor(f); $('#ctp_mapPreviewWrap').style.display='block'; ctpApplyMapKmToFuelLines(); }
  else $('#ctp_mapPreviewWrap').style.display='none';
 };
 $('#btnCtpAddMap').onclick=()=>{ $('#ctpAddMapForm').style.display='block'; };
@@ -4695,7 +4736,21 @@ async function ctpLoadAll(){
  renderCtpDashboard();
  ctpRenderTripSelect();
  ctpPopulateEngFilter();
+ ctpLoadFuelRate();
 }
+// Giá xăng cố định (đ/lít) — dòng xăng MỚI tạo tự lấy giá này làm Định mức.
+let ctpFuelRate=0;
+async function ctpLoadFuelRate(){
+ const j=await DB.getCtpFuelRate();
+ if(j.ok){ ctpFuelRate=j.rate; $('#ctp_fuel_rate_input').value=ctpFuelRate||''; }
+}
+$('#btnCtpSaveFuelRate').onclick=async()=>{
+ const val=Number($('#ctp_fuel_rate_input').value);
+ if(!val||val<=0){ toast('Nhập giá xăng hợp lệ',true); return; }
+ const j=await DB.setCtpFuelRate(val,adminPassword.chamcong_ctp);
+ if(j.ok){ ctpFuelRate=val; toast(`✅ Đã lưu giá xăng ${val.toLocaleString('vi-VN')}đ/lít cho tháng này`); }
+ else toast(j.error||'Lỗi lưu giá xăng',true);
+};
 
 // Mỗi kỹ sư có 1 file CTP cố định: chọn tên ở đây tự tìm đúng đợt công tác
 // GẦN NHẤT có tên người đó (mở lại để sửa tiếp), chưa có thì tạo file mới
@@ -5015,7 +5070,7 @@ function ctpBuildBlankRow(expenseTypeVal,engineerName){
    lineFromDate:$('#ctp_f_fromdate').value, lineToDate:$('#ctp_f_todate').value,
    projectCode:$('#ctp_f_pjcode').value.trim(), projectName:$('#ctp_f_pjname').value.trim(),
    serviceType:segVal('ctp_f_tripservice')};
- row.rate=fixedRate!=null?fixedRate:0;
+ row.rate=fixedRate!=null?fixedRate:(expenseTypeVal.includes('xăng')?(ctpFuelRate||0):0);
  Object.assign(row,ctpCalcQtyAmount(row.expenseType,row.km,row.rate));
  row.description=ctpDescriptionFor(row);
  return row;
