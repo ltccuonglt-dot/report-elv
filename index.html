@@ -427,7 +427,11 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
 .modal{position:fixed;inset:0;background:rgba(20,10,25,.55);z-index:50;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
 .modal.show{display:flex}
-.sheet{background:var(--surface);width:100%;max-width:480px;border-radius:22px 22px 0 0;padding:20px 18px calc(env(safe-area-inset-bottom) + 20px);animation:up .3s ease}
+/* .sheet trước đây không giới hạn chiều cao/không cuộn được — modal nào có
+   nội dung dài hơn màn hình (vd Chấm công/CTP, Báo cáo AEON có Dashboard +
+   bảng dữ liệu dài) sẽ bị cắt mất phần dưới, không cách nào xem/cuộn tới.
+   Giới hạn chiều cao còn lại của màn hình + tự cuộn bên trong toàn bộ sheet. */
+.sheet{background:var(--surface);width:100%;max-width:480px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:22px 22px 0 0;padding:20px 18px calc(env(safe-area-inset-bottom) + 20px);animation:up .3s ease}
 @media (min-width:520px){.sheet{border-radius:22px;margin-bottom:16px}}
 @keyframes up{from{transform:translateY(100%)}to{transform:none}}
 .sheet h2{font-size:17px;margin:0 0 4px;font-weight:700}
@@ -1007,9 +1011,10 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
       <div class="divider"></div>
       <div class="section-title" style="margin-bottom:8px">Danh sách tháng đang xem (<span id="ccListCount">0</span> dòng)</div>
+      <div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột</div>
       <div class="rpt-wrap"><table class="rpt" id="ccListTable"><thead><tr>
         <th>Ngày</th><th>Thứ</th><th>Nhân viên</th><th>Dự án/Nội dung</th><th>Mã DA</th><th>Địa chỉ</th>
-        <th>IN</th><th>OUT</th><th>Công</th><th>Nội dung CV</th><th>Sale</th><th>Ghi chú</th><th></th>
+        <th>IN</th><th>OUT</th><th>Công</th><th>Nội dung CV</th><th>Sale</th><th>Ghi chú</th><th>Sửa</th>
       </tr></thead><tbody id="ccListBody"></tbody></table></div>
 
       <div class="divider"></div>
@@ -1088,8 +1093,9 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       </div>
 
       <div class="divider"></div>
+      <div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột</div>
       <div class="rpt-wrap"><table class="rpt" id="ctpLineTable"><thead><tr>
-        <th>Tên NV</th><th>Nội dung</th><th>Diễn giải</th><th>Km</th><th>SL</th><th>Định mức</th><th>Thành tiền</th><th>Ghi chú</th><th></th>
+        <th>Tên NV</th><th>Nội dung</th><th>Diễn giải</th><th>Km</th><th>SL</th><th>Định mức</th><th>Thành tiền</th><th>Ghi chú</th><th>Sửa</th>
       </tr></thead><tbody id="ctpLineBody"></tbody></table></div>
       <div style="text-align:right;font-weight:800;margin:10px 0" id="ctpTotalBox">Tổng cộng: 0 đ</div>
 
@@ -1203,8 +1209,9 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
     <div class="divider"></div>
     <div class="section-title" style="margin-bottom:8px">Danh sách (<span id="aeonListCount">0</span> phiếu)</div>
+    <div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột</div>
     <div class="rpt-wrap"><table class="rpt" id="aeonListTable"><thead><tr>
-      <th>Ngày</th><th>Cơ sở</th><th>Vấn đề</th><th>Ưu tiên</th><th>Kỹ sư</th><th>Hỗ trợ</th><th>Trạng thái</th><th>Ghi chú</th><th></th>
+      <th>Ngày</th><th>Cơ sở</th><th>Vấn đề</th><th>Ưu tiên</th><th>Kỹ sư</th><th>Hỗ trợ</th><th>Trạng thái</th><th>Ghi chú</th><th>Sửa</th>
     </tr></thead><tbody id="aeonListBody"></tbody></table></div>
 
     <div id="aeonBackupStatus" class="period-notice" style="margin-top:10px;display:none"></div>
@@ -3560,16 +3567,25 @@ function renderAeonReport(){
  }</div>`;
 
  $('#aeonListCount').textContent=filtered.length;
- $('#aeonListBody').innerHTML=filtered.map(r=>`<tr>
-   <td>${esc(fmtDMYFull(r.date))}</td><td>${esc(r.customer)}</td><td>${esc(r.issue)}</td>
-   <td>${esc(r.priority)}</td><td>${esc(r.engineer)}</td><td>${esc(r.support)}</td>
-   <td>${esc(r.status)}</td><td>${esc(r.remark)}</td>
-   <td style="white-space:nowrap">
-     <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-act="edit" aria-label="Sửa dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-     <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-act="del" aria-label="Xoá dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-   </td>
- </tr>`).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:14px">Chưa có phiếu nào</td></tr>`;
- $$('#aeonListBody .row-del-btn').forEach(b=>b.onclick=()=>b.dataset.act==='edit'?aeonEditRow(b.dataset.no):aeonDeleteRow(b.dataset.no));
+ $('#aeonListBody').innerHTML=filtered.map(r=>{
+   const supCls=(r.support||'').toLowerCase().includes('site')?'sup-onsite':'sup-online';
+   return `<tr>
+   <td data-label="Ngày">${esc(fmtDMYFull(r.date))}</td>
+   <td data-label="Cơ sở">${esc(r.customer)}</td>
+   <td class="issue-cell" data-label="Vấn đề">${esc(r.issue)}</td>
+   <td data-label="Ưu tiên"><span class="pill ${pcls(r.priority)}">${esc(r.priority||'')}</span></td>
+   <td data-label="Kỹ sư">${esc(r.engineer)}</td>
+   <td data-label="Hỗ trợ"><span class="pill ${supCls}">${esc(r.support||'')}</span></td>
+   <td data-label="Trạng thái"><span class="pill ${scls(r.status)}">${esc(slabel(r.status))}</span></td>
+   <td data-label="Ghi chú">${esc(r.remark)}</td>
+   <td data-label="Sửa"><div class="row-actions">
+     <button type="button" class="btn-row-edit" data-no="${esc(r.no)}" data-act="edit" aria-label="Sửa dòng" title="Sửa phiếu này"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+     <button type="button" class="btn-row-delete" data-no="${esc(r.no)}" data-act="del" aria-label="Xoá dòng" title="Xoá hẳn phiếu này"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+   </div></td>
+ </tr>`;
+ }).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:14px">Chưa có phiếu nào</td></tr>`;
+ $$('#aeonListBody .btn-row-edit').forEach(b=>b.onclick=()=>aeonEditRow(b.dataset.no));
+ $$('#aeonListBody .btn-row-delete').forEach(b=>b.onclick=()=>aeonDeleteRow(b.dataset.no));
 }
 $$('#aeon_site_filter button').forEach(b=>b.onclick=()=>{ segSet('aeon_site_filter',b.dataset.v); renderAeonReport(); });
 
@@ -3767,17 +3783,29 @@ function renderCcDashboard(){
 function ccRenderList(){
  renderCcDashboard();
  $('#ccListCount').textContent=ccCurrentList.length;
- $('#ccListBody').innerHTML=ccCurrentList.map(r=>`<tr>
-   <td>${esc(fmtDMYFull(r.date))}</td><td>${esc(thuVN(r.date))}</td><td>${esc(r.employee)}</td>
-   <td>${esc(r.projectContent)}</td><td>${esc(r.projectCode)}</td><td>${esc(r.workAddress)}</td>
-   <td>${esc(r.timeIn)}</td><td>${esc(r.timeOut)}</td><td>${r.workDays||0}</td>
-   <td>${esc(r.workContent)}</td><td>${esc(r.salePhuTrach)}</td><td>${esc(r.note)}</td>
-   <td style="white-space:nowrap">
-     <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-employee="${esc(r.employee)}" data-act="edit" aria-label="Sửa dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-     <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-employee="${esc(r.employee)}" data-act="del" aria-label="Xoá dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-   </td>
- </tr>`).join('') || `<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:14px">Chưa có dòng nào tháng này</td></tr>`;
- $$('#ccListBody .row-del-btn').forEach(b=>b.onclick=()=>b.dataset.act==='edit'?ccEditRow(b.dataset.no):ccDeleteRow(b.dataset.no));
+ $('#ccListBody').innerHTML=ccCurrentList.map(r=>{
+   const isWeekend=[0,6].includes(new Date(r.date+'T00:00:00').getDay());
+   return `<tr${isWeekend?' class="weekend-row"':''}>
+   <td data-label="Ngày">${esc(fmtDMYFull(r.date))}</td>
+   <td data-label="Thứ">${esc(thuVN(r.date))}</td>
+   <td data-label="Nhân viên">${esc(r.employee)}</td>
+   <td data-label="Dự án/Nội dung">${esc(r.projectContent)}</td>
+   <td data-label="Mã DA">${esc(r.projectCode)}</td>
+   <td data-label="Địa chỉ">${esc(r.workAddress)}</td>
+   <td data-label="IN">${esc(r.timeIn)}</td>
+   <td data-label="OUT">${esc(r.timeOut)}</td>
+   <td class="num" data-label="Công">${r.workDays||0}</td>
+   <td class="issue-cell" data-label="Nội dung CV">${esc(r.workContent)}</td>
+   <td data-label="Sale">${esc(r.salePhuTrach)}</td>
+   <td data-label="Ghi chú">${esc(r.note)}</td>
+   <td data-label="Sửa"><div class="row-actions">
+     <button type="button" class="btn-row-edit" data-no="${esc(r.no)}" data-act="edit" aria-label="Sửa dòng" title="Sửa dòng chấm công này"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+     <button type="button" class="btn-row-delete" data-no="${esc(r.no)}" data-act="del" aria-label="Xoá dòng" title="Xoá dòng chấm công này"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+   </div></td>
+ </tr>`;
+ }).join('') || `<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:14px">Chưa có dòng nào tháng này</td></tr>`;
+ $$('#ccListBody .btn-row-edit').forEach(b=>b.onclick=()=>ccEditRow(b.dataset.no));
+ $$('#ccListBody .btn-row-delete').forEach(b=>b.onclick=()=>ccDeleteRow(b.dataset.no));
 }
 
 let ccEditingNo=null;
@@ -4172,14 +4200,21 @@ function ctpCurrentLines(){ return currentTripId ? ctpAllLines.filter(r=>r.tripI
 function ctpRenderLines(){
  const lines=ctpCurrentLines();
  $('#ctpLineBody').innerHTML=lines.map(r=>`<tr>
-   <td>${esc(r.requesterName)}</td><td>${esc(r.expenseType)}</td><td>${esc(r.description)}</td><td>${r.km||''}</td><td>${r.quantity||''}</td>
-   <td>${(r.rate||0).toLocaleString('vi-VN')}</td><td>${(r.amount||0).toLocaleString('vi-VN')}</td><td>${esc(r.note)}</td>
-   <td style="white-space:nowrap">
-     <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-act="edit" aria-label="Sửa dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-     <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-act="del" aria-label="Xoá dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-   </td>
+   <td data-label="Tên NV">${esc(r.requesterName)}</td>
+   <td data-label="Nội dung">${esc(r.expenseType)}</td>
+   <td class="issue-cell" data-label="Diễn giải">${esc(r.description)}</td>
+   <td class="num" data-label="Km">${r.km||''}</td>
+   <td class="num" data-label="SL">${r.quantity||''}</td>
+   <td class="num" data-label="Định mức">${(r.rate||0).toLocaleString('vi-VN')}</td>
+   <td class="num" data-label="Thành tiền">${(r.amount||0).toLocaleString('vi-VN')}</td>
+   <td data-label="Ghi chú">${esc(r.note)}</td>
+   <td data-label="Sửa"><div class="row-actions">
+     <button type="button" class="btn-row-edit" data-no="${esc(r.no)}" data-act="edit" aria-label="Sửa dòng" title="Sửa dòng chi phí này"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+     <button type="button" class="btn-row-delete" data-no="${esc(r.no)}" data-act="del" aria-label="Xoá dòng" title="Xoá dòng chi phí này"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+   </div></td>
  </tr>`).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:14px">Chưa có dòng chi phí nào</td></tr>`;
- $$('#ctpLineBody .row-del-btn').forEach(b=>b.onclick=()=>b.dataset.act==='edit'?ctpEditLine(b.dataset.no):ctpDeleteLine(b.dataset.no));
+ $$('#ctpLineBody .btn-row-edit').forEach(b=>b.onclick=()=>ctpEditLine(b.dataset.no));
+ $$('#ctpLineBody .btn-row-delete').forEach(b=>b.onclick=()=>ctpDeleteLine(b.dataset.no));
  const total=lines.reduce((s,r)=>s+(Number(r.amount)||0),0);
  $('#ctpTotalBox').textContent=`Tổng cộng: ${total.toLocaleString('vi-VN')} đ`;
 }
