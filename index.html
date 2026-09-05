@@ -1023,8 +1023,8 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         <label class="field"><span class="lab">Mã dự án</span><input type="text" id="cc_f_code" placeholder="Không bắt buộc"></label>
         <label class="field"><span class="lab">Địa chỉ làm việc</span><select id="cc_f_addr"></select></label>
         <label class="field" id="wrap_cc_addr_other" style="display:none"><span class="lab">Nhập địa chỉ</span><input type="text" id="cc_f_addr_other" placeholder="VD: Quận 1, TP.HCM"></label>
-        <label class="field"><span class="lab">Giờ vào</span><input type="time" id="cc_f_in" value="08:00"></label>
-        <label class="field"><span class="lab">Giờ ra</span><input type="time" id="cc_f_out" value="17:00"></label>
+        <label class="field"><span class="lab">Giờ vào</span><input type="text" inputmode="numeric" pattern="[0-2][0-9]:[0-5][0-9]" placeholder="08:00" id="cc_f_in" value="08:00"></label>
+        <label class="field"><span class="lab">Giờ ra</span><input type="text" inputmode="numeric" pattern="[0-2][0-9]:[0-5][0-9]" placeholder="17:00" id="cc_f_out" value="17:00"></label>
         <label class="field"><span class="lab">Số công <span class="hint" style="font-weight:400">(Thứ 7 tự về 0)</span></span><input type="number" step="0.5" id="cc_f_days" value="1"></label>
         <label class="field" style="grid-column:1/-1"><span class="lab">Nội dung công việc</span>
           <select id="cc_f_work">
@@ -1083,7 +1083,8 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
           <label class="field" style="grid-column:1/-1"><span class="lab">Người đề nghị (chọn được nhiều người cùng đi)</span>
             <div id="ctp_f_requester_list" class="ctp-checklist"></div>
           </label>
-          <label class="field"><span class="lab">Địa điểm công tác</span><input type="text" id="ctp_f_place"></label>
+          <label class="field"><span class="lab">Địa điểm công tác</span><select id="ctp_f_place"></select></label>
+          <label class="field" id="wrap_ctp_place_other" style="display:none"><span class="lab">Nhập địa điểm</span><input type="text" id="ctp_f_place_other" placeholder="VD: Quận 1, TP.HCM"></label>
           <label class="field"><span class="lab">Từ ngày</span><input type="date" id="ctp_f_fromdate"></label>
           <label class="field"><span class="lab">Đến ngày</span><input type="date" id="ctp_f_todate"></label>
           <label class="field"><span class="lab">Mã vụ việc (chung)</span><input type="text" id="ctp_f_pjcode"></label>
@@ -3809,21 +3810,22 @@ const VN_PROVINCES_OLD=['Hà Giang','Yên Bái','Bắc Kạn','Hòa Bình','Vĩn
  'Hà Nam','Nam Định','Quảng Bình','Quảng Nam','Kon Tum','Bình Định','Phú Yên','Ninh Thuận','Đắk Nông','Bình Thuận',
  'Bình Phước','Long An','Bình Dương','Bà Rịa - Vũng Tàu','Tiền Giang','Kiên Giang','Bến Tre','Trà Vinh','Sóc Trăng',
  'Hậu Giang','Bạc Liêu'];
-function buildWorkAddressOptions(){
+function buildWorkAddressOptions(selectId){
  let html='<option value="">— Chọn địa điểm —</option><option value="Văn phòng Soeco">🏢 SOECO (Văn phòng)</option>';
  VN_PROVINCES_NEW_BY_REGION.forEach(([region,list])=>{
    html+=`<optgroup label="${esc(region)}">`+list.map(p=>`<option>${esc(p)}</option>`).join('')+`</optgroup>`;
  });
  html+=`<optgroup label="Tỉnh/thành cũ (trước sáp nhập 6/2025)">`+VN_PROVINCES_OLD.map(p=>`<option>${esc(p)}</option>`).join('')+`</optgroup>`;
  html+='<option value="__other">Khác…</option>';
- $('#cc_f_addr').innerHTML=html;
+ $('#'+selectId).innerHTML=html;
 }
 
 function ccPopulateSelects(){
  const empSel=$('#cc_employee'); const curE=empSel.value;
  empSel.innerHTML='<option value="">— Chọn nhân viên để tạo nháp/xem riêng —</option>'+engineerList.map(n=>`<option value="${esc(n)}" ${n===curE?'selected':''}>${esc(n)}</option>`).join('');
  $('#cc_f_employee').innerHTML=engineerList.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
- if(!$('#cc_f_addr').dataset.built){ buildWorkAddressOptions(); $('#cc_f_addr').dataset.built='1'; ccResetAddForm(); }
+ if(!$('#cc_f_addr').dataset.built){ buildWorkAddressOptions('cc_f_addr'); $('#cc_f_addr').dataset.built='1'; ccResetAddForm(); }
+ if(!$('#ctp_f_place').dataset.built){ buildWorkAddressOptions('ctp_f_place'); $('#ctp_f_place').dataset.built='1'; }
  const now=vnNow();
  const mSel=$('#cc_month');
  if(!mSel.dataset.built){ let opts=''; for(let m=1;m<=12;m++) opts+=`<option value="${pad2(m)}" ${pad2(m)===pad2(now.getMonth()+1)?'selected':''}>Tháng ${m}</option>`; mSel.innerHTML=opts; mSel.dataset.built='1'; }
@@ -3840,6 +3842,7 @@ function ccPopulateSelects(){
 }
 $('#cc_f_project').onchange=e=>$('#wrap_cc_project_other').style.display=e.target.value==='__other'?'block':'none';
 $('#cc_f_addr').onchange=e=>$('#wrap_cc_addr_other').style.display=e.target.value==='__other'?'block':'none';
+$('#ctp_f_place').onchange=e=>$('#wrap_ctp_place_other').style.display=e.target.value==='__other'?'block':'none';
 $('#cc_f_work').onchange=e=>$('#wrap_cc_work_other').style.display=e.target.value==='__other'?'block':'none';
 // Chọn Ngày là Thứ 7 → Số công tự về 0 (mặc định không tính công thứ 7 nữa);
 // các ngày khác tự về 1 — đỡ phải tự sửa tay mỗi lần đổi ngày.
@@ -4014,8 +4017,8 @@ function ccRenderDraft(){
    <td><input type="text" data-i="${i}" data-f="projectContent" value="${esc(r.projectContent)}" style="width:130px"></td>
    <td><input type="text" data-i="${i}" data-f="projectCode" value="${esc(r.projectCode)}" style="width:80px"></td>
    <td><input type="text" data-i="${i}" data-f="workAddress" value="${esc(r.workAddress)}" style="width:100px"></td>
-   <td><input type="time" data-i="${i}" data-f="timeIn" value="${esc(r.timeIn)}" style="width:82px"></td>
-   <td><input type="time" data-i="${i}" data-f="timeOut" value="${esc(r.timeOut)}" style="width:82px"></td>
+   <td><input type="text" inputmode="numeric" placeholder="08:00" data-i="${i}" data-f="timeIn" value="${esc(r.timeIn)}" style="width:82px"></td>
+   <td><input type="text" inputmode="numeric" placeholder="17:00" data-i="${i}" data-f="timeOut" value="${esc(r.timeOut)}" style="width:82px"></td>
    <td><input type="number" step="0.5" data-i="${i}" data-f="workDays" value="${r.workDays==null?'':r.workDays}" style="width:52px"></td>
    <td><input type="text" data-i="${i}" data-f="workContent" value="${esc(r.workContent)}" style="width:160px"></td>
    <td><input type="text" data-i="${i}" data-f="salePhuTrach" value="${esc(r.salePhuTrach)}" style="width:100px"></td>
@@ -4316,7 +4319,7 @@ function ctpNewTrip(){
  currentTripId=null;
  $('#ctp_f_reqdate').value=vnTodayIso();
  ctpRenderRequesterChecklist('');
- $('#ctp_f_place').value='';
+ $('#ctp_f_place').value=''; $('#wrap_ctp_place_other').style.display='none'; $('#ctp_f_place_other').value='';
  $('#ctp_f_fromdate').value=''; $('#ctp_f_todate').value='';
  $('#ctp_f_pjcode').value=''; $('#ctp_f_pjname').value='';
  segSet('ctp_f_tripservice','Bảo trì');
@@ -4336,7 +4339,7 @@ function ctpLoadTripIntoForm(){
  // này — không phải chỉ lấy tên ở dòng đầu tiên.
  const allNames=[...new Set(lines.map(l=>l.requesterName).filter(Boolean))].join(' - ');
  ctpRenderRequesterChecklist(allNames);
- $('#ctp_f_place').value=first.workingPlace||'';
+ setFieldOrOther('ctp_f_place','wrap_ctp_place_other','ctp_f_place_other',first.workingPlace||'');
  $('#ctp_f_fromdate').value=first.fromDate||first.tripFromDate||''; $('#ctp_f_todate').value=first.toDate||first.tripToDate||'';
  $('#ctp_f_pjcode').value=first.projectCode||''; $('#ctp_f_pjname').value=first.projectName||'';
  segSet('ctp_f_tripservice', first.serviceType||'Bảo trì');
@@ -4399,6 +4402,10 @@ async function ctpDeleteLine(no){
 }
 
 function ctpMapValueForSave(){ return ctpUploadedMapDataUrl || $('#ctp_mapSelect').value || ''; }
+function ctpPlaceValue(){
+ const v=$('#ctp_f_place').value;
+ return v==='__other' ? $('#ctp_f_place_other').value.trim() : v;
+}
 
 $('#btnCtpSaveTrip').onclick=async()=>{
  // KHÔNG đụng tới requesterName ở đây — mỗi dòng chi phí đã gắn đúng tên
@@ -4410,7 +4417,7 @@ $('#btnCtpSaveTrip').onclick=async()=>{
  // dòng, nhưng ít trường hơn hẳn so với trước (chỉ 4 trường dùng chung).
  const tripHeader={
    requestDate:$('#ctp_f_reqdate').value, dept:'TECH',
-   workingPlace:$('#ctp_f_place').value.trim(), fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value
+   workingPlace:ctpPlaceValue(), fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value
  };
  const lineShared={
    projectCode:$('#ctp_f_pjcode').value.trim(), projectName:$('#ctp_f_pjname').value.trim(),
@@ -4458,7 +4465,7 @@ $('#btnCtpAddLine').onclick=async()=>{
    let ok=0, fail=0;
    for(const eng of engineers){
      const payload=Object.assign({tripId:tripIdToUse,
-       requestDate:reqDate, requesterName:eng, dept:'TECH', workingPlace:$('#ctp_f_place').value.trim(),
+       requestDate:reqDate, requesterName:eng, dept:'TECH', workingPlace:ctpPlaceValue(),
        fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value}, lineFields);
      const j=await DB.addExpenseLine(payload,adminPassword.chamcong_ctp);
      if(j.ok){ ok++; tripIdToUse=j.tripId||tripIdToUse; } else fail++;
