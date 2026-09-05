@@ -95,6 +95,97 @@ function handleChangeAdminPassword(data){
 // vào đây (cùng thư mục Drive). Nếu backup lỗi thì KHÔNG chặn thao tác chính.
 var BACKUP_SPREADSHEET_ID = '1Fs3dsRBfVw-zxYRoDKa5_slPLaddIm5_XFiwjCoVSUc';
 
+/* ===== Backup phiếu từ Supabase sang Google Sheet =====
+   Từ khi phiếu chuyển sang Supabase, Sheet không còn là nơi lưu chính nữa mà
+   đóng vai trò BẢN SAO LƯU. Tab riêng "Tickets" trong file backup giữ đầy đủ
+   cả link ảnh (kể cả ảnh đã chuyển sang Drive) để sau này tra cứu lại được
+   dù dữ liệu cũ đã bị xoá khỏi Supabase. Ghi theo kiểu cập nhật-hoặc-thêm
+   (dựa trên Id) nên bấm đồng bộ bao nhiêu lần cũng không tạo dòng trùng. */
+var BACKUP_TICKETS_SHEET = 'Tickets';
+var BACKUP_TICKETS_HEADERS = ['Id','Date','Customer','System','Issue','Priority','Engineer',
+  'Support','Status','Remark','WorkType','AttachmentUrl','AttachmentName',
+  'BienbanPdfUrl','BienbanPdfName','Photos','SyncedAt'];
+
+function getBackupTicketsSheet_(){
+  var ss = SpreadsheetApp.openById(BACKUP_SPREADSHEET_ID);
+  ensureVietnamTimeZone(ss);
+  var sh = ss.getSheetByName(BACKUP_TICKETS_SHEET);
+  if (!sh){
+    sh = ss.insertSheet(BACKUP_TICKETS_SHEET);
+    sh.getRange(1, 1, 1, BACKUP_TICKETS_HEADERS.length).setValues([BACKUP_TICKETS_HEADERS]);
+    styleHeader(sh, BACKUP_TICKETS_HEADERS.length);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+/* Nhận danh sách phiếu từ app (đọc sẵn từ Supabase) rồi ghi vào Sheet backup.
+   Chỉ admin. Trả về số phiếu thêm mới / cập nhật. */
+function handleBackupTickets(data){
+  if (!isValidAdmin(data)) return json({ok:false, error:'Sai mat khau quan tri'});
+  var rows = data.rows || [];
+  if (!rows.length) return json({ok:true, added:0, updated:0});
+  var sh = getBackupTicketsSheet_();
+  var last = sh.getLastRow();
+  var existing = last > 1 ? sh.getRange(2, 1, last - 1, 1).getValues() : [];
+  var indexById = {};
+  for (var i = 0; i < existing.length; i++){
+    var key = String(existing[i][0] || '').trim();
+    if (key) indexById[key] = i + 2; // số dòng thật trên sheet
+  }
+  var now = new Date();
+  var added = 0, updated = 0, toAppend = [];
+  for (var r = 0; r < rows.length; r++){
+    var t = rows[r];
+    var line = [
+      String(t.id || ''), t.date || '', t.customer || '', t.system || '', t.issue || '',
+      t.priority || '', t.engineer || '', t.support || '', t.status || '', t.remark || '',
+      t.workType || '', t.attachmentUrl || '', t.attachmentName || '',
+      t.bienbanPdfUrl || '', t.bienbanPdfName || '',
+      (t.photos && t.photos.length) ? t.photos.join(' | ') : '', now
+    ];
+    var atRow = indexById[String(t.id || '').trim()];
+    if (atRow){
+      sh.getRange(atRow, 1, 1, BACKUP_TICKETS_HEADERS.length).setValues([line]);
+      updated++;
+    } else {
+      toAppend.push(line);
+      added++;
+    }
+  }
+  if (toAppend.length){
+    sh.getRange(sh.getLastRow() + 1, 1, toAppend.length, BACKUP_TICKETS_HEADERS.length).setValues(toAppend);
+  }
+  // Id là chuỗi số — ép về dạng văn bản để không bị Sheets tự đổi kiểu
+  if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, 1).setNumberFormat('@');
+  SpreadsheetApp.flush();
+  return json({ok:true, added:added, updated:updated});
+}
+
+/* Đọc lại toàn bộ phiếu đã lưu trữ trong Sheet backup — dùng cho màn "Lịch sử"
+   để tra cứu dữ liệu cũ (kể cả khi đã xoá khỏi Supabase). */
+function listBackupTickets(){
+  var sh = getBackupTicketsSheet_();
+  var last = sh.getLastRow();
+  if (last < 2) return [];
+  var values = sh.getRange(2, 1, last - 1, BACKUP_TICKETS_HEADERS.length).getValues();
+  var out = [];
+  for (var i = 0; i < values.length; i++){
+    var r = values[i];
+    if (!String(r[0] || '').trim()) continue;
+    out.push({
+      no: r[0], date: fmtDate(r[1]), customer: r[2], system: r[3], issue: r[4],
+      priority: r[5], engineer: r[6], support: r[7], status: r[8], remark: r[9],
+      workType: r[10], attachmentUrl: r[11], attachmentName: r[12],
+      bienbanPdfUrl: r[13], bienbanPdfName: r[14],
+      photos: String(r[15] || '').split(' | ').filter(function(x){ return x; }),
+      archived: true
+    });
+  }
+  out.sort(function(a, b){ return String(a.date).localeCompare(String(b.date)) || (Number(a.no) - Number(b.no)); });
+  return out;
+}
+
 // Sheet CHÍNH chứa phiếu ("Report ELV"). Mở theo ID thay vì
 // getActiveSpreadsheet() để code chạy được ở CẢ 2 dạng project: gắn liền với
 // Sheet (container-bound) lẫn project độc lập (standalone) — cần thiết vì
@@ -154,6 +245,7 @@ function doPost(e){
     if (data.action === 'deleteExpenseTrip') return handleDeleteExpenseTrip(data);
     if (data.action === 'archiveFileToDrive') return handleArchiveFileToDrive(data);
     if (data.action === 'deleteDriveFile') return handleDeleteDriveFile(data);
+    if (data.action === 'backupTickets') return handleBackupTickets(data);
 
     var sh = getSheet();
     var no = nextTicketNo(sh);
@@ -192,6 +284,7 @@ function doGet(e){
   if (p.action === 'meta') return json({ok:true, signal:getSheetSignal()});
   if (p.action === 'periodInfo') return json(Object.assign({ok:true}, getPeriodInfo()));
   if (p.action === 'getOne') return handleGetOne(p);
+  if (p.action === 'listBackupTickets') return json({ok:true, data:listBackupTickets()});
   // Chấm công / Công tác phí — riêng tư (dữ liệu công/lương), nên bắt buộc
   // đúng mật khẩu quản trị mới ĐỌC được, không chỉ ẩn nút trên giao diện.
   if (p.action === 'listAttendance'){
@@ -522,15 +615,38 @@ function handleClearBackupRange(data){
     if (d && d >= from && d <= to) removedCount++;
     else kept.push(values[i]);
   }
-  if (removedCount === 0) return json({ok:true, count:0});
-
-  bsh.getRange(2, 1, values.length, HEADERS.length).clearContent();
-  if (kept.length){
-    bsh.getRange(2, 1, kept.length, HEADERS.length).setValues(kept);
-    styleBlock(bsh, 2, kept.length);
+  if (removedCount > 0){
+    bsh.getRange(2, 1, values.length, HEADERS.length).clearContent();
+    if (kept.length){
+      bsh.getRange(2, 1, kept.length, HEADERS.length).setValues(kept);
+      styleBlock(bsh, 2, kept.length);
+    }
   }
+  // Xoá luôn trong tab "Tickets" (bản sao lưu từ Supabase) cho cùng khoảng ngày
+  removedCount += clearBackupTicketsRange_(from, to);
   SpreadsheetApp.flush();
   return json({ok:true, count:removedCount});
+}
+
+/* Xoá các dòng trong tab "Tickets" của file backup có Date nằm trong khoảng
+   [from, to]. Trả về số dòng đã xoá. */
+function clearBackupTicketsRange_(from, to){
+  var sh = getBackupTicketsSheet_();
+  var last = sh.getLastRow();
+  if (last < 2) return 0;
+  var n = BACKUP_TICKETS_HEADERS.length;
+  var values = sh.getRange(2, 1, last - 1, n).getValues();
+  var kept = [], removed = 0;
+  for (var i = 0; i < values.length; i++){
+    var d = fmtDate(values[i][1]);
+    if (d && d >= from && d <= to) removed++;
+    else kept.push(values[i]);
+  }
+  if (!removed) return 0;
+  sh.getRange(2, 1, values.length, n).clearContent();
+  if (kept.length) sh.getRange(2, 1, kept.length, n).setValues(kept);
+  if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, 1).setNumberFormat('@');
+  return removed;
 }
 
 /* Tra 1 phiếu theo No — CHỈ đọc đúng 1 dòng (không quét toàn bộ dữ liệu ra

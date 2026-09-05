@@ -600,6 +600,11 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         <select id="histMonth" class="mini-date"><option value="">Tháng</option></select>
         <select id="histYear" class="mini-date"><option value="">Năm</option></select>
       </div>
+      <div class="seg sm" id="histSource" style="margin-bottom:10px">
+        <button type="button" data-v="live" class="on">📋 Đang dùng</button>
+        <button type="button" data-v="archived">🗄 Đã lưu trữ</button>
+      </div>
+      <p class="hint" id="histSourceHint" style="margin:-4px 0 10px">Đang xem dữ liệu hiện hành trên Supabase. Chuyển sang "Đã lưu trữ" để tra cứu phiếu cũ đã sao lưu sang Google Sheet (ảnh mở từ Google Drive) — kể cả phiếu đã xoá khỏi Supabase.</p>
       <div class="toolbar" style="margin-bottom:12px">
         <input type="text" id="histSearch" placeholder="🔍 Tìm theo tên kỹ sư, sự cố..." />
       </div>
@@ -756,10 +761,11 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <button type="button" class="btn btn-primary" id="btnAddEngineer" style="width:auto;padding:12px 18px;margin:0;flex:none">Thêm</button>
     </div>
     <div class="divider"></div>
-    <div class="section-title" style="margin-bottom:8px">Sao lưu dữ liệu</div>
-    <p class="desc" style="margin-top:-4px">Backup <b>KHÔNG</b> tự cập nhật theo mỗi lần gửi/sửa/xóa phiếu — chỉ cập nhật khi bạn bấm nút này. Nút chỉ <b>THÊM</b> phiếu backup chưa có (tự kiểm tra trước, phiếu nào đã có rồi thì bỏ qua, không tạo trùng) — an toàn bấm bao nhiêu lần cũng được, kể cả đồng bộ dần từng ít một trong ngày, không xóa/ghi đè dữ liệu cũ trong backup.</p>
+    <div class="section-title" style="margin-bottom:8px">Sao lưu dữ liệu sang Google Sheet</div>
+    <p class="desc" style="margin-top:-4px">Dữ liệu phiếu hiện lưu chính ở Supabase; Google Sheet đóng vai trò <b>bản sao lưu</b>. Bấm nút này để chép toàn bộ phiếu (kèm link ảnh Biên bản, PDF và ảnh khác — kể cả ảnh đã chuyển sang Drive) sang file Sheet backup, tab <b>"Tickets"</b>. Phiếu đã có sẽ được cập nhật lại, không tạo dòng trùng — bấm bao nhiêu lần cũng an toàn. Sau khi sao lưu, mục <b>Lịch sử</b> có thể tra cứu lại dữ liệu này kể cả khi đã xoá khỏi Supabase.</p>
+    <div id="syncBackupStatus" class="period-notice" style="margin-bottom:10px;display:none"></div>
     <button type="button" class="btn" id="btnSyncBackup" style="margin-bottom:16px">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span>Đồng bộ Sheet chính → Backup</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span>Đồng bộ Supabase → Google Sheet</span>
     </button>
     <p class="desc" style="margin-top:-4px">Dọn bớt backup nếu đã lưu trữ quá lâu (vd hơn 2 năm) — xóa các phiếu có ngày nằm trong khoảng chọn dưới đây, CHỈ xóa trong backup, không đụng Sheet chính.</p>
     <div style="display:flex;gap:8px;margin-bottom:8px">
@@ -1159,6 +1165,23 @@ const DB={
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
    const {data,error}=await sb.rpc('delete_engineer',{p_name:name,p_admin_password:adminPassword});
    return error?{ok:false,error:error.message}:{ok:true,data:data.map(r=>r.name)};
+ },
+ // Đẩy toàn bộ phiếu từ Supabase sang Google Sheet backup (kèm link ảnh,
+ // kể cả ảnh đã chuyển sang Drive) — gọi qua Apps Script, chia lô cho nhẹ.
+ async backupTicketsToSheet(rows,adminPassword){
+   if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
+   try{
+     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+       body:JSON.stringify({token:CFG.token,action:'backupTickets',rows,adminPassword})});
+     return await res.json();
+   }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
+ },
+ async listBackupTickets(){
+   if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
+   try{
+     const res=await fetch(`${CFG.url}?action=listBackupTickets&token=${encodeURIComponent(CFG.token)}`);
+     return await res.json();
+   }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
  },
  async listCtpMaps(){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
@@ -1798,14 +1821,16 @@ function emptyState(t,d){return `<div class="empty"><svg viewBox="0 0 24 24" fil
 /* history — lấy đúng dữ liệu THẬT từ Sheet (mgrData), giống hệt Quản lý,
    lọc theo Ngày/Tuần/Tháng/Tất cả — không dùng bộ nhớ máy riêng nữa nên
    luôn khớp với Quản lý (trước đây dùng localStorage nên có thể lệch/sót). */
-function findTicket(no){
+function findTicket(no,fromArchive){
+ if(fromArchive) return (archivedData||[]).find(r=>String(r.no)===String(no));
  return mgrData.find(r=>String(r.no)===String(no))
-   || JSON.parse(localStorage.getItem(LS_HIST)||'[]').find(r=>String(r.no)===String(no));
+   || JSON.parse(localStorage.getItem(LS_HIST)||'[]').find(r=>String(r.no)===String(no))
+   || (archivedData||[]).find(r=>String(r.no)===String(no));
 }
 // Xem "Hướng xử lý" (remark) của 1 phiếu — không hiện thành cột riêng trong
 // bảng (quá dài, chiếm chỗ), nên bấm nút 👁 cạnh nút Sửa để xem trong popup.
-function showRemark(no,displayNo){
- const rec=findTicket(no);
+function showRemark(no,displayNo,fromArchive){
+ const rec=findTicket(no,fromArchive);
  $('#remarkModalTitle').textContent=`Hướng xử lý — Phiếu #${displayNo||no}`;
  $('#remarkModalText').textContent=(rec&&rec.remark)?rec.remark:'Chưa có hướng xử lý.';
  $('#remarkModal').classList.add('show');
@@ -1815,44 +1840,94 @@ $('#remarkModal').onclick=e=>{if(e.target===$('#remarkModal'))$('#remarkModal').
 
 // Xem ảnh của 1 phiếu: ảnh Biên bản làm việc, file PDF Biên bản, và các ảnh
 // khác chụp thêm để theo dõi (bảng ticket_photos, tải riêng khi mở popup).
-async function showPhotos(no,displayNo){
- const rec=findTicket(no);
- $('#photosModalTitle').textContent=`Ảnh phiếu #${displayNo||no}`;
+// Ảnh đã chuyển sang Drive thì hiện nút mở Drive thay vì nhúng thẳng <img>
+// (Drive chặn nhúng ảnh trực tiếp từ trang khác nên nhúng sẽ bị vỡ ảnh).
+function isDriveLink(u){ return /drive\.google\.com/.test(u||''); }
+function photoTile(url,label){
+ return isDriveLink(url)
+   ? `<a href="${esc(url)}" target="_blank" rel="noopener" class="btn btn-ghost" style="display:inline-flex">🖼 ${esc(label||'Mở ảnh trên Drive')}</a>`
+   : `<a href="${esc(url)}" target="_blank" rel="noopener"><img src="${esc(url)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--line)" /></a>`;
+}
+async function showPhotos(no,displayNo,fromArchive){
+ const rec=findTicket(no,fromArchive);
+ $('#photosModalTitle').textContent=`Ảnh phiếu #${displayNo||no}${fromArchive?' (đã lưu trữ)':''}`;
  const parts=[];
- if(rec&&rec.attachmentUrl) parts.push(`<div><div class="section-title" style="margin-top:0">Ảnh Biên bản làm việc</div><img src="${esc(rec.attachmentUrl)}" style="max-width:100%;border-radius:10px;border:1px solid var(--line)" /></div>`);
+ if(rec&&rec.attachmentUrl) parts.push(`<div><div class="section-title" style="margin-top:0">Ảnh Biên bản làm việc</div>${isDriveLink(rec.attachmentUrl)?photoTile(rec.attachmentUrl,'Mở ảnh biên bản trên Drive'):`<img src="${esc(rec.attachmentUrl)}" style="max-width:100%;border-radius:10px;border:1px solid var(--line)" />`}</div>`);
  if(rec&&rec.bienbanPdfUrl) parts.push(`<div><div class="section-title">File PDF Biên bản</div><a href="${esc(rec.bienbanPdfUrl)}" target="_blank" rel="noopener" class="btn btn-ghost" style="display:inline-flex">📄 Mở file PDF</a></div>`);
  $('#photosModalBody').innerHTML=parts.join('')||'<div class="hint">Đang tải ảnh khác...</div>';
  $('#photosModal').classList.add('show');
+ // Phiếu lưu trữ: danh sách ảnh khác lấy sẵn từ Google Sheet, không cần gọi Supabase
+ if(fromArchive){
+   const others=(rec&&rec.photos)||[];
+   const otherHtml=others.length
+     ? `<div><div class="section-title">Ảnh khác (${others.length})</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">${others.map(u=>photoTile(u)).join('')}</div></div>`
+     : '';
+   $('#photosModalBody').innerHTML=(parts.join('')+otherHtml)||'<div class="hint">Phiếu này không có ảnh nào được lưu trữ.</div>';
+   return;
+ }
  if(!sb) return;
  try{
    const j=await DB.listTicketPhotos(no);
    const others=j.ok?(j.data||[]):[];
    const otherHtml=others.length
-     ? `<div><div class="section-title">Ảnh khác</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px">${others.map(p=>`<a href="${esc(p.url)}" target="_blank" rel="noopener"><img src="${esc(p.url)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--line)" /></a>`).join('')}</div></div>`
+     ? `<div><div class="section-title">Ảnh khác</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">${others.map(p=>photoTile(p.url)).join('')}</div></div>`
      : '';
- const empty=!parts.length&&!others.length;
- $('#photosModalBody').innerHTML=(parts.join('')+otherHtml)||'<div class="hint">Phiếu này chưa có ảnh nào.</div>';
+   $('#photosModalBody').innerHTML=(parts.join('')+otherHtml)||'<div class="hint">Phiếu này chưa có ảnh nào.</div>';
  }catch(err){ $('#photosModalBody').innerHTML=parts.join('')||'<div class="hint">Không tải được ảnh khác.</div>'; }
 }
 $('#btnClosePhotos').onclick=()=>$('#photosModal').classList.remove('show');
 $('#photosModal').onclick=e=>{if(e.target===$('#photosModal'))$('#photosModal').classList.remove('show')};
+/* ===== Lịch sử: xem được 2 nguồn dữ liệu =====
+   - "Đang dùng": phiếu hiện hành trên Supabase (mgrData)
+   - "Đã lưu trữ": phiếu đã sao lưu sang Google Sheet — dùng để tra cứu dữ
+     liệu cũ đã xoá khỏi Supabase; ảnh mở trực tiếp từ link Google Drive. */
+let histSource='live';
+let archivedData=null;      // nạp 1 lần rồi giữ lại, bấm "Làm mới" để tải lại
+let archivedLoading=false;
+async function loadArchivedTickets(force){
+ if(archivedLoading) return;
+ if(archivedData && !force) return;
+ archivedLoading=true;
+ $('#historyList').innerHTML='<div class="empty"><div class="t">Đang tải dữ liệu lưu trữ từ Google Sheet...</div></div>';
+ try{
+   const j=await DB.listBackupTickets();
+   archivedData=j.ok?(j.data||[]):[];
+   if(!j.ok) toast(j.error||'Không tải được dữ liệu lưu trữ',true);
+ }catch(err){ archivedData=[]; toast('Không tải được dữ liệu lưu trữ',true); }
+ archivedLoading=false;
+ renderHistory();
+}
+$$('#histSource button').forEach(b=>b.onclick=()=>{
+ $$('#histSource button').forEach(x=>x.classList.toggle('on',x===b));
+ histSource=b.dataset.v;
+ $('#histSourceHint').textContent = histSource==='live'
+   ? 'Đang xem dữ liệu hiện hành trên Supabase. Chuyển sang "Đã lưu trữ" để tra cứu phiếu cũ đã sao lưu sang Google Sheet (ảnh mở từ Google Drive) — kể cả phiếu đã xoá khỏi Supabase.'
+   : 'Đang xem dữ liệu đã sao lưu trong Google Sheet (tab "Tickets"). Đây là dữ liệu chỉ đọc — muốn cập nhật thì bấm "Đồng bộ Supabase → Google Sheet" trong ⚙️ Cài đặt.';
+ if(histSource==='archived') loadArchivedTickets(false); else renderHistory();
+});
 function renderHistory(){
  const fYear=$('#histYear').value, fMonth=$('#histMonth').value, fDay=$('#histDay').value, fWeek=$('#histWeek').value;
  const q=($('#histSearch').value||'').trim().toLowerCase();
- let h=mgrData.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
+ const isArchived=histSource==='archived';
+ const source=isArchived?(archivedData||[]):mgrData;
+ let h=source.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
  if(q) h=h.filter(r=>((r.engineer||'')+' '+(r.issue||'')+' '+(r.customer||'')+' '+(r.system||'')+' '+(r.workType||'')).toLowerCase().includes(q));
  h.sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(Number(a.no)-Number(b.no))); // ngày nhỏ (cũ) đến lớn (mới), xem chú thích ở renderManager
  const lbl=[fYear&&('Năm '+fYear),fMonth&&('Tháng '+Number(fMonth)),fDay&&('Ngày '+Number(fDay)),fWeek&&('Tuần '+fWeek)].filter(Boolean).join(', ')||'Tất cả';
- $('#histListTitle').textContent=`Lịch sử phiếu · ${lbl} (${h.length})`;
- if(!h.length){$('#historyList').innerHTML=emptyState(q?'Không tìm thấy':'Chưa có phiếu',q?'Không có phiếu khớp tìm kiếm.':sb?'Không có phiếu trong khoảng thời gian này.':'Kết nối Supabase để xem lịch sử.');return}
+ $('#histListTitle').textContent=`${isArchived?'Phiếu đã lưu trữ':'Lịch sử phiếu'} · ${lbl} (${h.length})`;
+ if(isArchived && archivedLoading) return;
+ if(!h.length){$('#historyList').innerHTML=emptyState(q?'Không tìm thấy':'Chưa có phiếu',
+   q?'Không có phiếu khớp tìm kiếm.'
+   :isArchived?'Chưa có phiếu nào trong Google Sheet. Vào ⚙️ Cài đặt bấm "Đồng bộ Supabase → Google Sheet" để sao lưu.'
+   :sb?'Không có phiếu trong khoảng thời gian này.':'Kết nối Supabase để xem lịch sử.');return}
  $('#historyList').innerHTML=`<div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột</div>
    <div class="rpt-wrap"><table class="rpt">
    <thead><tr><th>No</th><th>Ngày</th><th>Khách hàng</th><th>Hệ thống</th><th>Loại công việc</th><th>Sự cố</th><th>Ưu tiên</th><th>Kỹ sư</th><th>Hỗ trợ</th><th>Trạng thái</th><th>Sửa</th></tr></thead>
-   <tbody>${h.map((r,i)=>rptRow(r,i+1)).join('')}</tbody>
+   <tbody>${h.map((r,i)=>rptRow(r,i+1,isArchived)).join('')}</tbody>
  </table></div>`;
  $$('#historyList .status-sel').forEach(sel=>sel.onchange=()=>updateStatus(sel.dataset.no,sel.value,sel));
- $$('#historyList .btn-row-view').forEach(b=>b.onclick=()=>showRemark(b.dataset.no,b.dataset.displayNo));
- $$('#historyList .btn-row-photos').forEach(b=>b.onclick=()=>showPhotos(b.dataset.no,b.dataset.displayNo));
+ $$('#historyList .btn-row-view').forEach(b=>b.onclick=()=>showRemark(b.dataset.no,b.dataset.displayNo,b.dataset.archived==='1'));
+ $$('#historyList .btn-row-photos').forEach(b=>b.onclick=()=>showPhotos(b.dataset.no,b.dataset.displayNo,b.dataset.archived==='1'));
  $$('#historyList .btn-row-edit').forEach(b=>b.onclick=()=>startEdit(b.dataset.no,b.dataset.displayNo));
  $$('#historyList .btn-row-delete').forEach(b=>b.onclick=()=>deleteTicket(b.dataset.no,b.dataset.displayNo));
 }
@@ -2065,7 +2140,7 @@ function statusOptions(cur){
    hiển thị — vì danh sách xếp theo NGÀY mới nhất lên trước, không theo No
    thật lưu trong Sheet). r.no (No thật) vẫn giữ nguyên, không đổi, chỉ dùng
    ngầm để gọi sửa/xóa đúng phiếu — người dùng chỉ thấy displayNo. */
-function rptRow(r,displayNo){
+function rptRow(r,displayNo,readOnly){
  const dd=(r.date||'').split('-').reverse().join('/');
  const supCls=(r.support||'').toLowerCase().includes('site')?'sup-onsite':'sup-online';
  const dow=r.date?new Date(r.date+'T00:00:00').getDay():-1; // 0=CN, 6=Thứ 7
@@ -2080,8 +2155,11 @@ function rptRow(r,displayNo){
    <td data-label="Ưu tiên"><span class="pill ${pcls(r.priority)}">${esc(r.priority||'')}</span></td>
    <td data-label="Kỹ sư">${esc(r.engineer||'')}</td>
    <td data-label="Hỗ trợ"><span class="pill ${supCls}">${esc(r.support||'')}</span></td>
-   <td data-label="Trạng thái">${r.no&&sb?`<select class="status-sel ${scls(r.status)}" data-no="${esc(r.no)}">${statusOptions(r.status)}</select>`:`<span class="pill ${scls(r.status)}">${esc(slabel(r.status))}</span>`}</td>
-   <td data-label="Sửa">${r.no&&sb?`<div class="row-actions">
+   <td data-label="Trạng thái">${r.no&&sb&&!readOnly?`<select class="status-sel ${scls(r.status)}" data-no="${esc(r.no)}">${statusOptions(r.status)}</select>`:`<span class="pill ${scls(r.status)}">${esc(slabel(r.status))}</span>`}</td>
+   <td data-label="Sửa">${readOnly?`<div class="row-actions">
+     <button type="button" class="btn-row-view" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" data-archived="1" aria-label="Xem hướng xử lý"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+     <button type="button" class="btn-row-photos" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" data-archived="1" aria-label="Xem ảnh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-4 4-3-3-4 4"/></svg></button>
+   </div>`:r.no&&sb?`<div class="row-actions">
      <button type="button" class="btn-row-view" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" aria-label="Xem hướng xử lý phiếu #${esc(displayNo||r.no)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg></button>
      <button type="button" class="btn-row-photos" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" aria-label="Xem ảnh phiếu #${esc(displayNo||r.no)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-4 4-3-3-4 4"/></svg></button>
      <button type="button" class="btn-row-edit" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" aria-label="Sửa phiếu #${esc(displayNo||r.no)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
@@ -2270,16 +2348,43 @@ async function loadPeriodInfo(){
      : `📅 Kỳ dữ liệu bắt đầu ${fmtDMYFull(j.periodStart)} — nên xóa vào khoảng ${fmtDMYFull(j.dueDate)} (còn ${j.daysRemaining} ngày).`;
  }catch(err){ box.textContent='Không kết nối được để kiểm tra.'; box.className='period-notice'; }
 }
+/* Sao lưu Supabase → Google Sheet: đọc hết phiếu + ảnh từ Supabase rồi gửi
+   sang Apps Script ghi vào tab "Tickets" của file backup. Chia lô 50 phiếu
+   mỗi lần để không vượt giới hạn kích thước request của Apps Script. */
 $('#btnSyncBackup').onclick=async()=>{
- if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
+ if(!sb){ toast('Chưa kết nối Supabase',true); return; }
+ if(!CFG.url){ toast('Chưa cấu hình Apps Script URL',true); return; }
  const btn=$('#btnSyncBackup'); btn.disabled=true;
+ const box=$('#syncBackupStatus'); box.style.display='block'; box.className='period-notice';
+ box.textContent='Đang đọc dữ liệu từ Supabase...';
  try{
-   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-     body:JSON.stringify({token:CFG.token,action:'syncBackup',adminPassword:adminPasswordRuntime})});
-   const j=await res.json();
-   if(j.ok) toast(j.count?`✅ Đã thêm ${j.count} phiếu mới vào backup${j.skipped?` (${j.skipped} phiếu đã có sẵn, bỏ qua)`:''}`:'Backup đã đủ, không có phiếu mới để thêm');
-   else toast(j.error||'Lỗi đồng bộ backup',true);
- }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
+   const tj=await DB.listTicketsFull();
+   if(!tj.ok){ throw new Error(tj.error||'Không đọc được phiếu'); }
+   const tickets=tj.data||[];
+   if(!tickets.length){ box.textContent='Chưa có phiếu nào để sao lưu.'; btn.disabled=false; return; }
+   // gom ảnh "khác" theo từng phiếu (1 truy vấn, gộp lại phía app)
+   const {data:allPhotos}=await sb.from('ticket_photos').select('ticket_id,url');
+   const photoMap={};
+   (allPhotos||[]).forEach(p=>{ (photoMap[p.ticket_id]=photoMap[p.ticket_id]||[]).push(p.url); });
+   const rows=tickets.map(t=>({id:t.no,date:t.date,customer:t.customer,system:t.system,issue:t.issue,
+     priority:t.priority,engineer:t.engineer,support:t.support,status:t.status,remark:t.remark,
+     workType:t.workType,attachmentUrl:t.attachmentUrl,attachmentName:t.attachmentName,
+     bienbanPdfUrl:t.bienbanPdfUrl,bienbanPdfName:t.bienbanPdfName,photos:photoMap[t.no]||[]}));
+   let added=0, updated=0;
+   for(let i=0;i<rows.length;i+=50){
+     const batch=rows.slice(i,i+50);
+     box.textContent=`Đang sao lưu ${Math.min(i+batch.length,rows.length)}/${rows.length} phiếu...`;
+     const j=await DB.backupTicketsToSheet(batch,adminPasswordRuntime);
+     if(!j.ok) throw new Error(j.error||'Lỗi ghi vào Sheet');
+     added+=j.added||0; updated+=j.updated||0;
+   }
+   box.className='period-notice';
+   box.textContent=`✅ Đã sao lưu ${rows.length} phiếu sang Google Sheet (thêm mới ${added}, cập nhật ${updated}).`;
+   toast(`✅ Đã sao lưu ${rows.length} phiếu sang Google Sheet`);
+ }catch(err){
+   box.className='period-notice overdue'; box.textContent='Lỗi: '+err.message;
+   toast('⚠️ Sao lưu thất bại',true);
+ }
  btn.disabled=false;
 };
 $('#btnClearBackupRange').onclick=async()=>{
