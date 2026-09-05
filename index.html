@@ -858,12 +858,16 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
 <div class="modal" id="adminGateModal">
   <div class="sheet">
-    <h2>Khu vực quản trị</h2>
-    <p class="desc">Chỉ quản trị viên mới vào được Cài đặt. Nhập mật khẩu quản trị để tiếp tục.</p>
+    <h2 id="adminGateTitle">Khu vực quản trị</h2>
+    <p class="desc" id="adminGateDesc">Chỉ quản trị viên mới vào được Cài đặt. Nhập mật khẩu quản trị để tiếp tục.</p>
     <label class="field">
-      <span class="lab">Mật khẩu quản trị</span>
+      <span class="lab">Tên đăng nhập (bỏ trống nếu dùng mật khẩu chung)</span>
+      <input type="text" id="admin_user" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    </label>
+    <label class="field">
+      <span class="lab">Mật khẩu</span>
       <div style="position:relative">
-        <input type="text" id="admin_pin" class="masked" placeholder="Nhập mật khẩu quản trị" style="padding-right:44px" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" name="kt-admin-pin" />
+        <input type="text" id="admin_pin" class="masked" placeholder="Nhập mật khẩu" style="padding-right:44px" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" name="kt-admin-pin" />
         <button type="button" id="btnToggleAdminPin" aria-label="Hiện/ẩn mã bảo mật"
           style="position:absolute;right:4px;top:4px;bottom:4px;width:36px;border:none;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:19px;height:19px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -1353,10 +1357,16 @@ async function verifyAppsScriptAdmin(pin,group){
    return !!j.ok;
  }catch(err){ return false; }
 }
-async function verifyAdminPassword(pin,group){
+const GROUP_ALLOWED_ROLES={settings:['administrator'],aeon:['aeon','administrator'],chamcong_ctp:['chamcong_ctp','administrator']};
+async function verifyAdminPassword(pin,group,username){
  group=group||'settings';
  if(!pin) return false;
  try{
+   if(username){
+     const login=await DB.loginUser(username,pin);
+     if(!login.ok || !(GROUP_ALLOWED_ROLES[group]||[]).includes(login.role)) return false;
+     adminUnlocked[group]=true; adminPassword[group]=pin; return true;
+   }
    const ok = group==='aeon' ? (await DB.verifyAeonPassword(pin)).ok
      : group==='chamcong_ctp' ? (await DB.verifyChamCongPassword(pin)).ok
      : (await DB.verifyAdmin(pin)).ok;
@@ -1639,6 +1649,11 @@ const DB={
  // mới quản lý được (thêm/xoá/đổi mật khẩu). Chỉ cần đúng mật khẩu Administrator
  // (mật khẩu Cài đặt HOẶC mật khẩu riêng của 1 tài khoản role=administrator đều
  // được — xem verify_admin đã mở rộng phía Supabase), không cần username người gọi.
+ async loginUser(username,password){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('login_user',{p_username:username,p_password:password});
+   return (error||!data||!data.length) ? {ok:false,error:error?.message||'Sai tên đăng nhập hoặc mật khẩu'} : {ok:true,username:data[0].username,role:data[0].role};
+ },
  async listUsers(adminPassword){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
    const {data,error}=await sb.rpc('list_users',{p_req_username:'',p_req_password:adminPassword});
@@ -3534,17 +3549,50 @@ $('#btnArchiveOldPhotos').onclick=async()=>{
  btn.disabled=false;
 };
 
-$('#btnSettings').onclick=()=>{$('#admin_pin').value='';$('#admin_pin').classList.add('masked');gate.classList.add('show');setTimeout(()=>$('#admin_pin').focus(),100)};
-$('#btnCloseAdminGate').onclick=()=>gate.classList.remove('show');
-$('#btnToggleAdminPin').onclick=()=>{$('#admin_pin').classList.toggle('masked')};
-gate.onclick=e=>{if(e.target===gate)gate.classList.remove('show')};
-async function tryUnlock(){
- const ok=await verifyAdminPassword($('#admin_pin').value,'settings');
- if(ok){ gate.classList.remove('show'); openSettingsModal(); renderManager(); renderHistory(); }
- else toast('Sai mật khẩu quản trị',true);
+// Cổng đăng nhập DÙNG CHUNG cho mọi nhóm (Cài đặt/AEON/Chấm công-CTP) — hiện
+// CẢ tên đăng nhập lẫn mật khẩu (trước đây requireAdminThen dùng prompt() gốc
+// của trình duyệt, chỉ hỏi 1 ô mật khẩu, không có chỗ nhập tên đăng nhập cho
+// tài khoản riêng từng người). Bỏ trống tên đăng nhập vẫn dùng được mật khẩu
+// CHUNG như cũ (verify_admin/verify_aeon_password/verify_chamcong_password đã
+// tự chấp nhận cả 2 kiểu phía Supabase) — nhập tên đăng nhập thì xác thực
+// đúng tài khoản đó qua login_user, kiểm tra role có hợp lệ với nhóm không.
+let adminGatePendingResolve=null;
+function openAdminGate(group){
+ group=group||'settings';
+ return new Promise(resolve=>{
+   adminGatePendingResolve=resolve;
+   $('#adminGateModal').dataset.group=group;
+   $('#adminGateTitle').textContent = group==='settings' ? 'Khu vực quản trị' : `Đăng nhập ${PW_GROUP_LABEL[group]||group}`;
+   $('#adminGateDesc').textContent = group==='settings'
+     ? 'Chỉ Administrator mới vào được Cài đặt. Nhập tên đăng nhập + mật khẩu riêng, hoặc bỏ trống tên đăng nhập để dùng mật khẩu chung.'
+     : `Nhập tên đăng nhập + mật khẩu riêng của nhóm "${PW_GROUP_LABEL[group]||group}", hoặc bỏ trống tên đăng nhập để dùng mật khẩu chung.`;
+   $('#admin_user').value=''; $('#admin_pin').value=''; $('#admin_pin').classList.add('masked');
+   gate.classList.add('show');
+   setTimeout(()=>$('#admin_user').focus(),100);
+ });
 }
-$('#btnAdminUnlock').onclick=tryUnlock;
-$('#admin_pin').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock()});
+function closeAdminGate(result){
+ gate.classList.remove('show');
+ if(adminGatePendingResolve){ const r=adminGatePendingResolve; adminGatePendingResolve=null; r(result); }
+}
+$('#btnSettings').onclick=async()=>{
+ const ok=await openAdminGate('settings');
+ if(ok){ openSettingsModal(); renderManager(); renderHistory(); }
+};
+$('#btnCloseAdminGate').onclick=()=>closeAdminGate(false);
+$('#btnToggleAdminPin').onclick=()=>{$('#admin_pin').classList.toggle('masked')};
+gate.onclick=e=>{if(e.target===gate) closeAdminGate(false);};
+async function tryUnlockGate(){
+ const group=$('#adminGateModal').dataset.group||'settings';
+ const username=$('#admin_user').value.trim();
+ const pin=$('#admin_pin').value;
+ const ok=await verifyAdminPassword(pin,group,username||null);
+ if(ok) closeAdminGate(true);
+ else toast('Sai tên đăng nhập hoặc mật khẩu',true);
+}
+$('#btnAdminUnlock').onclick=tryUnlockGate;
+$('#admin_pin').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlockGate()});
+$('#admin_user').addEventListener('keydown',e=>{if(e.key==='Enter')$('#admin_pin').focus()});
 
 /* ===== Cài đặt ứng dụng lên máy (PWA) — hoạt động trên Android/Windows/Mac
    (Chrome, Edge) qua hộp thoại cài đặt thật; trên iOS Safari không cho phép
@@ -3690,10 +3738,8 @@ const ADMIN_ACTIONS={};
 function registerAdminAction(name,fn){ ADMIN_ACTIONS[name]=fn; }
 async function requireAdminThen(group,action){
  if(adminUnlocked[group]){ action(); return; }
- const pin=prompt(`Nhập mật khẩu ${PW_GROUP_LABEL[group]||'quản trị'}:`);
- if(pin===null) return;
- const ok=await verifyAdminPassword(pin,group);
- if(ok) action(); else toast('Sai mật khẩu',true);
+ const ok=await openAdminGate(group);
+ if(ok) action();
 }
 $$('[data-admin-action]').forEach(btn=>{
  btn.onclick=()=>requireAdminThen(btn.dataset.adminGroup||'settings',()=>{
