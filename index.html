@@ -998,6 +998,14 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         <button type="button" class="btn-mini" id="btnCcLoad">Xem</button>
       </div>
 
+      <div class="divider"></div>
+      <div class="section-title" style="margin-bottom:8px">Đồng bộ Google Sheet riêng — mỗi kỹ sư 1 sheet</div>
+      <div class="cc-filters">
+        <select id="cc_sync_employee" style="flex:2"></select>
+        <button type="button" class="btn-mini" id="btnCcSyncEngineer">🔄 Đồng bộ từ Supabase sang Sheet</button>
+      </div>
+      <p class="hint" style="margin-bottom:10px">Chọn tên kỹ sư rồi bấm nút — app lấy TOÀN BỘ chấm công của người đó từ Supabase (nguồn thật) ghi đè lại đúng tab riêng của người đó trong file "Report Chấm Công" (mỗi kỹ sư 1 tab).</p>
+
       <button type="button" class="btn" id="btnCcAutoFill" style="margin:10px 0">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
         <span>Tạo nháp cả tháng từ Report (ngày On-Site lấy khách hàng, còn lại = văn phòng)</span>
@@ -1519,6 +1527,14 @@ const DB={
    try{
      const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
        body:JSON.stringify({token:CFG.token,action:'backupExpenses',rows,adminPassword})});
+     return await res.json();
+   }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
+ },
+ async syncAttendanceEngineerToSheet(employee,rows,adminPassword){
+   if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
+   try{
+     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+       body:JSON.stringify({token:CFG.token,action:'syncAttendanceEngineer',employee,rows,adminPassword})});
      return await res.json();
    }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
  },
@@ -3821,6 +3837,8 @@ function ccPopulateSelects(){
  const empSel=$('#cc_employee'); const curE=empSel.value;
  empSel.innerHTML='<option value="">— Chọn nhân viên để tạo nháp/xem riêng —</option>'+engineerList.map(n=>`<option value="${esc(n)}" ${n===curE?'selected':''}>${esc(n)}</option>`).join('');
  $('#cc_f_employee').innerHTML=engineerList.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+ const syncSel=$('#cc_sync_employee'); const curSync=syncSel.value;
+ syncSel.innerHTML=engineerList.map(n=>`<option value="${esc(n)}" ${n===curSync?'selected':''}>${esc(n)}</option>`).join('');
  if(!$('#cc_f_addr').dataset.built){ buildWorkAddressOptions('cc_f_addr'); $('#cc_f_addr').dataset.built='1'; ccResetAddForm(); }
  if(!$('#ctp_f_place').dataset.built){ buildWorkAddressOptions('ctp_f_place'); $('#ctp_f_place').dataset.built='1'; }
  const now=vnNow();
@@ -4136,6 +4154,24 @@ $('#btnCcClearMonth').onclick=async()=>{
 };
 $('#cc_clr_month').onchange=renderCcMonthAudit;
 $('#cc_clr_year').onchange=renderCcMonthAudit;
+
+// Đồng bộ TAY chấm công của 1 kỹ sư từ Supabase sang tab riêng của người đó
+// trong file "Report Chấm Công" (mỗi kỹ sư 1 tab, đúng bố cục mẫu công ty).
+// Lấy TOÀN BỘ lịch sử của người đó (không giới hạn theo tháng đang xem) rồi
+// ghi đè lại tab — đảm bảo tab luôn khớp đúng dữ liệu thật trên Supabase.
+$('#btnCcSyncEngineer').onclick=async()=>{
+ const eng=$('#cc_sync_employee').value;
+ if(!eng){ toast('Chọn tên kỹ sư cần đồng bộ',true); return; }
+ if(!CFG.url){ toast('Chưa cấu hình Apps Script URL',true); return; }
+ const btn=$('#btnCcSyncEngineer'); btn.disabled=true; const oldText=btn.textContent; btn.textContent='Đang đồng bộ…';
+ try{
+   const res=await DB.listAttendance(eng,null,null,adminPassword.chamcong_ctp);
+   if(!res.ok){ toast(res.error||'Lỗi tải dữ liệu từ Supabase',true); return; }
+   const j=await DB.syncAttendanceEngineerToSheet(eng,res.data,adminPassword.chamcong_ctp);
+   if(j.ok) toast(`✅ Đã đồng bộ ${j.count||0} dòng chấm công của ${eng} sang Google Sheet`);
+   else toast(j.error||'Lỗi đồng bộ',true);
+ } finally { btn.disabled=false; btn.textContent=oldText; }
+};
 
 // Báo tháng đang chọn để xoá đã "sạch" (0 dòng) chưa, và liệt kê TẤT CẢ
 // tháng hiện còn dữ liệu (đọc toàn bộ chấm công, không lọc, rồi tự gom nhóm
