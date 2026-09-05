@@ -3128,6 +3128,11 @@ $$('[data-pw-group]').forEach(btn=>{
        const r=await DB.changeChamCongPassword(oldPw,newPw);
        if(!r.ok){ ok=false; err=r.error||'Lỗi đổi mật khẩu'; }
      } else {
+       // Nhóm 'settings' phải đổi CẢ 2 nơi (Apps Script + Supabase) — nếu 1
+       // trong 2 lỗi, ĐỔI NGƯỢC LẠI nơi vừa thành công về mật khẩu cũ, để
+       // không bao giờ rơi vào tình trạng lệch pha (Apps Script đổi rồi mà
+       // Supabase chưa, hoặc ngược lại) khiến người dùng không biết dùng mật
+       // khẩu nào cho đúng ở đâu. Thất bại thì coi như KHÔNG đổi gì cả.
        if(!CFG.url){ ok=false; err='Chưa kết nối Google Sheet'; }
        else{
          const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
@@ -3137,7 +3142,23 @@ $$('[data-pw-group]').forEach(btn=>{
        }
        if(ok && group==='settings'){
          const r2=await DB.changeAdminPassword(oldPw,newPw);
-         if(!r2.ok){ ok=false; err='Đã đổi phía Apps Script nhưng lỗi phía Supabase: '+(r2.error||''); }
+         if(!r2.ok){
+           ok=false;
+           // Đổi ngược Apps Script về mật khẩu cũ (đã đổi thành công ở bước
+           // trên) — bọc try/catch RIÊNG để dù mất mạng ngay lúc đổi ngược
+           // vẫn báo đúng cảnh báo "2 nơi đang lệch", không bị catch ngoài
+           // nuốt mất thành thông báo chung chung "không kết nối được".
+           try{
+             const rollback=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+               body:JSON.stringify({token:CFG.token,action:'changeAdminPassword',oldPassword:newPw,newPassword:oldPw,group})});
+             const rj=await rollback.json();
+             err=rj.ok
+               ? 'Lỗi phía Supabase, đã tự đổi ngược Apps Script về mật khẩu cũ — chưa đổi được gì, thử lại.'
+               : 'Lỗi phía Supabase VÀ không đổi ngược được Apps Script — 2 nơi đang LỆCH mật khẩu, cần kiểm tra thủ công ngay: '+(r2.error||'');
+           }catch(rollbackErr){
+             err='Lỗi phía Supabase VÀ mất mạng lúc đổi ngược Apps Script — 2 nơi đang LỆCH mật khẩu (Apps Script đã đổi, Supabase thì chưa), cần kiểm tra thủ công ngay.';
+           }
+         }
        }
      }
      if(ok){
@@ -3683,8 +3704,12 @@ async function maybeAutoBackupChamCongCtp(){
    localStorage.setItem('kt_cc_ctp_backup_date', todayStr); // không có gì mới — không backup thật
    return;
  }
- if(ccNew.length) await DB.backupAttendanceToSheet(ccNew, adminPassword.chamcong_ctp);
- if(ctpNew.length) await DB.backupExpensesToSheet(ctpNew, adminPassword.chamcong_ctp);
+ // Chỉ đánh dấu "đã backup hôm nay" nếu CẢ 2 lần ghi đều thành công — nếu
+ // không, lần sau vẫn coi hôm nay CHƯA backup và thử ghi lại đúng các dòng
+ // này (so lastAt cũ, không bị bỏ sót do đã lỡ nhích mốc thời gian).
+ const ccOk = !ccNew.length || (await DB.backupAttendanceToSheet(ccNew, adminPassword.chamcong_ctp)).ok;
+ const ctpOk = !ctpNew.length || (await DB.backupExpensesToSheet(ctpNew, adminPassword.chamcong_ctp)).ok;
+ if(!ccOk || !ctpOk) return; // ghi lỗi 1 phần — không đánh dấu, thử lại ở lần kiểm tra sau
  localStorage.setItem('kt_cc_ctp_backup_date', todayStr);
  localStorage.setItem('kt_cc_ctp_backup_at', new Date().toISOString());
 }
