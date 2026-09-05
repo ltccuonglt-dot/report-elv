@@ -99,6 +99,15 @@ body{background:var(--ground);color:var(--ink);font-family:var(--font);font-size
 .cc-add-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
 .cc-add-grid label.field{margin-bottom:0}
 @media (max-width:520px){.cc-add-grid{grid-template-columns:1fr}}
+.pw-change-block{border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px;background:var(--surface-2)}
+.pw-change-title{font-weight:700;font-size:13.5px;margin-bottom:8px;color:var(--brand)}
+.aeon-compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.aeon-compare-card{border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:14px;background:var(--surface-2)}
+.aeon-compare-card h3{margin:0 0 10px;font-size:15px}
+.aeon-compare-card .row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px dashed var(--line)}
+.aeon-compare-card .row:last-child{border-bottom:none}
+.aeon-compare-card .row b{color:var(--brand)}
+@media (max-width:520px){.aeon-compare-grid{grid-template-columns:1fr}}
 .ctp-checklist{display:flex;flex-wrap:wrap;gap:8px}
 .ctp-checklist label{display:flex;align-items:center;gap:6px;border:1.5px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer;background:var(--surface)}
 .ctp-checklist input:checked + span{font-weight:700;color:var(--brand)}
@@ -447,10 +456,10 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
          registerAdminAction(). Thêm tính năng quản trị mới sau này chỉ cần
          thêm 1 button như dưới đây + 1 lần gọi registerAdminAction(), không
          phải sửa lại phần hỏi mật khẩu/gắn sự kiện. -->
-    <button class="icon-btn" data-admin-action="chamcong-ctp" aria-label="Chấm công & Công tác phí" title="Chấm công & Công tác phí (yêu cầu mật khẩu quản trị)">
+    <button class="icon-btn" data-admin-action="chamcong-ctp" data-admin-group="chamcong_ctp" aria-label="Chấm công & Công tác phí" title="Chấm công & Công tác phí (yêu cầu mật khẩu quản trị riêng)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
     </button>
-    <button class="icon-btn" data-admin-action="aeon-report" aria-label="Báo cáo AEON Huế / Thanh Khê" title="Báo cáo AEON Huế / Thanh Khê (yêu cầu mật khẩu quản trị)">
+    <button class="icon-btn" data-admin-action="aeon-report" data-admin-group="aeon" aria-label="Báo cáo AEON Huế / Thanh Khê" title="Báo cáo AEON Huế / Thanh Khê (yêu cầu mật khẩu quản trị riêng)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
     </button>
     <button class="icon-btn" id="btnSettings" aria-label="Cài đặt">
@@ -888,22 +897,37 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     </button>
     <div class="divider"></div>
     <div class="section-title" style="margin-bottom:8px">Đổi mật khẩu quản trị</div>
-    <p class="desc" style="margin-top:-4px">Đổi xong có hiệu lực ngay trên mọi thiết bị (lưu trên server) — dùng mật khẩu mới cho lần mở Cài đặt tiếp theo.</p>
-    <label class="field">
-      <span class="lab">Mật khẩu hiện tại</span>
-      <input type="password" id="s_pwOld" autocomplete="off" />
-    </label>
-    <label class="field">
-      <span class="lab">Mật khẩu mới</span>
-      <input type="password" id="s_pwNew" autocomplete="off" placeholder="Tối thiểu 4 ký tự" />
-    </label>
-    <label class="field">
-      <span class="lab">Nhập lại mật khẩu mới</span>
-      <input type="password" id="s_pwNew2" autocomplete="off" />
-    </label>
-    <button type="button" class="btn" id="btnChangeAdminPassword" style="margin-bottom:16px">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Đổi mật khẩu quản trị</span>
-    </button>
+    <p class="desc" style="margin-top:-4px">Mỗi nhóm 1 mật khẩu riêng, đổi độc lập — đổi xong có hiệu lực ngay trên mọi thiết bị.</p>
+
+    <div class="pw-change-block">
+      <div class="pw-change-title">Cài đặt / Sửa-xoá phiếu / Kỹ sư</div>
+      <label class="field"><span class="lab">Mật khẩu hiện tại</span><input type="password" id="s_pwOld_settings" autocomplete="off" /></label>
+      <label class="field"><span class="lab">Mật khẩu mới</span><input type="password" id="s_pwNew_settings" autocomplete="off" placeholder="Tối thiểu 4 ký tự" /></label>
+      <label class="field"><span class="lab">Nhập lại mật khẩu mới</span><input type="password" id="s_pwNew2_settings" autocomplete="off" /></label>
+      <button type="button" class="btn" data-pw-group="settings" style="margin-bottom:6px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Đổi mật khẩu Cài đặt</span>
+      </button>
+    </div>
+
+    <div class="pw-change-block">
+      <div class="pw-change-title">Báo cáo AEON Huế / Thanh Khê</div>
+      <label class="field"><span class="lab">Mật khẩu hiện tại</span><input type="password" id="s_pwOld_aeon" autocomplete="off" /></label>
+      <label class="field"><span class="lab">Mật khẩu mới</span><input type="password" id="s_pwNew_aeon" autocomplete="off" placeholder="Tối thiểu 4 ký tự" /></label>
+      <label class="field"><span class="lab">Nhập lại mật khẩu mới</span><input type="password" id="s_pwNew2_aeon" autocomplete="off" /></label>
+      <button type="button" class="btn" data-pw-group="aeon" style="margin-bottom:6px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Đổi mật khẩu Báo cáo AEON</span>
+      </button>
+    </div>
+
+    <div class="pw-change-block">
+      <div class="pw-change-title">Chấm công & Công tác phí</div>
+      <label class="field"><span class="lab">Mật khẩu hiện tại</span><input type="password" id="s_pwOld_chamcong_ctp" autocomplete="off" /></label>
+      <label class="field"><span class="lab">Mật khẩu mới</span><input type="password" id="s_pwNew_chamcong_ctp" autocomplete="off" placeholder="Tối thiểu 4 ký tự" /></label>
+      <label class="field"><span class="lab">Nhập lại mật khẩu mới</span><input type="password" id="s_pwNew2_chamcong_ctp" autocomplete="off" /></label>
+      <button type="button" class="btn" data-pw-group="chamcong_ctp" style="margin-bottom:16px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Đổi mật khẩu Chấm công/CTP</span>
+      </button>
+    </div>
     <div class="divider"></div>
     <button class="btn btn-primary" id="btnSaveSettings" style="margin-bottom:10px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span>Lưu & Kiểm tra kết nối</span>
@@ -1117,6 +1141,62 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
   </div>
 </div>
 
+<!-- ===== Báo cáo AEON Huế / Thanh Khê (tool riêng, dữ liệu riêng — bảng aeon_tickets,
+     không lẫn với phiếu kỹ thuật đang vận hành trong tickets) ===== -->
+<div class="modal" id="aeonReportModal">
+  <div class="sheet" style="max-width:920px">
+    <h2>Báo cáo AEON Huế / Thanh Khê</h2>
+    <p class="desc" style="margin-top:-6px">Dữ liệu lưu ở bảng riêng, tách khỏi phiếu kỹ thuật đang vận hành.</p>
+    <div class="seg" id="aeon_site_filter" style="margin-bottom:14px">
+      <button type="button" data-v="all" class="on">Tất cả</button>
+      <button type="button" data-v="hue">AEON Huế</button>
+      <button type="button" data-v="tk">AEON Thanh Khê</button>
+    </div>
+    <div id="aeonDonutWrap" class="donut-wrap"></div>
+    <div id="aeonReportSummary" class="aeon-compare-grid"></div>
+
+    <div class="divider"></div>
+    <div class="section-title" style="margin-bottom:8px">Thêm / sửa 1 phiếu AEON</div>
+    <div class="cc-add-grid">
+      <label class="field"><span class="lab">Ngày</span><input type="date" id="aeon_f_date"></label>
+      <label class="field"><span class="lab">Cơ sở</span>
+        <select id="aeon_f_customer">
+          <option value="AEON Mall HUE">AEON Mall Huế</option>
+          <option value="AEON Mall Thanh Khe">AEON Mall Thanh Khê</option>
+        </select>
+      </label>
+      <label class="field"><span class="lab">Hệ thống</span><input type="text" id="aeon_f_system" value="CCTV"></label>
+      <label class="field"><span class="lab">Ưu tiên</span>
+        <select id="aeon_f_priority"><option value="Low">Low</option><option value="Medium" selected>Medium</option><option value="High">High</option></select>
+      </label>
+      <label class="field" style="grid-column:1/-1"><span class="lab">Vấn đề</span><input type="text" id="aeon_f_issue"></label>
+      <label class="field"><span class="lab">Kỹ sư</span><input type="text" id="aeon_f_engineer"></label>
+      <label class="field"><span class="lab">Hình thức hỗ trợ</span>
+        <select id="aeon_f_support"><option value="Online">Online</option><option value="On-Site">On-Site</option></select>
+      </label>
+      <label class="field"><span class="lab">Trạng thái</span>
+        <select id="aeon_f_status"><option value="Done">Done</option><option value="In Progress">In Progress</option><option value="Pending">Pending</option></select>
+      </label>
+      <label class="field" style="grid-column:1/-1"><span class="lab">Ghi chú</span><input type="text" id="aeon_f_remark"></label>
+    </div>
+    <div style="display:flex;gap:10px;margin:10px 0">
+      <button type="button" class="btn btn-primary" id="btnAeonAddRow"><span>+ Thêm phiếu</span></button>
+      <button type="button" class="btn btn-ghost" id="btnAeonCancelEdit" style="display:none">Huỷ sửa</button>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-title" style="margin-bottom:8px">Danh sách (<span id="aeonListCount">0</span> phiếu)</div>
+    <div class="rpt-wrap"><table class="rpt" id="aeonListTable"><thead><tr>
+      <th>Ngày</th><th>Cơ sở</th><th>Vấn đề</th><th>Ưu tiên</th><th>Kỹ sư</th><th>Hỗ trợ</th><th>Trạng thái</th><th>Ghi chú</th><th></th>
+    </tr></thead><tbody id="aeonListBody"></tbody></table></div>
+
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button type="button" class="btn btn-primary" id="btnAeonExportExcel"><span>⬇️ Xuất Excel</span></button>
+      <button type="button" class="btn btn-ghost" id="btnCloseAeonReport">Đóng</button>
+    </div>
+  </div>
+</div>
+
 <script>
 "use strict";
 /* ===== CẤU HÌNH — mở app, bấm ⚙️ để dán link, KHÔNG cần sửa file ===== */
@@ -1125,16 +1205,34 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 const DEFAULT_URL='https://script.google.com/macros/s/AKfycbxI7LhPoN7XhNWoYvWiXQnMjF-97IHl3EL4pMSGSYLK1aPX83ogHzxdYTHJUDU4hBaO/exec';
 const DEFAULT_TOKEN='AEON-KT-2026';
 const DEFAULT_STORE='Report -ELV';
-// Mật khẩu quản trị KHÔNG còn hardcode ở đây nữa (đổi được qua app, lưu bên
-// server) — app luôn hỏi server (action 'verifyAdmin') để kiểm tra đúng/sai,
-// và nhớ lại đúng mật khẩu vừa gõ trong biến này để dùng cho các hành động
-// admin khác trong cùng phiên (xóa, đồng bộ backup, sửa không giới hạn...).
-let adminPasswordRuntime=null;
-async function verifyAdminPassword(pin){
+// Mật khẩu quản trị KHÔNG hardcode, TÁCH RIÊNG theo 3 nhóm (đổi được độc lập,
+// không dùng chung 1 mật khẩu cho mọi nút nữa):
+//  - 'settings'      : Cài đặt, sửa/xoá phiếu, kỹ sư, sao lưu, xoá dữ liệu,
+//                      chuyển ảnh cũ (Supabase verify_admin + Apps Script
+//                      group 'settings', đổi cả 2 cùng lúc)
+//  - 'aeon'          : Báo cáo AEON Huế/Thanh Khê (Supabase verify_aeon_password)
+//  - 'chamcong_ctp'  : Chấm công & Công tác phí (Apps Script group mặc định)
+// adminUnlocked[group] nhớ đã mở khoá trong phiên chưa; adminPassword[group]
+// nhớ đúng mật khẩu vừa gõ để dùng lại cho các lệnh admin khác cùng nhóm.
+const adminUnlocked={settings:false, aeon:false, chamcong_ctp:false};
+const adminPassword={settings:null, aeon:null, chamcong_ctp:null};
+async function verifyAppsScriptAdmin(pin,group){
+ if(!CFG.url) return false;
+ try{
+   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+     body:JSON.stringify({token:CFG.token,action:'verifyAdmin',pass:pin,group})});
+   const j=await res.json();
+   return !!j.ok;
+ }catch(err){ return false; }
+}
+async function verifyAdminPassword(pin,group){
+ group=group||'settings';
  if(!pin) return false;
  try{
-   const j=await DB.verifyAdmin(pin);
-   if(j.ok){ isAdminUnlocked=true; adminPasswordRuntime=pin; return true; }
+   const ok = group==='aeon' ? (await DB.verifyAeonPassword(pin)).ok
+     : group==='chamcong_ctp' ? await verifyAppsScriptAdmin(pin,'chamcong_ctp')
+     : (await DB.verifyAdmin(pin)).ok;
+   if(ok){ adminUnlocked[group]=true; adminPassword[group]=pin; return true; }
  }catch(err){}
  return false;
 }
@@ -1171,10 +1269,31 @@ function mapTicket(row){
    attachmentBackUrl:row.attachment_back_url, attachmentBackName:row.attachment_back_name,
    bienbanPdfUrl:row.bienban_pdf_url, bienbanPdfName:row.bienban_pdf_name};
 }
+function mapAeonTicket(row){
+ return {no:row.id, date:row.ticket_date, customer:row.customer, system:row.system, issue:row.issue,
+   priority:row.priority, engineer:row.engineer, support:row.support, status:row.status, remark:row.remark};
+}
 const DB={
  async verifyAdmin(pass){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
    const {data,error}=await sb.rpc('verify_admin',{p_password:pass});
+   return error?{ok:false,error:error.message}:{ok:!!data};
+ },
+ async changeAdminPassword(oldPass,newPass){
+   // RPC change_admin_password trả về void (không phải boolean) — thành công
+   // là khi KHÔNG có error, không phải khi data truthy (data luôn null).
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {error}=await sb.rpc('change_admin_password',{p_old:oldPass,p_new:newPass});
+   return error?{ok:false,error:error.message}:{ok:true};
+ },
+ async verifyAeonPassword(pass){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('verify_aeon_password',{p_password:pass});
+   return error?{ok:false,error:error.message}:{ok:!!data};
+ },
+ async changeAeonPassword(oldPass,newPass){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('change_aeon_password',{p_old:oldPass,p_new:newPass});
    return error?{ok:false,error:error.message}:{ok:!!data};
  },
  // PostgREST mặc định chỉ trả tối đa 1000 dòng — phải tự phân trang, nếu
@@ -1249,6 +1368,33 @@ const DB={
  async deleteTicket(no,adminPassword){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
    const {error}=await sb.rpc('delete_ticket',{p_id:Number(no),p_admin_password:adminPassword});
+   return error?{ok:false,error:error.message}:{ok:true};
+ },
+ // Báo cáo AEON Huế/Thanh Khê — bảng riêng aeon_tickets, tách khỏi tickets sống
+ async listAeonTickets(){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.from('aeon_tickets').select('*').order('ticket_date').order('id');
+   return error?{ok:false,error:error.message}:{ok:true,data:data.map(mapAeonTicket)};
+ },
+ async addAeonTicket(payload,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('add_aeon_ticket',{p_admin_password:adminPassword,p_fields:{
+     ticket_date:payload.date, customer:payload.customer, system:payload.system, issue:payload.issue,
+     priority:payload.priority, engineer:payload.engineer, support:payload.support, status:payload.status, remark:payload.remark
+   }});
+   return error?{ok:false,error:error.message}:{ok:true,data:mapAeonTicket(data)};
+ },
+ async updateAeonTicket(id,payload,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('update_aeon_ticket',{p_id:Number(id),p_admin_password:adminPassword,p_fields:{
+     ticket_date:payload.date, customer:payload.customer, system:payload.system, issue:payload.issue,
+     priority:payload.priority, engineer:payload.engineer, support:payload.support, status:payload.status, remark:payload.remark
+   }});
+   return error?{ok:false,error:error.message}:{ok:true,data:mapAeonTicket(data)};
+ },
+ async deleteAeonTicket(id,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {error}=await sb.rpc('delete_aeon_ticket',{p_id:Number(id),p_admin_password:adminPassword});
    return error?{ok:false,error:error.message}:{ok:true};
  },
  async listEngineers(){
@@ -1610,7 +1756,7 @@ async function addEngineer(){
  if(!name){ toast('Nhập tên kỹ sư',true); return; }
  if(!sb){ toast('Chưa kết nối Supabase',true); return; }
  try{
-   const j=await DB.addEngineer(name,adminPasswordRuntime);
+   const j=await DB.addEngineer(name,adminPassword.settings);
    if(j.ok){ engineerList=j.data||engineerList; input.value=''; renderEngineerChecklist(); renderEngineerManageList(); buildEngineerFilterOptions(); toast('✅ Đã thêm kỹ sư'); }
    else toast(j.error||'Lỗi thêm kỹ sư',true);
  }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
@@ -1619,7 +1765,7 @@ async function deleteEngineer(name){
  if(!confirm(`Xóa kỹ sư "${name}" khỏi danh sách?`)) return;
  if(!sb){ toast('Chưa kết nối Supabase',true); return; }
  try{
-   const j=await DB.deleteEngineer(name,adminPasswordRuntime);
+   const j=await DB.deleteEngineer(name,adminPassword.settings);
    if(j.ok){ engineerList=j.data||engineerList; renderEngineerChecklist(); renderEngineerManageList(); buildEngineerFilterOptions(); toast('✅ Đã xóa kỹ sư'); }
    else toast(j.error||'Lỗi xóa kỹ sư',true);
  }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
@@ -2009,7 +2155,7 @@ $('#tkForm').onsubmit=async e=>{
    // ngầm bên dưới), làm tưởng thành công nhưng lúc tải lại thì dữ liệu vẫn y
    // như cũ — rất khó hiểu ("lúc được lúc không"). Hết lượt thì hỏi ngay mật
    // khẩu quản trị tại chỗ để sửa tiếp, khỏi phải thoát ra vào lại Cài đặt.
-   if(isEdit && !isAdminUnlocked){
+   if(isEdit && !adminUnlocked.settings){
      const editingRec=mgrData.find(r=>String(r.no)===String(no));
      if(editingRec && (Number(editingRec.editCount)||0)>=EDIT_LIMIT){
        const pin=prompt(`Phiếu #${displayNo} đã sửa đủ ${EDIT_LIMIT} lần. Nhập mật khẩu quản trị để sửa tiếp:`);
@@ -2072,7 +2218,7 @@ $('#tkForm').onsubmit=async e=>{
 
    try{
      const j=isEdit
-       ? await DB.editTicket(no,payload,isAdminUnlocked?adminPasswordRuntime:null)
+       ? await DB.editTicket(no,payload,adminUnlocked.settings?adminPassword.settings:null)
        : await DB.createTicket(payload);
      if(!j.ok) toast(`⚠️ Gửi ${isEdit?'cập nhật':''} phiếu${isEdit?` #${displayNo}`:''} thất bại: ${j.error||'máy chủ báo lỗi'} — thử gửi lại`,true);
      else if(pendingOtherPhotos.length){
@@ -2499,7 +2645,7 @@ function rptRow(r,displayNo,readOnly){
      <button type="button" class="btn-row-photos" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" aria-label="Xem ảnh phiếu #${esc(displayNo||r.no)}" title="Xem ảnh biên bản + ảnh làm việc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-4 4-3-3-4 4"/></svg></button>
      ${r.attachmentUrl?`<button type="button" class="btn-row-pdf" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" aria-label="Xuất PDF biên bản phiếu #${esc(displayNo||r.no)}" title="Xuất file PDF từ ảnh biên bản (mặt trước+sau)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 11h6"/></svg></button>`:''}
      <button type="button" class="btn-row-edit" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" aria-label="Sửa phiếu #${esc(displayNo||r.no)}" title="Sửa nội dung phiếu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-     ${isAdminUnlocked?`<button type="button" class="btn-row-delete" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" aria-label="Xóa phiếu #${esc(displayNo||r.no)}" title="Xoá hẳn phiếu này (không thể hoàn tác)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>`:''}
+     ${adminUnlocked.settings?`<button type="button" class="btn-row-delete" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" aria-label="Xóa phiếu #${esc(displayNo||r.no)}" title="Xoá hẳn phiếu này (không thể hoàn tác)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>`:''}
    </div>`:''}</td>
  </tr>`;
 }
@@ -2571,10 +2717,10 @@ function renderManager(){
 }
 async function deleteTicket(no,displayNo){
  displayNo=displayNo||no;
- if(!isAdminUnlocked){toast('Chỉ quản trị viên mới được xóa phiếu',true);return}
+ if(!adminUnlocked.settings){toast('Chỉ quản trị viên mới được xóa phiếu',true);return}
  if(!confirm(`Xóa hẳn phiếu #${displayNo}? Không thể hoàn tác.`)) return;
  try{
-   const j=await DB.deleteTicket(no,adminPasswordRuntime);
+   const j=await DB.deleteTicket(no,adminPassword.settings);
    if(j.ok){
      toast(`🗑️ Đã xóa phiếu #${displayNo}`);
      mgrData=mgrData.filter(r=>String(r.no)!==String(no));
@@ -2719,7 +2865,7 @@ $('#btnSyncBackup').onclick=async()=>{
    for(let i=0;i<rows.length;i+=50){
      const batch=rows.slice(i,i+50);
      box.textContent=`Đang sao lưu ${Math.min(i+batch.length,rows.length)}/${rows.length} phiếu...`;
-     const j=await DB.backupTicketsToSheet(batch,adminPasswordRuntime);
+     const j=await DB.backupTicketsToSheet(batch,adminPassword.settings);
      if(!j.ok) throw new Error(j.error||'Lỗi ghi vào Sheet');
      added+=j.added||0; updated+=j.updated||0;
    }
@@ -2742,40 +2888,62 @@ $('#btnClearBackupRange').onclick=async()=>{
  const btn=$('#btnClearBackupRange'); btn.disabled=true;
  try{
    const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-     body:JSON.stringify({token:CFG.token,action:'clearBackupRange',adminPassword:adminPasswordRuntime,from,to})});
+     body:JSON.stringify({token:CFG.token,action:'clearBackupRange',adminPassword:adminPassword.settings,from,to})});
    const j=await res.json();
    if(j.ok) toast(j.count?`✅ Đã xóa ${j.count} phiếu trong backup`:'Không có phiếu nào trong khoảng ngày đó');
    else toast(j.error||'Lỗi xóa dữ liệu backup',true);
  }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
  btn.disabled=false;
 };
-$('#btnChangeAdminPassword').onclick=async()=>{
- if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
- const oldPw=$('#s_pwOld').value, newPw=$('#s_pwNew').value, newPw2=$('#s_pwNew2').value;
- if(!oldPw||!newPw){ toast('Nhập đủ mật khẩu hiện tại và mật khẩu mới',true); return; }
- if(newPw.length<4){ toast('Mật khẩu mới tối thiểu 4 ký tự',true); return; }
- if(newPw!==newPw2){ toast('Nhập lại mật khẩu mới không khớp',true); return; }
- if(!confirm('Đổi mật khẩu quản trị? Mật khẩu cũ sẽ không dùng được nữa.')) return;
- const btn=$('#btnChangeAdminPassword'); btn.disabled=true;
- try{
-   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-     body:JSON.stringify({token:CFG.token,action:'changeAdminPassword',oldPassword:oldPw,newPassword:newPw})});
-   const j=await res.json();
-   if(j.ok){
-     toast('✅ Đã đổi mật khẩu quản trị');
-     adminPasswordRuntime=newPw;
-     $('#s_pwOld').value='';$('#s_pwNew').value='';$('#s_pwNew2').value='';
-   } else toast(j.error||'Lỗi đổi mật khẩu',true);
- }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
- btn.disabled=false;
-};
+// Đổi mật khẩu theo TỪNG NHÓM độc lập (Cài đặt / Báo cáo AEON / Chấm công-CTP).
+// Nhóm 'settings' đổi CẢ 2 nơi cùng lúc: Apps Script (giữ hành vi cũ) và
+// Supabase (RPC change_admin_password — trước đây tồn tại sẵn nhưng KHÔNG
+// bao giờ được gọi, khiến hash bên Supabase không đổi theo khi người dùng
+// đổi mật khẩu qua Cài đặt; vá lại trong lần này).
+const PW_GROUP_LABEL={settings:'Cài đặt',aeon:'Báo cáo AEON',chamcong_ctp:'Chấm công/CTP'};
+$$('[data-pw-group]').forEach(btn=>{
+ const group=btn.dataset.pwGroup;
+ btn.onclick=async()=>{
+   const oldPw=$('#s_pwOld_'+group).value, newPw=$('#s_pwNew_'+group).value, newPw2=$('#s_pwNew2_'+group).value;
+   if(!oldPw||!newPw){ toast('Nhập đủ mật khẩu hiện tại và mật khẩu mới',true); return; }
+   if(newPw.length<4){ toast('Mật khẩu mới tối thiểu 4 ký tự',true); return; }
+   if(newPw!==newPw2){ toast('Nhập lại mật khẩu mới không khớp',true); return; }
+   if(!confirm(`Đổi mật khẩu ${PW_GROUP_LABEL[group]}? Mật khẩu cũ sẽ không dùng được nữa.`)) return;
+   btn.disabled=true;
+   try{
+     let ok=true, err='';
+     if(group==='aeon'){
+       const r=await DB.changeAeonPassword(oldPw,newPw);
+       if(!r.ok){ ok=false; err=r.error||'Lỗi đổi mật khẩu'; }
+     } else {
+       if(!CFG.url){ ok=false; err='Chưa kết nối Google Sheet'; }
+       else{
+         const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+           body:JSON.stringify({token:CFG.token,action:'changeAdminPassword',oldPassword:oldPw,newPassword:newPw,group})});
+         const j=await res.json();
+         if(!j.ok){ ok=false; err=j.error||'Lỗi đổi mật khẩu'; }
+       }
+       if(ok && group==='settings'){
+         const r2=await DB.changeAdminPassword(oldPw,newPw);
+         if(!r2.ok){ ok=false; err='Đã đổi phía Apps Script nhưng lỗi phía Supabase: '+(r2.error||''); }
+       }
+     }
+     if(ok){
+       toast(`✅ Đã đổi mật khẩu ${PW_GROUP_LABEL[group]}`);
+       adminPassword[group]=newPw;
+       $('#s_pwOld_'+group).value=''; $('#s_pwNew_'+group).value=''; $('#s_pwNew2_'+group).value='';
+     } else toast(err,true);
+   }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
+   btn.disabled=false;
+ };
+});
 $('#btnClearAllData').onclick=async()=>{
  if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
  if(!confirm('XÓA TOÀN BỘ phiếu ở Sheet chính (đã tự lưu vào backup trước khi xóa)?\n\nSheet chính KHÔNG THỂ HOÀN TÁC sau khi xóa. Bạn chắc chắn chứ?')) return;
  if(!confirm('Xác nhận LẦN 2: thật sự muốn xóa HẾT toàn bộ dữ liệu ở Sheet chính?')) return;
  try{
    const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-     body:JSON.stringify({token:CFG.token,action:'clearAllData',adminPassword:adminPasswordRuntime})});
+     body:JSON.stringify({token:CFG.token,action:'clearAllData',adminPassword:adminPassword.settings})});
    const j=await res.json();
    if(j.ok){
      toast('✅ Đã lưu vào backup và xóa Sheet chính, bắt đầu kỳ mới');
@@ -2843,7 +3011,7 @@ $('#btnArchiveOldPhotos').onclick=async()=>{
      // không bị bỏ sót file vì 1 trục trặc thoáng qua.
      let ar=null;
      for(let attempt=1; attempt<=3; attempt++){
-       ar=await DB.archiveFileToDrive(job.url,job.name,adminPasswordRuntime);
+       ar=await DB.archiveFileToDrive(job.url,job.name,adminPassword.settings);
        if(ar.ok) break;
        if(attempt<3){ statusBox.textContent=`Đang chuyển ${idx+1}/${jobs.length} (thử lại lần ${attempt+1})...`; await new Promise(r=>setTimeout(r,2000)); }
      }
@@ -2882,9 +3050,8 @@ $('#btnSettings').onclick=()=>{$('#admin_pin').value='';$('#admin_pin').classLis
 $('#btnCloseAdminGate').onclick=()=>gate.classList.remove('show');
 $('#btnToggleAdminPin').onclick=()=>{$('#admin_pin').classList.toggle('masked')};
 gate.onclick=e=>{if(e.target===gate)gate.classList.remove('show')};
-let isAdminUnlocked=false;
 async function tryUnlock(){
- const ok=await verifyAdminPassword($('#admin_pin').value);
+ const ok=await verifyAdminPassword($('#admin_pin').value,'settings');
  if(ok){ gate.classList.remove('show'); openSettingsModal(); renderManager(); renderHistory(); }
  else toast('Sai mật khẩu quản trị',true);
 }
@@ -3019,25 +3186,29 @@ function soThanhChu(soVND){
 /* ===== Khung nút quản trị trong header (mở rộng được) =====
    Mọi nút chức năng chỉ-admin trong header (Chấm công/CTP, Báo cáo AEON, và
    BẤT KỲ nút nào thêm sau này) đều LUÔN hiện sẵn ngay cạnh Cài đặt — không
-   cần mở Cài đặt trước như trước đây. Bấm vào: nếu đã mở khoá quản trị
-   (isAdminUnlocked) thì chạy luôn; chưa thì hỏi mật khẩu tại chỗ (prompt),
-   đúng thì chạy VÀ giữ mở khoá cho các nút admin khác dùng lại tới khi tải
+   cần mở Cài đặt trước như trước đây. Mỗi nút thuộc 1 NHÓM mật khẩu riêng
+   (data-admin-group) — đúng mật khẩu nhóm nào chỉ mở khoá nhóm đó, không mở
+   khoá luôn các nút khác (khác nhóm) như trước. Bấm vào: nếu nhóm đã mở khoá
+   trong phiên (adminUnlocked[group]) thì chạy luôn; chưa thì hỏi mật khẩu tại
+   chỗ (prompt), đúng thì chạy VÀ giữ mở khoá cho riêng nhóm đó tới khi tải
    lại trang.
    Thêm tính năng quản trị mới sau này: chỉ cần (1) thêm 1
-   <button class="icon-btn" data-admin-action="ten-moi"> trong header, và
-   (2) gọi registerAdminAction('ten-moi', hamMoTinhNang) — không phải đụng gì
-   tới đoạn hỏi mật khẩu/gắn sự kiện dưới đây. */
+   <button class="icon-btn" data-admin-action="ten-moi" data-admin-group="...">
+   trong header (dùng lại 1 trong 3 nhóm sẵn có, hoặc thêm nhóm mới vào
+   adminUnlocked/adminPassword), và (2) gọi
+   registerAdminAction('ten-moi', hamMoTinhNang) — không phải đụng gì tới
+   đoạn hỏi mật khẩu/gắn sự kiện dưới đây. */
 const ADMIN_ACTIONS={};
 function registerAdminAction(name,fn){ ADMIN_ACTIONS[name]=fn; }
-async function requireAdminThen(action){
- if(isAdminUnlocked){ action(); return; }
- const pin=prompt('Nhập mật khẩu quản trị:');
+async function requireAdminThen(group,action){
+ if(adminUnlocked[group]){ action(); return; }
+ const pin=prompt(`Nhập mật khẩu ${PW_GROUP_LABEL[group]||'quản trị'}:`);
  if(pin===null) return;
- const ok=await verifyAdminPassword(pin);
- if(ok) action(); else toast('Sai mật khẩu quản trị',true);
+ const ok=await verifyAdminPassword(pin,group);
+ if(ok) action(); else toast('Sai mật khẩu',true);
 }
 $$('.icon-btn[data-admin-action]').forEach(btn=>{
- btn.onclick=()=>requireAdminThen(()=>{
+ btn.onclick=()=>requireAdminThen(btn.dataset.adminGroup||'settings',()=>{
    const fn=ADMIN_ACTIONS[btn.dataset.adminAction];
    if(fn) fn(); else toast('Tính năng chưa sẵn sàng',true);
  });
@@ -3100,18 +3271,138 @@ function aeonCompareSheet(hue,tk){
  for(let r=2;r<8;r++){ const ref='A'+(r+1); if(ws[ref]) ws[ref].s={font:{name:'Times New Roman',sz:12,bold:true}}; }
  return ws;
 }
-registerAdminAction('aeon-report',()=>{
+/* Dữ liệu đọc từ bảng riêng aeon_tickets (không phải mgrData/tickets sống) —
+   đúng kiến trúc "mỗi tool 1 bảng riêng, chỉ mượn ELV làm popup hiển thị". */
+let aeonData=[];
+let aeonEditingId=null;
+
+function aeonSplit(){
+ return {
+   hue:aeonData.filter(r=>/hue|huế/.test(normVN(r.customer))),
+   tk:aeonData.filter(r=>/thanh\s*kh(e|ê)/.test(normVN(r.customer)))
+ };
+}
+
+async function aeonLoadAndRender(){
+ const res=await DB.listAeonTickets();
+ if(!res.ok){ toast(res.error||'Không tải được dữ liệu AEON',true); return; }
+ aeonData=res.data;
+ renderAeonReport();
+}
+
+function renderAeonReport(){
+ const {hue,tk}=aeonSplit();
+ // Chọn site nào thì donut "Hình thức hỗ trợ"/"Mức ưu tiên" + bảng danh sách
+ // chỉ hiện đúng site đó — không gộp chung 2 site thành 1 donut so sánh nữa.
+ const site=segVal('aeon_site_filter');
+ const filtered=site==='hue'?hue:site==='tk'?tk:aeonData;
+
+ const online=filtered.filter(r=>!(r.support||'').toLowerCase().includes('site')).length;
+ const onsite=filtered.length-online;
+ const pr={Low:0,Medium:0,High:0};
+ filtered.forEach(r=>{const p=(r.priority||'').trim(); if(pr[p]!=null)pr[p]++;});
+
+ $('#aeonDonutWrap').innerHTML=
+   donutBlock('Hình thức hỗ trợ',[
+     {label:'Online',val:online,color:'var(--info)'},
+     {label:'On-Site',val:onsite,color:'var(--brand)'}])+
+   donutBlock('Mức ưu tiên',[
+     {label:'Low',val:pr.Low,color:'var(--ok)'},
+     {label:'Medium',val:pr.Medium,color:'var(--warn)'},
+     {label:'High',val:pr.High,color:'var(--danger)'}]);
+
+ const cardStat=rows=>{
+   const on=rows.filter(r=>!(r.support||'').toLowerCase().includes('site')).length;
+   return {total:rows.length, online:on, onsite:rows.length-on};
+ };
+ const a=cardStat(hue), b=cardStat(tk);
+ $('#aeonReportSummary').innerHTML=`
+   <div class="aeon-compare-card"><h3>AEON Huế</h3>
+     <div class="row"><span>Tổng phiếu</span><b>${a.total}</b></div>
+     <div class="row"><span>Online</span><b>${a.online}</b></div>
+     <div class="row"><span>On-Site</span><b>${a.onsite}</b></div>
+   </div>
+   <div class="aeon-compare-card"><h3>AEON Thanh Khê</h3>
+     <div class="row"><span>Tổng phiếu</span><b>${b.total}</b></div>
+     <div class="row"><span>Online</span><b>${b.online}</b></div>
+     <div class="row"><span>On-Site</span><b>${b.onsite}</b></div>
+   </div>`;
+
+ $('#aeonListCount').textContent=filtered.length;
+ $('#aeonListBody').innerHTML=filtered.map(r=>`<tr>
+   <td>${esc(fmtDMYFull(r.date))}</td><td>${esc(r.customer)}</td><td>${esc(r.issue)}</td>
+   <td>${esc(r.priority)}</td><td>${esc(r.engineer)}</td><td>${esc(r.support)}</td>
+   <td>${esc(r.status)}</td><td>${esc(r.remark)}</td>
+   <td style="white-space:nowrap">
+     <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-act="edit" aria-label="Sửa dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+     <button type="button" class="row-del-btn" data-no="${esc(r.no)}" data-act="del" aria-label="Xoá dòng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+   </td>
+ </tr>`).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:14px">Chưa có phiếu nào</td></tr>`;
+ $$('#aeonListBody .row-del-btn').forEach(b=>b.onclick=()=>b.dataset.act==='edit'?aeonEditRow(b.dataset.no):aeonDeleteRow(b.dataset.no));
+}
+$$('#aeon_site_filter button').forEach(b=>b.onclick=()=>{ segSet('aeon_site_filter',b.dataset.v); renderAeonReport(); });
+
+function aeonResetForm(){
+ aeonEditingId=null;
+ $('#aeon_f_date').value=''; $('#aeon_f_customer').value='AEON Mall HUE'; $('#aeon_f_system').value='CCTV';
+ $('#aeon_f_priority').value='Medium'; $('#aeon_f_issue').value=''; $('#aeon_f_engineer').value='';
+ $('#aeon_f_support').value='Online'; $('#aeon_f_status').value='Done'; $('#aeon_f_remark').value='';
+ $('#btnAeonAddRow span').textContent='+ Thêm phiếu';
+ $('#btnAeonCancelEdit').style.display='none';
+}
+
+function aeonEditRow(no){
+ const r=aeonData.find(x=>String(x.no)===String(no));
+ if(!r) return;
+ aeonEditingId=no;
+ $('#aeon_f_date').value=r.date||''; $('#aeon_f_customer').value=r.customer||'AEON Mall HUE';
+ $('#aeon_f_system').value=r.system||''; $('#aeon_f_priority').value=r.priority||'Medium';
+ $('#aeon_f_issue').value=r.issue||''; $('#aeon_f_engineer').value=r.engineer||'';
+ $('#aeon_f_support').value=r.support||'Online'; $('#aeon_f_status').value=r.status||'Done'; $('#aeon_f_remark').value=r.remark||'';
+ $('#btnAeonAddRow span').textContent='💾 Lưu sửa phiếu #'+no;
+ $('#btnAeonCancelEdit').style.display='inline-block';
+ $('#aeon_f_date').scrollIntoView({behavior:'smooth',block:'center'});
+}
+$('#btnAeonCancelEdit').onclick=aeonResetForm;
+
+$('#btnAeonAddRow').onclick=async()=>{
+ const payload={date:$('#aeon_f_date').value, customer:$('#aeon_f_customer').value, system:$('#aeon_f_system').value,
+   issue:$('#aeon_f_issue').value, priority:$('#aeon_f_priority').value, engineer:$('#aeon_f_engineer').value,
+   support:$('#aeon_f_support').value, status:$('#aeon_f_status').value, remark:$('#aeon_f_remark').value||null};
+ if(!payload.date || !payload.issue){ toast('Cần nhập Ngày và Vấn đề',true); return; }
+ const res=aeonEditingId
+   ? await DB.updateAeonTicket(aeonEditingId,payload,adminPassword.aeon)
+   : await DB.addAeonTicket(payload,adminPassword.aeon);
+ if(!res.ok){ toast(res.error||'Lỗi lưu phiếu AEON',true); return; }
+ toast(aeonEditingId?'✅ Đã lưu sửa':'✅ Đã thêm phiếu');
+ aeonResetForm();
+ aeonLoadAndRender();
+};
+
+async function aeonDeleteRow(no){
+ if(!confirm('Xoá phiếu AEON này?')) return;
+ const res=await DB.deleteAeonTicket(no,adminPassword.aeon);
+ if(!res.ok){ toast(res.error||'Lỗi xoá',true); return; }
+ toast('✅ Đã xoá'); aeonLoadAndRender();
+}
+
+registerAdminAction('aeon-report',async()=>{
+ await aeonLoadAndRender();
+ $('#aeonReportModal').classList.add('show');
+});
+$('#btnAeonExportExcel').onclick=()=>{
  if(typeof XLSX==='undefined'){ toast('Chưa tải được thư viện xuất Excel, thử lại sau',true); return; }
- const hue=mgrData.filter(r=>/hue|hu\u1ebf/.test(normVN(r.customer)));
- const tk=mgrData.filter(r=>/thanh\s*kh(e|\u00ea)/.test(normVN(r.customer)));
- if(!hue.length && !tk.length){ toast('Chưa có phiếu nào của AEON Huế / Thanh Khê trong dữ liệu hiện tại',true); return; }
+ const {hue,tk}=aeonSplit();
+ if(!hue.length && !tk.length){ toast('Chưa có phiếu nào của AEON Huế / Thanh Khê',true); return; }
  const wb=XLSX.utils.book_new();
  XLSX.utils.book_append_sheet(wb,aeonCompareSheet(hue,tk),'So sánh');
  XLSX.utils.book_append_sheet(wb,aeonSiteStyledSheet(hue),'AEON Hue');
  XLSX.utils.book_append_sheet(wb,aeonSiteStyledSheet(tk),'AEON Thanh Khe');
  XLSX.writeFile(wb,`Service_Support_Ticket_Report_AEON-vs-ThanhKhe_${new Date().toISOString().slice(0,10)}.xlsx`);
  toast(`✅ Đã xuất báo cáo — Huế: ${hue.length} phiếu, Thanh Khê: ${tk.length} phiếu`);
-});
+};
+$('#btnCloseAeonReport').onclick=()=>$('#aeonReportModal').classList.remove('show');
+$('#aeonReportModal').onclick=e=>{if(e.target===$('#aeonReportModal'))$('#aeonReportModal').classList.remove('show')};
 registerAdminAction('chamcong-ctp',()=>{
  ccPopulateSelects();
  ctpRenderRequesterChecklist('');
@@ -3150,7 +3441,7 @@ async function ccLoadList(){
  try{
    // Mỗi kỹ sư 1 tab riêng — có chọn nhân viên thì server chỉ đọc đúng tab đó
    // (nhanh hơn); để trống thì server tự gộp TẤT CẢ tab lại.
-   const res=await fetch(`${CFG.url}?action=listAttendance&token=${encodeURIComponent(CFG.token)}&adminPassword=${encodeURIComponent(adminPasswordRuntime||'')}&year=${year}&month=${month}&employee=${encodeURIComponent(emp)}`);
+   const res=await fetch(`${CFG.url}?action=listAttendance&token=${encodeURIComponent(CFG.token)}&adminPassword=${encodeURIComponent(adminPassword.chamcong_ctp||'')}&year=${year}&month=${month}&employee=${encodeURIComponent(emp)}`);
    const j=await res.json();
    if(!j.ok){ toast(j.error||'Lỗi tải chấm công',true); return; }
    ccCurrentList=j.data||[];
@@ -3200,7 +3491,7 @@ async function ccDeleteRow(no,employee){
  if(!confirm('Xoá dòng chấm công này?')) return;
  try{
    const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-     body:JSON.stringify({token:CFG.token,action:'deleteAttendance',no,employee,adminPassword:adminPasswordRuntime})});
+     body:JSON.stringify({token:CFG.token,action:'deleteAttendance',no,employee,adminPassword:adminPassword.chamcong_ctp})});
    const j=await res.json();
    if(j.ok){ toast('✅ Đã xoá'); ccLoadList(); } else toast(j.error||'Lỗi xoá',true);
  }catch(err){ toast('Không kết nối được',true); }
@@ -3211,7 +3502,7 @@ $('#btnCcAddRow').onclick=async()=>{
  if(!date){ toast('Chọn ngày',true); return; }
  if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
  const isEdit=!!ccEditingNo;
- const payload={token:CFG.token,action:isEdit?'updateAttendance':'addAttendance',adminPassword:adminPasswordRuntime,
+ const payload={token:CFG.token,action:isEdit?'updateAttendance':'addAttendance',adminPassword:adminPassword.chamcong_ctp,
    date, employee:$('#cc_f_employee').value, projectContent:$('#cc_f_project').value.trim(),
    projectCode:$('#cc_f_code').value.trim(), workAddress:$('#cc_f_addr').value.trim(),
    timeIn:$('#cc_f_in').value, timeOut:$('#cc_f_out').value, workDays:Number($('#cc_f_days').value)||0,
@@ -3292,7 +3583,7 @@ $('#btnCcSaveDraft').onclick=async()=>{
  for(const row of ccDraft){
    try{
      const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-       body:JSON.stringify(Object.assign({token:CFG.token,action:'addAttendance',adminPassword:adminPasswordRuntime}, row))});
+       body:JSON.stringify(Object.assign({token:CFG.token,action:'addAttendance',adminPassword:adminPassword.chamcong_ctp}, row))});
      const j=await res.json();
      if(j.ok) ok++; else fail++;
    }catch(err){ fail++; }
@@ -3389,7 +3680,7 @@ $('#btnCcClearMonth').onclick=async()=>{
  if(!confirm(`Xoá TOÀN BỘ chấm công tháng ${Number(month)}/${year} (mọi nhân viên)? Nhớ đã xuất Excel xong chưa — không thể hoàn tác.`)) return;
  try{
    const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-     body:JSON.stringify({token:CFG.token,action:'clearAttendanceMonth',year,month,adminPassword:adminPasswordRuntime})});
+     body:JSON.stringify({token:CFG.token,action:'clearAttendanceMonth',year,month,adminPassword:adminPassword.chamcong_ctp})});
    const j=await res.json();
    if(j.ok){ toast(`✅ Đã xoá ${j.count||0} dòng tháng ${Number(month)}/${year}`); ccLoadList(); }
    else toast(j.error||'Lỗi xoá',true);
@@ -3448,7 +3739,7 @@ $('#btnCtpSaveMap').onclick=async()=>{
  try{
    const up=await DB.uploadCtpMap(file,label);
    if(!up.ok){ toast(up.error||'Lỗi tải ảnh lên',true); return; }
-   const j=await DB.addCtpMap(label,up.url,adminPasswordRuntime);
+   const j=await DB.addCtpMap(label,up.url,adminPassword.chamcong_ctp);
    if(j.ok){
      ctpMapsFromDb=j.data||ctpMapsFromDb; ctpPopulateMapSelect();
      $('#ctp_mapSelect').value=up.url; $('#ctp_mapSelect').dispatchEvent(new Event('change'));
@@ -3502,7 +3793,7 @@ function ctpRecalcAmount(){
 async function ctpLoadAll(){
  if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
  try{
-   const res=await fetch(`${CFG.url}?action=listExpenses&token=${encodeURIComponent(CFG.token)}&adminPassword=${encodeURIComponent(adminPasswordRuntime||'')}`);
+   const res=await fetch(`${CFG.url}?action=listExpenses&token=${encodeURIComponent(CFG.token)}&adminPassword=${encodeURIComponent(adminPassword.chamcong_ctp||'')}`);
    const j=await res.json();
    if(!j.ok){ toast(j.error||'Lỗi tải công tác phí',true); return; }
    ctpAllLines=j.data||[];
@@ -3601,7 +3892,7 @@ async function ctpDeleteLine(no){
  if(!confirm('Xoá dòng chi phí này?')) return;
  try{
    const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-     body:JSON.stringify({token:CFG.token,action:'deleteExpense',no,adminPassword:adminPasswordRuntime})});
+     body:JSON.stringify({token:CFG.token,action:'deleteExpense',no,adminPassword:adminPassword.chamcong_ctp})});
    const j=await res.json();
    if(j.ok){ toast('✅ Đã xoá'); await ctpLoadAll(); if(currentTripId) $('#ctp_tripSelect').value=currentTripId; ctpLoadTripIntoForm(); }
    else toast(j.error||'Lỗi xoá',true);
@@ -3628,7 +3919,7 @@ $('#btnCtpSaveTrip').onclick=async()=>{
  for(const line of lines){
    try{
      const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-       body:JSON.stringify(Object.assign({token:CFG.token,action:'updateExpense',no:line.no,adminPassword:adminPasswordRuntime}, header))});
+       body:JSON.stringify(Object.assign({token:CFG.token,action:'updateExpense',no:line.no,adminPassword:adminPassword.chamcong_ctp}, header))});
      const j=await res.json(); if(j.ok) ok++; else fail++;
    }catch(err){ fail++; }
  }
@@ -3657,7 +3948,7 @@ $('#btnCtpAddLine').onclick=async()=>{
  try{
    if(isEdit){
      const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-       body:JSON.stringify(Object.assign({token:CFG.token,action:'updateExpense',no:ctpEditingNo,adminPassword:adminPasswordRuntime}, lineFields))});
+       body:JSON.stringify(Object.assign({token:CFG.token,action:'updateExpense',no:ctpEditingNo,adminPassword:adminPassword.chamcong_ctp}, lineFields))});
      const j=await res.json();
      if(!j.ok){ toast(j.error||'Lỗi lưu sửa',true); return; }
      toast('✅ Đã lưu sửa dòng chi phí');
@@ -3667,7 +3958,7 @@ $('#btnCtpAddLine').onclick=async()=>{
      let tripIdToUse=currentTripId||'';
      let ok=0, fail=0;
      for(const eng of engineers){
-       const payload=Object.assign({token:CFG.token, action:'addExpense', adminPassword:adminPasswordRuntime, tripId:tripIdToUse,
+       const payload=Object.assign({token:CFG.token, action:'addExpense', adminPassword:adminPassword.chamcong_ctp, tripId:tripIdToUse,
          requestDate:reqDate, requesterName:eng, dept:'TECH', workingPlace:$('#ctp_f_place').value.trim(),
          fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value}, lineFields);
        const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
@@ -3690,7 +3981,7 @@ $('#btnCtpDeleteTrip').onclick=async()=>{
  if(!confirm('Xoá HẲN toàn bộ đợt công tác này (mọi dòng chi phí)? Không thể hoàn tác.')) return;
  try{
    const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-     body:JSON.stringify({token:CFG.token,action:'deleteExpenseTrip',tripId:currentTripId,adminPassword:adminPasswordRuntime})});
+     body:JSON.stringify({token:CFG.token,action:'deleteExpenseTrip',tripId:currentTripId,adminPassword:adminPassword.chamcong_ctp})});
    const j=await res.json();
    if(j.ok){ toast(`✅ Đã xoá đợt công tác (${j.count||0} dòng)`); await ctpLoadAll(); }
    else toast(j.error||'Lỗi xoá',true);
