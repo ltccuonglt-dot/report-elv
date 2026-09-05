@@ -308,6 +308,13 @@ table.rpt select.status-sel.s-prog{background-color:var(--warn-soft);color:var(-
 table.rpt select.status-sel.s-pend{background-color:var(--danger-soft);color:var(--danger);border-color:transparent}
 table.rpt select.status-sel:disabled{opacity:.5}
 .row-actions{display:flex;gap:6px}
+.ctp-grid{font-size:inherit}
+.ctp-grid td{padding:6px 8px}
+.ctp-grid input.ctp-cell,.ctp-grid select.ctp-cell{width:100%;box-sizing:border-box;font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
+.ctp-grid input.ctp-cell:disabled{background:var(--surface-2);color:var(--muted)}
+.ctp-grid td.num{text-align:right}
+.ctp-menu-pop{position:absolute;top:calc(100% + 6px);right:0;z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow);padding:10px;min-width:220px}
+.ctp-menu-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px}
 .btn-row-view,.btn-row-photos,.btn-row-edit,.btn-row-delete{border:1.5px solid var(--line);background:var(--surface-2);color:var(--muted);width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
 .btn-row-view svg,.btn-row-photos svg,.btn-row-edit svg,.btn-row-delete svg{width:15px;height:15px}
 .btn-row-view:hover{color:var(--info);border-color:var(--info)}
@@ -1073,9 +1080,10 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <div class="card" id="ctpDashDonut" style="margin-bottom:14px"></div>
       <div class="divider"></div>
       <div class="section-title" style="margin-bottom:8px">Đợt công tác</div>
+      <label class="field" style="margin-bottom:8px"><span class="lab">Mở file CTP của kỹ sư (mỗi kỹ sư 1 file cố định)</span><select id="ctp_f_engfilter"><option value="">— Chọn kỹ sư —</option></select></label>
       <select id="ctp_tripSelect" style="margin-bottom:10px"></select>
       <button type="button" class="btn-mini" id="btnCtpNewTrip">+ Tạo đợt công tác mới</button>
-      <p class="hint">Chọn 1 đợt có sẵn ở trên để xem/sửa, hoặc bấm đây để bắt đầu ghi 1 đợt công tác hoàn toàn mới (form bên dưới sẽ trống lại).</p>
+      <p class="hint">Chọn tên kỹ sư ở trên để tự mở lại đúng file CTP của người đó (có sẵn thì mở tiếp, chưa có thì tự tạo mới) — ô bên dưới liệt kê mọi đợt nếu cần xem đợt khác.</p>
 
       <div id="ctpTripForm" style="margin-top:12px">
         <div class="cc-add-grid">
@@ -1103,38 +1111,27 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       </div>
 
       <div class="divider"></div>
-      <div class="section-title" style="margin-bottom:8px">Thêm dòng chi phí</div>
-      <div class="cc-add-grid">
-        <label class="field"><span class="lab">Nội dung chi phí</span>
-          <select id="ctp_f_type">
-            <option value="Công tác phí">Công tác phí (phụ cấp/ngày)</option>
-            <option value="Chi phí thuê xe máy di chuyển">Chi phí thuê xe máy di chuyển</option>
-            <option value="Chi phí lưu trú">Chi phí lưu trú (khách sạn)</option>
-            <option value="Chi phí xe công nghệ">Chi phí xe công nghệ (Grab)</option>
-            <option value="Chi phí xe có vé">Chi phí xe có vé (vé xe)</option>
-            <option value="Chi phí xăng tiêu hao cho di chuyển 30km/l">Chi phí xăng (30km/l)</option>
-          </select>
-        </label>
-        <label class="field" style="grid-column:1/-1"><span class="lab">Diễn giải</span><input type="text" id="ctp_f_desc"></label>
-        <label class="field"><span class="lab">Từ ngày (dòng này)</span><input type="date" id="ctp_f_linefrom"></label>
-        <label class="field"><span class="lab">Đến ngày (dòng này)</span><input type="date" id="ctp_f_lineto"></label>
-        <label class="field" id="ctp_km_wrap" style="display:none"><span class="lab">Km (chỉ dòng xăng)</span><input type="number" id="ctp_f_km" step="0.1"></label>
-        <label class="field"><span class="lab">Số lượng (tự tính, đúng mẫu — không nhập tay)</span><input type="number" id="ctp_f_qty" step="0.1" value="1" readonly style="background:var(--surface-2);color:var(--muted)"></label>
-        <label class="field"><span class="lab">Định mức (đ)</span><input type="number" id="ctp_f_rate" step="1000"></label>
-        <label class="field"><span class="lab">Thành tiền (đ)</span><input type="number" id="ctp_f_amount" step="1000"></label>
-        <label class="field"><span class="lab">Mã vụ việc (dòng này)</span><input type="text" id="ctp_f_linecode"></label>
-        <label class="field"><span class="lab">Tên DA (dòng này)</span><input type="text" id="ctp_f_linename"></label>
-        <label class="field" style="grid-column:1/-1"><span class="lab">Ghi chú</span><input type="text" id="ctp_f_linenote"></label>
-      </div>
-      <div style="display:flex;gap:10px;margin:10px 0">
-        <button type="button" class="btn btn-primary" id="btnCtpAddLine"><span>+ Thêm dòng chi phí</span></button>
-        <button type="button" class="btn btn-ghost" id="btnCtpCancelEdit" style="display:none">Huỷ sửa</button>
+      <div class="section-title" style="margin-bottom:8px">Dòng chi phí — bấm trực tiếp vào ô để sửa, tự lưu như Excel</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+        <button type="button" class="btn btn-primary" id="btnCtpAddLine"><span>+ Thêm dòng</span></button>
+        <div class="ctp-menu-wrap" style="position:relative;margin-left:auto">
+          <button type="button" class="btn-mini" id="btnCtpMoreMenu" aria-haspopup="true" aria-expanded="false">Tuỳ chọn bảng ▾</button>
+          <div class="ctp-menu-pop" id="ctpMoreMenuPop" hidden>
+            <div class="ctp-menu-row"><span>Phóng to / thu nhỏ</span>
+              <div style="display:flex;align-items:center;gap:6px">
+                <button type="button" class="btn-mini" id="btnCtpZoomOut" aria-label="Thu nhỏ">−</button>
+                <span id="ctpZoomLabel" style="min-width:42px;text-align:center;font-weight:700">100%</span>
+                <button type="button" class="btn-mini" id="btnCtpZoomIn" aria-label="Phóng to">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="divider"></div>
-      <div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột</div>
-      <div class="rpt-wrap"><table class="rpt" id="ctpLineTable"><thead><tr>
-        <th>Tên NV</th><th>Nội dung</th><th>Diễn giải</th><th>Km</th><th>SL</th><th>Định mức</th><th>Thành tiền</th><th>Ghi chú</th><th>Sửa</th>
+      <div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột — dùng nút +/− ở trên để phóng to/thu nhỏ bảng</div>
+      <div class="rpt-wrap" id="ctpLineWrap"><table class="rpt ctp-grid" id="ctpLineTable"><thead><tr>
+        <th>Tên NV</th><th>Nội dung</th><th>Diễn giải</th><th>Km</th><th>SL</th><th>Định mức</th><th>Thành tiền</th><th>Ghi chú</th><th>Xoá</th>
       </tr></thead><tbody id="ctpLineBody"></tbody></table></div>
       <div style="text-align:right;font-weight:800;margin:10px 0" id="ctpTotalBox">Tổng cộng: 0 đ</div>
 
@@ -4235,37 +4232,16 @@ $('#ctp_mapUpload').onchange=()=>{
  reader.readAsDataURL(file);
 };
 
-/* Xăng: "Diễn giải" đúng mẫu là câu cố định kèm NGÀY THẬT của dòng này, tự
-   ghép chứ không gõ tay (đúng như file mẫu: "Xăng xe lượt đi và về từ ngày
-   ...đến ngày..."). Loại khác thì chỉ gợi ý câu mặc định, vẫn sửa tay được. */
-function ctpUpdateFuelDesc(){
- if(!$('#ctp_f_type').value.includes('xăng')) return;
- const f=$('#ctp_f_linefrom').value||$('#ctp_f_fromdate').value, t=$('#ctp_f_lineto').value||$('#ctp_f_todate').value;
- $('#ctp_f_desc').value=`Xăng xe lượt đi và về từ ngày ${f?fmtDMYFull(f):'…'} đến ngày ${t?fmtDMYFull(t):'…'}`;
-}
-$('#ctp_f_type').onchange=()=>{
- const isFuel=$('#ctp_f_type').value.includes('xăng');
- $('#ctp_km_wrap').style.display=isFuel?'block':'none';
- if(isFuel){ ctpUpdateFuelDesc(); }
- else{ const t=CTP_TYPES.find(x=>x.v===$('#ctp_f_type').value); if(t && !$('#ctp_f_desc').value) $('#ctp_f_desc').value=t.desc; }
- ctpRecalcAmount();
-};
-['ctp_f_linefrom','ctp_f_lineto'].forEach(id=>$('#'+id).addEventListener('input',ctpUpdateFuelDesc));
-['ctp_f_km','ctp_f_rate'].forEach(id=>$('#'+id).addEventListener('input',ctpRecalcAmount));
 // Số lượng KHÔNG cho gõ tay (đúng mẫu — luôn tự tính): 1 cho mọi loại chi
 // phí thường (1 lần/1 ngày công), riêng xăng tự tính km/30 (lít).
-function ctpRecalcAmount(){
- const isFuel=$('#ctp_f_type').value.includes('xăng');
- const rate=Number($('#ctp_f_rate').value)||0;
- let qty;
+function ctpCalcQtyAmount(expenseType,km,rate){
+ const isFuel=(expenseType||'').includes('xăng');
+ rate=Number(rate)||0;
  if(isFuel){
-   const km=Number($('#ctp_f_km').value)||0;
-   qty=km/30; $('#ctp_f_qty').value=qty?qty.toFixed(3):0;
-   $('#ctp_f_amount').value=Math.round(qty*2*rate);
- } else {
-   qty=1; $('#ctp_f_qty').value=1;
-   $('#ctp_f_amount').value=Math.round(qty*rate);
+   const q=(Number(km)||0)/30;
+   return {quantity:q?Number(q.toFixed(3)):0, amount:Math.round(q*2*rate)};
  }
+ return {quantity:1, amount:Math.round(1*rate)};
 }
 
 async function ctpLoadAll(){
@@ -4274,7 +4250,61 @@ async function ctpLoadAll(){
  ctpAllLines=j.data||[];
  renderCtpDashboard();
  ctpRenderTripSelect();
+ ctpPopulateEngFilter();
 }
+
+// Mỗi kỹ sư có 1 file CTP cố định: chọn tên ở đây tự tìm đúng đợt công tác
+// GẦN NHẤT có tên người đó (mở lại để sửa tiếp), chưa có thì tạo file mới
+// và tick sẵn tên người đó — không cần dò tìm thủ công trong danh sách đợt.
+function ctpPopulateEngFilter(){
+ const cur=$('#ctp_f_engfilter').value;
+ $('#ctp_f_engfilter').innerHTML='<option value="">— Chọn kỹ sư —</option>'+engineerList.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+ if(cur) $('#ctp_f_engfilter').value=cur;
+}
+function ctpOpenEngineerFile(eng){
+ if(!eng) return;
+ const byTrip={};
+ ctpAllLines.forEach(r=>{ (byTrip[r.tripId]=byTrip[r.tripId]||[]).push(r); });
+ let bestId=null, bestDate='';
+ Object.entries(byTrip).forEach(([id,rows])=>{
+   if(!rows.some(r=>r.requesterName===eng)) return;
+   const d=rows[0].requestDate||'';
+   if(!bestId || d>=bestDate){ bestDate=d; bestId=id; }
+ });
+ if(bestId){
+   currentTripId=bestId; $('#ctp_tripSelect').value=bestId; ctpLoadTripIntoForm();
+   toast(`📂 Đã mở file CTP của ${eng}`);
+ } else {
+   ctpNewTrip(); ctpRenderRequesterChecklist(eng);
+   toast(`🆕 Chưa có file, sẽ tạo file CTP mới cho ${eng} khi bạn thêm dòng đầu tiên`);
+ }
+}
+$('#ctp_f_engfilter').onchange=()=>ctpOpenEngineerFile($('#ctp_f_engfilter').value);
+
+// Phóng to/thu nhỏ bảng dòng chi phí, giống Excel — chỉ đổi cỡ chữ của
+// riêng bảng này (không ảnh hưởng phần còn lại của popup), nhớ theo máy.
+let ctpZoom=Number(localStorage.getItem('kt_ctp_zoom')||100);
+function ctpApplyZoom(){
+ $('#ctpLineWrap').style.fontSize=Math.round(12.5*ctpZoom/100)+'px';
+ $('#ctpZoomLabel').textContent=ctpZoom+'%';
+}
+$('#btnCtpZoomIn').onclick=()=>{ ctpZoom=Math.min(200,ctpZoom+10); localStorage.setItem('kt_ctp_zoom',ctpZoom); ctpApplyZoom(); };
+$('#btnCtpZoomOut').onclick=()=>{ ctpZoom=Math.max(50,ctpZoom-10); localStorage.setItem('kt_ctp_zoom',ctpZoom); ctpApplyZoom(); };
+ctpApplyZoom();
+
+// Gom các tuỳ chọn phụ (zoom...) vào 1 menu sổ xuống thay vì để rời rạc
+// nhiều nút trên thanh công cụ — bấm ra ngoài hoặc bấm lại nút để đóng.
+$('#btnCtpMoreMenu').onclick=(e)=>{
+ e.stopPropagation();
+ const open=$('#ctpMoreMenuPop').hidden;
+ $('#ctpMoreMenuPop').hidden=!open;
+ $('#btnCtpMoreMenu').setAttribute('aria-expanded',open?'true':'false');
+};
+document.addEventListener('click',(e)=>{
+ if(!$('#ctpMoreMenuPop').hidden && !e.target.closest('.ctp-menu-wrap')){
+   $('#ctpMoreMenuPop').hidden=true; $('#btnCtpMoreMenu').setAttribute('aria-expanded','false');
+ }
+});
 
 // Dashboard công tác phí — tính trên TOÀN BỘ đợt (không chỉ đợt đang chọn ở
 // dưới), cùng cấu trúc .stats + donut như Dashboard chính của Report ELV.
@@ -4350,55 +4380,86 @@ function ctpLoadTripIntoForm(){
 }
 
 function ctpCurrentLines(){ return currentTripId ? ctpAllLines.filter(r=>r.tripId===currentTripId) : []; }
+// Bảng dòng chi phí kiểu Excel: mỗi ô là input/select sửa trực tiếp, rời ô
+// (blur/change) là tự lưu ngay xuống Supabase — không còn form nhập riêng +
+// danh sách chỉ đọc như trước. ctpLocalRows là bản làm việc của đợt đang mở.
+let ctpLocalRows=[];
+function ctpCurrentLines(){ return currentTripId ? ctpAllLines.filter(r=>r.tripId===currentTripId) : []; }
 function ctpRenderLines(){
- const lines=ctpCurrentLines();
- $('#ctpLineBody').innerHTML=lines.map(r=>`<tr>
-   <td data-label="Tên NV">${esc(r.requesterName)}</td>
-   <td data-label="Nội dung">${esc(r.expenseType)}</td>
-   <td class="issue-cell" data-label="Diễn giải">${esc(r.description)}</td>
-   <td class="num" data-label="Km">${r.km||''}</td>
-   <td class="num" data-label="SL">${r.quantity||''}</td>
-   <td class="num" data-label="Định mức">${(r.rate||0).toLocaleString('vi-VN')}</td>
+ ctpLocalRows=ctpCurrentLines().map(r=>Object.assign({},r));
+ ctpRenderLinesFromLocal();
+}
+function ctpRowHtml(r,i){
+ const isFuel=(r.expenseType||'').includes('xăng');
+ return `<tr data-i="${i}">
+   <td data-label="Tên NV"><select class="ctp-cell" data-f="requesterName">${engineerList.map(n=>`<option value="${esc(n)}" ${n===r.requesterName?'selected':''}>${esc(n)}</option>`).join('')}</select></td>
+   <td data-label="Nội dung"><select class="ctp-cell" data-f="expenseType">${CTP_TYPES.map(t=>`<option value="${esc(t.v)}" ${t.v===r.expenseType?'selected':''}>${esc(t.desc)}</option>`).join('')}</select></td>
+   <td class="issue-cell" data-label="Diễn giải"><input class="ctp-cell" data-f="description" type="text" value="${esc(r.description||'')}"></td>
+   <td class="num" data-label="Km"><input class="ctp-cell" data-f="km" type="number" step="0.1" value="${r.km||''}" ${isFuel?'':'disabled'}></td>
+   <td class="num" data-label="SL">${r.quantity||0}</td>
+   <td class="num" data-label="Định mức"><input class="ctp-cell" data-f="rate" type="number" step="1000" value="${r.rate||''}"></td>
    <td class="num" data-label="Thành tiền">${(r.amount||0).toLocaleString('vi-VN')}</td>
-   <td data-label="Ghi chú">${esc(r.note)}</td>
-   <td data-label="Sửa"><div class="row-actions">
-     <button type="button" class="btn-row-edit" data-no="${esc(r.no)}" data-act="edit" aria-label="Sửa dòng" title="Sửa dòng chi phí này"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-     <button type="button" class="btn-row-delete" data-no="${esc(r.no)}" data-act="del" aria-label="Xoá dòng" title="Xoá dòng chi phí này"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-   </div></td>
- </tr>`).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:14px">Chưa có dòng chi phí nào</td></tr>`;
- $$('#ctpLineBody .btn-row-edit').forEach(b=>b.onclick=()=>ctpEditLine(b.dataset.no));
- $$('#ctpLineBody .btn-row-delete').forEach(b=>b.onclick=()=>ctpDeleteLine(b.dataset.no));
- const total=lines.reduce((s,r)=>s+(Number(r.amount)||0),0);
- $('#ctpTotalBox').textContent=`Tổng cộng: ${total.toLocaleString('vi-VN')} đ`;
+   <td data-label="Ghi chú"><input class="ctp-cell" data-f="note" type="text" value="${esc(r.note||'')}"></td>
+   <td data-label="Xoá"><button type="button" class="btn-row-delete" data-i="${i}" aria-label="Xoá dòng" title="Xoá dòng chi phí này"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></td>
+ </tr>`;
 }
-
-let ctpEditingNo=null;
-function ctpEditLine(no){
- const r=ctpCurrentLines().find(x=>String(x.no)===String(no));
- if(!r) return;
- ctpEditingNo=no;
- $('#ctp_f_type').value=r.expenseType||'Công tác phí'; $('#ctp_km_wrap').style.display=(r.expenseType||'').includes('xăng')?'block':'none';
- $('#ctp_f_desc').value=r.description||''; $('#ctp_f_linefrom').value=r.lineFromDate||''; $('#ctp_f_lineto').value=r.lineToDate||'';
- $('#ctp_f_km').value=r.km||''; $('#ctp_f_qty').value=r.quantity||''; $('#ctp_f_rate').value=r.rate||''; $('#ctp_f_amount').value=r.amount||'';
- $('#ctp_f_linecode').value=r.projectCode||''; $('#ctp_f_linename').value=r.projectName||'';
- $('#ctp_f_linenote').value=r.note||'';
- $('#btnCtpAddLine span').textContent='💾 Lưu sửa dòng #'+no;
- $('#btnCtpCancelEdit').style.display='inline-block';
- $('#ctp_f_type').scrollIntoView({behavior:'smooth',block:'center'});
+function ctpRenderLinesFromLocal(){
+ $('#ctpLineBody').innerHTML=ctpLocalRows.map((r,i)=>ctpRowHtml(r,i)).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:14px">Chưa có dòng chi phí nào — bấm "+ Thêm dòng"</td></tr>`;
+ $$('#ctpLineBody .ctp-cell').forEach(el=>{
+   const evt=el.tagName==='SELECT'?'change':'blur';
+   el.addEventListener(evt,()=>ctpCellChanged(Number(el.closest('tr').dataset.i),el.dataset.f,el));
+ });
+ $$('#ctpLineBody .btn-row-delete').forEach(b=>b.onclick=()=>ctpDeleteLocalRow(Number(b.dataset.i)));
+ const total=ctpLocalRows.reduce((s,r)=>s+(Number(r.amount)||0),0);
+ $('#ctpTotalBox').innerHTML=`Tổng cộng: ${total.toLocaleString('vi-VN')} đ<div style="font-weight:400;font-size:12.5px;color:var(--muted);margin-top:2px">Bằng chữ: ${esc(soThanhChu(total))}</div>`;
 }
-$('#btnCtpCancelEdit').onclick=()=>{
- ctpEditingNo=null;
- ['ctp_f_desc','ctp_f_km','ctp_f_linecode','ctp_f_linename','ctp_f_linenote'].forEach(id=>$('#'+id).value='');
- $('#ctp_f_qty').value='1'; $('#ctp_f_rate').value=''; $('#ctp_f_amount').value='';
- $('#btnCtpAddLine span').textContent='+ Thêm dòng chi phí';
- $('#btnCtpCancelEdit').style.display='none';
-};
-
-async function ctpDeleteLine(no){
+async function ctpCellChanged(i,field,el){
+ const row=ctpLocalRows[i]; if(!row) return;
+ row[field]=el.type==='number'?(Number(el.value)||0):el.value;
+ if(field==='expenseType'||field==='km'||field==='rate'){
+   Object.assign(row,ctpCalcQtyAmount(row.expenseType,row.km,row.rate));
+   if(field==='expenseType' && !row.description){ const t=CTP_TYPES.find(x=>x.v===row.expenseType); if(t) row.description=t.desc; }
+ }
+ await ctpPersistRow(i);
+ ctpRenderLinesFromLocal();
+}
+async function ctpPersistRow(i){
+ const row=ctpLocalRows[i]; if(!row) return;
+ const payload={
+   tripId:currentTripId||'', requestDate:$('#ctp_f_reqdate').value||vnTodayIso(),
+   requesterName:row.requesterName||engineerList[0]||'', dept:'TECH', workingPlace:ctpPlaceValue(),
+   fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value,
+   expenseType:row.expenseType||'Công tác phí', description:row.description||'',
+   lineFromDate:row.lineFromDate||$('#ctp_f_fromdate').value, lineToDate:row.lineToDate||$('#ctp_f_todate').value,
+   km:Number(row.km)||0, quantity:Number(row.quantity)||0, rate:Number(row.rate)||0, amount:Number(row.amount)||0,
+   serviceType:segVal('ctp_f_tripservice'),
+   projectCode:$('#ctp_f_pjcode').value.trim(), projectName:$('#ctp_f_pjname').value.trim(),
+   note:row.note||'', mapImage:ctpMapValueForSave()
+ };
+ if(row.no){
+   const j=await DB.updateExpenseLine(row.no,payload,adminPassword.chamcong_ctp);
+   if(!j.ok){ toast(j.error||'Lỗi lưu dòng',true); return; }
+ } else {
+   const j=await DB.addExpenseLine(payload,adminPassword.chamcong_ctp);
+   if(!j.ok){ toast(j.error||'Lỗi lưu dòng',true); return; }
+   row.no=j.lineId; currentTripId=j.tripId||currentTripId;
+ }
+ const merged=Object.assign({},row,{tripId:currentTripId});
+ const idx=ctpAllLines.findIndex(x=>x.no===row.no);
+ if(idx>=0) ctpAllLines[idx]=merged; else ctpAllLines.push(merged);
+ renderCtpDashboard();
+}
+async function ctpDeleteLocalRow(i){
+ const row=ctpLocalRows[i]; if(!row) return;
+ if(!row.no){ ctpLocalRows.splice(i,1); ctpRenderLinesFromLocal(); return; }
  if(!confirm('Xoá dòng chi phí này?')) return;
- const j=await DB.deleteExpenseLine(no,adminPassword.chamcong_ctp);
- if(j.ok){ toast('✅ Đã xoá'); await ctpLoadAll(); if(currentTripId) $('#ctp_tripSelect').value=currentTripId; ctpLoadTripIntoForm(); }
- else toast(j.error||'Lỗi xoá',true);
+ const j=await DB.deleteExpenseLine(row.no,adminPassword.chamcong_ctp);
+ if(!j.ok){ toast(j.error||'Lỗi xoá',true); return; }
+ toast('✅ Đã xoá');
+ ctpAllLines=ctpAllLines.filter(x=>x.no!==row.no);
+ ctpLocalRows.splice(i,1);
+ renderCtpDashboard();
+ ctpRenderLinesFromLocal();
 }
 
 function ctpMapValueForSave(){ return ctpUploadedMapDataUrl || $('#ctp_mapSelect').value || ''; }
@@ -4437,47 +4498,19 @@ $('#btnCtpSaveTrip').onclick=async()=>{
  await ctpLoadAll(); $('#ctp_tripSelect').value=currentTripId; ctpLoadTripIntoForm();
 };
 
-/* Thêm dòng chi phí — theo đúng mẫu, "Tên NV" là TỪNG NGƯỜI riêng (không phải
-   chuỗi gộp nhiều tên): nếu đang chọn nhiều kỹ sư cùng đi đợt này, mỗi người
-   tự động được tạo 1 dòng chi phí riêng (cùng nội dung/số tiền), thay vì gộp
-   chung 1 dòng ghi tên nhiều người — đúng cách kế toán claim từng người. Khi
-   SỬA (edit) 1 dòng có sẵn thì không đụng tới người của dòng đó. */
+/* Thêm 1 dòng trống vào bảng rồi lưu ngay (đúng kiểu Excel — thêm dòng là
+   có ngay, sửa từng ô sau đó tự lưu). Tên NV mặc định lấy người đầu tiên
+   trong danh sách "Người đề nghị" phía trên (đổi lại ngay trong ô nếu cần). */
 $('#btnCtpAddLine').onclick=async()=>{
- const reqDate=$('#ctp_f_reqdate').value;
- if(!reqDate){ toast('Chọn ngày đề nghị ở phần đầu',true); return; }
- const isEdit=!!ctpEditingNo;
- const lineFields={
-   expenseType:$('#ctp_f_type').value, description:$('#ctp_f_desc').value.trim(),
-   lineFromDate:$('#ctp_f_linefrom').value||$('#ctp_f_fromdate').value, lineToDate:$('#ctp_f_lineto').value||$('#ctp_f_todate').value,
-   km:Number($('#ctp_f_km').value)||0, quantity:Number($('#ctp_f_qty').value)||0, rate:Number($('#ctp_f_rate').value)||0,
-   amount:Number($('#ctp_f_amount').value)||0, serviceType:segVal('ctp_f_tripservice'),
-   projectCode:$('#ctp_f_linecode').value.trim()||$('#ctp_f_pjcode').value.trim(), projectName:$('#ctp_f_linename').value.trim()||$('#ctp_f_pjname').value.trim(),
-   note:$('#ctp_f_linenote').value.trim(), mapImage:ctpMapValueForSave()
- };
- if(isEdit){
-   const j=await DB.updateExpenseLine(ctpEditingNo,lineFields,adminPassword.chamcong_ctp);
-   if(!j.ok){ toast(j.error||'Lỗi lưu sửa',true); return; }
-   toast('✅ Đã lưu sửa dòng chi phí');
- } else {
-   const engineers=ctpRequesterValue().split(' - ').map(s=>s.trim()).filter(Boolean);
-   if(!engineers.length){ toast('Chọn ít nhất 1 người đề nghị',true); return; }
-   let tripIdToUse=currentTripId||'';
-   let ok=0, fail=0;
-   for(const eng of engineers){
-     const payload=Object.assign({tripId:tripIdToUse,
-       requestDate:reqDate, requesterName:eng, dept:'TECH', workingPlace:ctpPlaceValue(),
-       fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value}, lineFields);
-     const j=await DB.addExpenseLine(payload,adminPassword.chamcong_ctp);
-     if(j.ok){ ok++; tripIdToUse=j.tripId||tripIdToUse; } else fail++;
-   }
-   currentTripId=tripIdToUse;
-   if(fail) toast(`⚠️ Đã thêm ${ok} dòng, lỗi ${fail} dòng`,true);
-   else toast(engineers.length>1?`✅ Đã thêm ${ok} dòng (mỗi người 1 dòng)`:'✅ Đã thêm dòng chi phí');
- }
- ['ctp_f_desc','ctp_f_km','ctp_f_linecode','ctp_f_linename','ctp_f_linenote'].forEach(id=>$('#'+id).value='');
- $('#ctp_f_qty').value='1'; $('#ctp_f_rate').value=''; $('#ctp_f_amount').value='';
- ctpEditingNo=null; $('#btnCtpAddLine span').textContent='+ Thêm dòng chi phí'; $('#btnCtpCancelEdit').style.display='none';
- await ctpLoadAll(); $('#ctp_tripSelect').value=currentTripId; ctpLoadTripIntoForm();
+ if(!$('#ctp_f_reqdate').value){ toast('Chọn ngày đề nghị ở phần đợt công tác trước',true); return; }
+ const defaultEng=ctpRequesterValue().split(' - ')[0]||engineerList[0]||'';
+ const defType=CTP_TYPES[0];
+ const row={no:null, requesterName:defaultEng, expenseType:defType.v, description:defType.desc, km:0, note:''};
+ Object.assign(row,ctpCalcQtyAmount(row.expenseType,row.km,0));
+ row.rate=0;
+ ctpLocalRows.push(row);
+ await ctpPersistRow(ctpLocalRows.length-1);
+ ctpRenderLinesFromLocal();
 };
 
 $('#btnCtpDeleteTrip').onclick=async()=>{
