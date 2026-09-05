@@ -113,7 +113,11 @@ body{background:var(--ground);color:var(--ink);font-family:var(--font);font-size
 }
 .banner svg{width:16px;height:16px;flex:none}
 
-main{flex:1;padding:14px 14px 150px;overflow-y:auto} /* chừa đủ chỗ cho nút nổi (Cài đặt ứng dụng/Xuất Excel) không đè lên nội dung cuối trang */
+/* Chừa chỗ cho 2 nút nổi (Cài đặt ứng dụng / Xuất Excel) — nút nổi cao 52px,
+   cách đáy 78px, nên nội dung cuối trang phải cách đáy > 130px mới không bị
+   đè. Trước đây để 150px nhưng chưa tính safe-area của iPhone nên nút "Gửi
+   phiếu" vẫn bị nút nổi che mất một góc. */
+main{flex:1;padding:14px 14px calc(env(safe-area-inset-bottom) + 168px);overflow-y:auto}
 .view{display:none;animation:fade .25s ease}
 .view.active{display:block}
 @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -126,12 +130,28 @@ label.field:last-child{margin-bottom:0}
 .lab{display:block;font-size:13px;font-weight:600;margin-bottom:7px;color:var(--ink)}
 .lab .req{color:var(--brand);font-weight:700}
 .hint{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:5px}
-.attach-preview{margin-top:10px;display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 10px}
-.attach-preview span{font-size:13px;color:var(--muted);word-break:break-all;flex:1}
-.attach-uploading{display:none;font-size:13px;color:var(--muted);margin-top:6px}
-.other-photo-item{display:flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:6px 10px;font-size:13px}
-.other-photo-item span{flex:1;color:var(--muted);word-break:break-all}
-.other-photo-item img{width:32px;height:32px;object-fit:cover;border-radius:6px}
+/* ===== Đính kèm ảnh/file ===== */
+.attach-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.attach-btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:54px;padding:12px 10px;
+  background:var(--surface-2);border:1.5px dashed var(--line);border-radius:var(--radius-sm);
+  color:var(--ink);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;line-height:1.25;
+  transition:border-color .15s,background .15s,color .15s,transform .1s}
+.attach-btn svg{width:19px;height:19px;flex:none;color:var(--brand)}
+.attach-btn:active{transform:scale(.98)}
+.attach-btn:hover{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-ink)}
+.attach-preview{margin-top:9px;display:flex;align-items:center;gap:10px;background:var(--brand-soft);
+  border:1.5px solid color-mix(in srgb,var(--brand) 35%,transparent);border-radius:var(--radius-sm);padding:8px 10px}
+.attach-thumb{width:40px;height:40px;flex:none;border-radius:8px;object-fit:cover;border:1px solid var(--line);background:var(--surface)}
+.attach-file-ico{width:40px;height:40px;flex:none;border-radius:8px;border:1px solid var(--line);background:var(--surface);
+  display:flex;align-items:center;justify-content:center;color:var(--brand)}
+.attach-file-ico svg{width:20px;height:20px}
+.attach-preview .nm{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--brand-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.attach-uploading{display:none;font-size:13px;color:var(--brand);font-weight:600;margin-top:8px}
+.other-photo-item{display:flex;align-items:center;gap:9px;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:7px 10px;font-size:13px}
+.other-photo-item .nm{flex:1;min-width:0;color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.other-photo-item img{width:36px;height:36px;object-fit:cover;border-radius:7px;border:1px solid var(--line);flex:none}
+.attach-count{font-size:12px;font-weight:700;color:var(--brand);margin-top:8px}
 
 input[type=text],textarea,select{width:100%;font-family:var(--font);font-size:15px;color:var(--ink);background:var(--surface-2);border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:12px 13px;transition:border-color .15s,box-shadow .15s}
 input.masked{-webkit-text-security:disc;text-security:disc}
@@ -297,11 +317,23 @@ table.rpt select.status-sel:disabled{opacity:.5}
 .donut-legend .dot{width:10px;height:10px;border-radius:3px;flex:none}
 .donut-legend .lv{margin-left:auto;font-family:var(--mono);font-weight:700;color:var(--muted)}
 
-.btn{width:100%;border:none;border-radius:var(--radius-sm);padding:15px;font-family:var(--font);font-size:15.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;transition:transform .1s,filter .15s}
+/* Kiểu MẶC ĐỊNH của .btn: nút phụ (tông tím nhạt, viền mảnh) — trước đây để
+   trống nên trình duyệt tự tô nền xám + chữ xanh mặc định, lệch hẳn tông app. */
+.btn{width:100%;border:1.5px solid color-mix(in srgb,var(--brand) 22%,transparent);
+  background:var(--brand-soft);color:var(--brand-ink);
+  border-radius:var(--radius-sm);padding:14px;font-family:var(--font);font-size:15px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;
+  transition:transform .1s,filter .15s,background .15s,border-color .15s}
+.btn svg{width:18px;height:18px;flex:none}
 .btn:active{transform:scale(.985)}
-.btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand-strong));color:#fff;box-shadow:0 6px 18px -6px var(--brand)}
+.btn:hover{border-color:var(--brand)}
+.btn:disabled{filter:grayscale(.4) opacity(.6);cursor:default}
+.btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand-strong));color:#fff;border-color:transparent;
+  font-size:15.5px;padding:15px;box-shadow:0 6px 18px -6px var(--brand)}
 .btn-primary:disabled{filter:grayscale(.5) opacity(.6);cursor:default}
 .btn-ghost{background:var(--surface-2);color:var(--ink);border:1.5px solid var(--line)}
+.btn-danger{background:var(--danger-soft);color:var(--danger);border-color:color-mix(in srgb,var(--danger) 30%,transparent)}
+.btn-danger:hover{border-color:var(--danger)}
 .btn svg{width:19px;height:19px}
 .btn .spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -548,40 +580,41 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
           <label class="field">
             <span class="lab">Ảnh Biên bản làm việc</span>
-            <div style="display:flex;gap:10px;flex-wrap:wrap">
-              <button type="button" class="btn" id="btnBbImgCamera" style="flex:1;min-width:140px">📷 Chụp ảnh</button>
-              <button type="button" class="btn" id="btnBbImgFile" style="flex:1;min-width:140px">📎 Chọn ảnh</button>
+            <div class="attach-grid">
+              <button type="button" class="attach-btn" id="btnBbImgCamera">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Chụp ảnh</button>
+              <button type="button" class="attach-btn" id="btnBbImgFile">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Chọn ảnh</button>
             </div>
             <input type="file" id="f_bbimg_camera" accept="image/*" capture="environment" hidden />
             <input type="file" id="f_bbimg_file" accept="image/*" hidden />
-            <div id="bbImgPreview" class="attach-preview" style="display:none">
-              <span id="bbImgPreviewName"></span>
-              <button type="button" class="btn-row-delete" id="btnBbImgRemove" aria-label="Bỏ ảnh biên bản">✕</button>
-            </div>
-            <div id="bbImgUploading" class="attach-uploading" style="display:none">⏳ Đang tải lên...</div>
+            <div id="bbImgPreview" class="attach-preview" style="display:none"></div>
+            <div id="bbImgUploading" class="attach-uploading">Đang tải lên…</div>
           </label>
 
           <label class="field">
             <span class="lab">File PDF Biên bản làm việc</span>
-            <button type="button" class="btn" id="btnBbPdfFile" style="width:100%">📄 Chọn file PDF</button>
+            <button type="button" class="attach-btn" id="btnBbPdfFile" style="width:100%">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>Chọn file PDF</button>
             <input type="file" id="f_bbpdf_file" accept="application/pdf" hidden />
-            <div id="bbPdfPreview" class="attach-preview" style="display:none">
-              <span id="bbPdfPreviewName"></span>
-              <button type="button" class="btn-row-delete" id="btnBbPdfRemove" aria-label="Bỏ file PDF biên bản">✕</button>
-            </div>
-            <div id="bbPdfUploading" class="attach-uploading" style="display:none">⏳ Đang tải lên...</div>
+            <div id="bbPdfPreview" class="attach-preview" style="display:none"></div>
+            <div id="bbPdfUploading" class="attach-uploading">Đang tải lên…</div>
           </label>
 
           <label class="field" style="margin-bottom:0">
-            <span class="lab">Ảnh khác (chụp thêm để theo dõi, được nhiều ảnh)</span>
-            <div style="display:flex;gap:10px;flex-wrap:wrap">
-              <button type="button" class="btn" id="btnOtherCamera" style="flex:1;min-width:140px">📷 Chụp thêm</button>
-              <button type="button" class="btn" id="btnOtherFile" style="flex:1;min-width:140px">📎 Chọn nhiều ảnh</button>
+            <span class="lab" style="margin-bottom:2px">Ảnh khác</span>
+            <span class="hint" style="margin:0 0 7px">Chụp thêm để theo dõi — chọn được nhiều ảnh</span>
+            <div class="attach-grid">
+              <button type="button" class="attach-btn" id="btnOtherCamera">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Chụp thêm</button>
+              <button type="button" class="attach-btn" id="btnOtherFile">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Chọn ảnh</button>
             </div>
             <input type="file" id="f_other_camera" accept="image/*" capture="environment" hidden />
             <input type="file" id="f_other_file" accept="image/*" multiple hidden />
-            <div id="otherPhotosList" style="margin-top:8px;display:flex;flex-direction:column;gap:6px"></div>
-            <div id="otherUploading" class="attach-uploading" style="display:none">⏳ Đang tải lên...</div>
+            <div id="otherPhotosCount" class="attach-count" style="display:none"></div>
+            <div id="otherPhotosList" style="margin-top:8px;display:flex;flex-direction:column;gap:7px"></div>
+            <div id="otherUploading" class="attach-uploading">Đang tải lên…</div>
           </label>
         </div>
 
@@ -785,7 +818,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     <div class="section-title" style="margin-bottom:8px;color:var(--danger)">Kỳ dữ liệu (6 tháng)</div>
     <div id="periodInfoBox" class="period-notice" style="margin-bottom:10px">Đang kiểm tra…</div>
     <p class="desc" style="margin-top:-4px">Cứ 6 tháng nên xóa hết phiếu cũ để Sheet luôn gọn, app luôn nhanh. Toàn bộ phiếu sẽ được LƯU LẠI vào backup (nối thêm, không mất) trước khi xóa Sheet chính — nên sau 1 năm (2 lần xóa), 2 năm (4 lần)... backup vẫn còn đủ. Việc xóa Sheet chính KHÔNG THỂ HOÀN TÁC — chỉ bấm khi chắc chắn.</p>
-    <button type="button" class="btn" id="btnClearAllData" style="margin-bottom:16px;background:var(--danger-soft);color:var(--danger);border:1.5px solid var(--danger)">
+    <button type="button" class="btn btn-danger" id="btnClearAllData" style="margin-bottom:16px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Xóa toàn bộ dữ liệu</span>
     </button>
     <div class="divider"></div>
@@ -890,7 +923,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg><span>Xem trước &amp; Xuất Excel chấm công</span>
       </button>
       <p class="hint" style="margin-bottom:10px">Xuất đúng bảng chấm công tháng đang xem hiện tại (theo bộ lọc Tháng/Năm/Nhân viên phía trên) ra file Excel, giữ nguyên định dạng mẫu công ty.</p>
-      <button type="button" class="btn" id="btnCcClearMonth" style="margin-bottom:6px;background:var(--danger-soft);color:var(--danger);border:1.5px solid var(--danger)">
+      <button type="button" class="btn btn-danger" id="btnCcClearMonth" style="margin-bottom:6px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Xoá chấm công tháng này (làm lại tháng mới)</span>
       </button>
       <p class="hint" style="margin-bottom:10px">Xoá HẲN toàn bộ dòng chấm công của tháng đang xem (mọi nhân viên) — dùng sau khi đã xuất Excel lưu lại, để bắt đầu chấm công tháng mới. Không thể hoàn tác.</p>
@@ -986,7 +1019,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg><span>In / Xuất PDF công tác phí</span>
       </button>
       <p class="hint" style="margin-bottom:10px">Xem trước rồi in/xuất PDF "Giấy đề nghị thanh toán chi phí công tác" cho đợt đang chọn — kèm bản đồ nếu đã chọn ở trên.</p>
-      <button type="button" class="btn" id="btnCtpDeleteTrip" style="margin-bottom:6px;background:var(--danger-soft);color:var(--danger);border:1.5px solid var(--danger)">
+      <button type="button" class="btn btn-danger" id="btnCtpDeleteTrip" style="margin-bottom:6px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Xoá hẳn đợt công tác này</span>
       </button>
       <p class="hint">Xoá TOÀN BỘ đợt công tác đang chọn — mọi dòng chi phí của tất cả kỹ sư trong đợt này đều mất theo. Không thể hoàn tác.</p>
@@ -1085,10 +1118,18 @@ const DB={
    const {data,error}=await sb.rpc('verify_admin',{p_password:pass});
    return error?{ok:false,error:error.message}:{ok:!!data};
  },
+ // PostgREST mặc định chỉ trả tối đa 1000 dòng — phải tự phân trang, nếu
+ // không app sẽ âm thầm thiếu phiếu khi dữ liệu vượt 1000 (rất khó phát hiện).
  async listTicketsFull(){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
-   const {data,error}=await sb.from('tickets').select('*').order('id');
-   return error?{ok:false,error:error.message}:{ok:true,data:data.map(mapTicket)};
+   const all=[]; const PAGE=1000;
+   for(let from=0;;from+=PAGE){
+     const {data,error}=await sb.from('tickets').select('*').order('id').range(from,from+PAGE-1);
+     if(error) return {ok:false,error:error.message};
+     all.push(...data);
+     if(data.length<PAGE) break;
+   }
+   return {ok:true,data:all.map(mapTicket)};
  },
  async listTickets(year,month){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
@@ -1542,19 +1583,32 @@ if(localStorage.getItem('kt_cus'))$('#f_customer').value=localStorage.getItem('k
 let bbImage={url:null,name:null};
 let bbPdf={url:null,name:null};
 let otherPhotos=[]; // ảnh MỚI thêm trong phiên sửa/tạo này — {url,name}, chưa gắn ticket_id
+const ICO_X='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+const ICO_PDF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
 function renderBbImagePreview(){
  const wrap=$('#bbImgPreview');
- if(bbImage.url){ wrap.style.display='flex'; $('#bbImgPreviewName').textContent='🖼 '+bbImage.name; }
- else wrap.style.display='none';
+ if(!bbImage.url){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+ wrap.style.display='flex';
+ wrap.innerHTML=`<img class="attach-thumb" src="${esc(bbImage.url)}" alt="" onerror="this.style.display='none'">
+   <span class="nm">${esc(bbImage.name||'Ảnh biên bản')}</span>
+   <button type="button" class="btn-row-delete" id="btnBbImgRemove" aria-label="Bỏ ảnh biên bản">${ICO_X}</button>`;
+ $('#btnBbImgRemove').onclick=()=>{bbImage={url:null,name:null}; renderBbImagePreview();};
 }
 function renderBbPdfPreview(){
  const wrap=$('#bbPdfPreview');
- if(bbPdf.url){ wrap.style.display='flex'; $('#bbPdfPreviewName').textContent='📄 '+bbPdf.name; }
- else wrap.style.display='none';
+ if(!bbPdf.url){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+ wrap.style.display='flex';
+ wrap.innerHTML=`<span class="attach-file-ico">${ICO_PDF}</span>
+   <span class="nm">${esc(bbPdf.name||'File PDF')}</span>
+   <button type="button" class="btn-row-delete" id="btnBbPdfRemove" aria-label="Bỏ file PDF">${ICO_X}</button>`;
+ $('#btnBbPdfRemove').onclick=()=>{bbPdf={url:null,name:null}; renderBbPdfPreview();};
 }
 function renderOtherPhotosList(){
+ const cnt=$('#otherPhotosCount');
+ cnt.style.display=otherPhotos.length?'block':'none';
+ cnt.textContent=otherPhotos.length?`Đã chọn ${otherPhotos.length} ảnh`:'';
  $('#otherPhotosList').innerHTML=otherPhotos.map((p,i)=>
-   `<div class="other-photo-item"><img src="${esc(p.url)}" onerror="this.style.display='none'"><span>${esc(p.name)}</span><button type="button" class="btn-row-delete" data-i="${i}" aria-label="Bỏ ảnh này">✕</button></div>`
+   `<div class="other-photo-item"><img src="${esc(p.url)}" alt="" onerror="this.style.display='none'"><span class="nm">${esc(p.name)}</span><button type="button" class="btn-row-delete" data-i="${i}" aria-label="Bỏ ảnh này">${ICO_X}</button></div>`
  ).join('');
  $$('#otherPhotosList button').forEach(b=>b.onclick=()=>{otherPhotos.splice(Number(b.dataset.i),1); renderOtherPhotosList();});
 }
@@ -1593,10 +1647,8 @@ $('#btnBbImgCamera').onclick=()=>$('#f_bbimg_camera').click();
 $('#btnBbImgFile').onclick=()=>$('#f_bbimg_file').click();
 $('#f_bbimg_camera').onchange=e=>{handleBbImage(e.target.files[0]); e.target.value='';};
 $('#f_bbimg_file').onchange=e=>{handleBbImage(e.target.files[0]); e.target.value='';};
-$('#btnBbImgRemove').onclick=()=>{bbImage={url:null,name:null}; renderBbImagePreview();};
 $('#btnBbPdfFile').onclick=()=>$('#f_bbpdf_file').click();
 $('#f_bbpdf_file').onchange=e=>{handleBbPdf(e.target.files[0]); e.target.value='';};
-$('#btnBbPdfRemove').onclick=()=>{bbPdf={url:null,name:null}; renderBbPdfPreview();};
 $('#btnOtherCamera').onclick=()=>$('#f_other_camera').click();
 $('#btnOtherFile').onclick=()=>$('#f_other_file').click();
 $('#f_other_camera').onchange=e=>{handleOtherFiles([...e.target.files]); e.target.value='';};
@@ -1905,6 +1957,9 @@ $$('#histSource button').forEach(b=>b.onclick=()=>{
    : 'Đang xem dữ liệu đã sao lưu trong Google Sheet (tab "Tickets"). Đây là dữ liệu chỉ đọc — muốn cập nhật thì bấm "Đồng bộ Supabase → Google Sheet" trong ⚙️ Cài đặt.';
  if(histSource==='archived') loadArchivedTickets(false); else renderHistory();
 });
+// Nút "Làm mới" ở đầu trang: khi đang xem dữ liệu lưu trữ thì tải lại từ Sheet
+// (trước đây chỉ tải lại dữ liệu Supabase, người dùng tưởng nút bị hỏng).
+function refreshCurrentHistorySource(){ if(histSource==='archived') loadArchivedTickets(true); }
 function renderHistory(){
  const fYear=$('#histYear').value, fMonth=$('#histMonth').value, fDay=$('#histDay').value, fWeek=$('#histWeek').value;
  const q=($('#histSearch').value||'').trim().toLowerCase();
@@ -2257,7 +2312,7 @@ $('#mgrCustomer').onchange=renderManager;
 $('#mgrSystem').onchange=renderManager;
 $('#mgrPriority').onchange=renderManager;
 $('#mgrWorkType').onchange=renderManager;
-$('#btnRefresh').onclick=()=>{loadManager();toast('Đã làm mới')};
+$('#btnRefresh').onclick=()=>{loadManager();refreshCurrentHistorySource();toast('Đã làm mới')};
 /* Làm mới TOÀN BỘ TRANG (không chỉ dữ liệu) — tải lại bản mới nhất từ server,
    bỏ qua cache trình duyệt, dùng khi vừa cập nhật app mà máy vẫn hiện bản cũ. */
 $('#btnPageReload').onclick=()=>{ location.href=location.pathname+'?v='+Date.now(); };
@@ -2363,7 +2418,13 @@ $('#btnSyncBackup').onclick=async()=>{
    const tickets=tj.data||[];
    if(!tickets.length){ box.textContent='Chưa có phiếu nào để sao lưu.'; btn.disabled=false; return; }
    // gom ảnh "khác" theo từng phiếu (1 truy vấn, gộp lại phía app)
-   const {data:allPhotos}=await sb.from('ticket_photos').select('ticket_id,url');
+   const allPhotos=[]; // cũng phải phân trang vì giới hạn 1000 dòng
+   for(let from=0;;from+=1000){
+     const {data,error}=await sb.from('ticket_photos').select('ticket_id,url').order('id').range(from,from+999);
+     if(error) throw new Error(error.message);
+     allPhotos.push(...data);
+     if(data.length<1000) break;
+   }
    const photoMap={};
    (allPhotos||[]).forEach(p=>{ (photoMap[p.ticket_id]=photoMap[p.ticket_id]||[]).push(p.url); });
    const rows=tickets.map(t=>({id:t.no,date:t.date,customer:t.customer,system:t.system,issue:t.issue,
@@ -2381,6 +2442,7 @@ $('#btnSyncBackup').onclick=async()=>{
    box.className='period-notice';
    box.textContent=`✅ Đã sao lưu ${rows.length} phiếu sang Google Sheet (thêm mới ${added}, cập nhật ${updated}).`;
    toast(`✅ Đã sao lưu ${rows.length} phiếu sang Google Sheet`);
+   archivedData=null; // buộc mục Lịch sử tải lại bản lưu trữ mới nhất
  }catch(err){
    box.className='period-notice overdue'; box.textContent='Lỗi: '+err.message;
    toast('⚠️ Sao lưu thất bại',true);
@@ -2442,22 +2504,30 @@ $('#btnClearAllData').onclick=async()=>{
 /* ===== Chuyển ảnh/PDF đính kèm của phiếu cũ (>6 tháng) sang Google Drive,
    xóa bản gốc khỏi Supabase Storage để giải phóng dung lượng free tier.
    Thủ công, admin tự bấm khi cần — không tự động chạy định kỳ. */
+/* Chỉ file còn nằm trên Supabase Storage mới cần chuyển. File đã ở Drive rồi
+   (lần chạy trước) phải BỎ QUA — nếu không mỗi lần bấm nút lại tải về rồi
+   tạo thêm 1 bản sao mới trên Drive, vừa trùng vừa tốn dung lượng Drive. */
+function isSupabaseStorageUrl(u){ return /\/storage\/v1\/object\/public\/ticket-attachments\//.test(u||''); }
 async function findOldTicketAttachments(){
  const cutoff=new Date(); cutoff.setMonth(cutoff.getMonth()-6);
  const cutoffStr=cutoff.toISOString().slice(0,10);
+ // Lấy TẤT CẢ phiếu cũ (không lọc sẵn theo cột ảnh) — vì có phiếu không có
+ // ảnh biên bản/PDF nhưng vẫn có "ảnh khác" trong bảng ticket_photos; lọc
+ // trước ở đây sẽ bỏ sót đúng nhóm phiếu đó.
  const {data:tix,error:e1}=await sb.from('tickets')
    .select('id,attachment_url,attachment_name,bienban_pdf_url,bienban_pdf_name')
-   .lt('ticket_date',cutoffStr)
-   .or('attachment_url.not.is.null,bienban_pdf_url.not.is.null');
+   .lt('ticket_date',cutoffStr).limit(5000);
  if(e1) throw new Error(e1.message);
  const ids=(tix||[]).map(t=>t.id);
  let photos=[];
  if(ids.length){
-   const {data,error:e2}=await sb.from('ticket_photos').select('id,ticket_id,url,name').in('ticket_id',ids);
+   const {data,error:e2}=await sb.from('ticket_photos').select('id,ticket_id,url,name').in('ticket_id',ids).limit(5000);
    if(e2) throw new Error(e2.message);
-   photos=data||[];
+   photos=(data||[]).filter(p=>isSupabaseStorageUrl(p.url));
  }
- return {tickets:tix||[], photos};
+ // chỉ giữ phiếu thật sự còn file trên Supabase cần chuyển
+ const tickets=(tix||[]).filter(t=>isSupabaseStorageUrl(t.attachment_url)||isSupabaseStorageUrl(t.bienban_pdf_url));
+ return {tickets, photos};
 }
 function storagePathFromUrl(url){
  const m=url.match(/\/ticket-attachments\/(.+)$/);
@@ -2474,8 +2544,8 @@ $('#btnArchiveOldPhotos').onclick=async()=>{
    const {tickets,photos}=await findOldTicketAttachments();
    let jobs=[]; // {kind, ticketId/photoId, url, name}
    tickets.forEach(t=>{
-     if(t.attachment_url) jobs.push({kind:'ticket_attachment',id:t.id,url:t.attachment_url,name:t.attachment_name});
-     if(t.bienban_pdf_url) jobs.push({kind:'ticket_pdf',id:t.id,url:t.bienban_pdf_url,name:t.bienban_pdf_name});
+     if(isSupabaseStorageUrl(t.attachment_url)) jobs.push({kind:'ticket_attachment',id:t.id,url:t.attachment_url,name:t.attachment_name});
+     if(isSupabaseStorageUrl(t.bienban_pdf_url)) jobs.push({kind:'ticket_pdf',id:t.id,url:t.bienban_pdf_url,name:t.bienban_pdf_name});
    });
    photos.forEach(p=>jobs.push({kind:'ticket_photo',id:p.id,url:p.url,name:p.name}));
    if(!jobs.length){ statusBox.textContent='Không có ảnh/PDF nào của phiếu quá 6 tháng cần chuyển.'; btn.disabled=false; return; }
@@ -2493,13 +2563,19 @@ $('#btnArchiveOldPhotos').onclick=async()=>{
        if(attempt<3){ statusBox.textContent=`Đang chuyển ${idx+1}/${jobs.length} (thử lại lần ${attempt+1})...`; await new Promise(r=>setTimeout(r,2000)); }
      }
      if(!ar.ok){ failed++; errors.push(`${job.name||job.url}: ${ar.error||'lỗi'}`); continue; }
-     // Cập nhật link mới (Drive) trong Supabase rồi mới xóa bản gốc — tránh
-     // mất link giữa chừng nếu có lỗi ở bước nào đó.
-     let updErr=null;
-     if(job.kind==='ticket_attachment') ({error:updErr}=await sb.from('tickets').update({attachment_url:ar.driveUrl}).eq('id',job.id));
-     else if(job.kind==='ticket_pdf') ({error:updErr}=await sb.from('tickets').update({bienban_pdf_url:ar.driveUrl}).eq('id',job.id));
-     else ({error:updErr}=await sb.from('ticket_photos').update({url:ar.driveUrl}).eq('id',job.id));
-     if(updErr){ failed++; errors.push(`${job.name||job.url}: ${updErr.message||updErr}`); continue; }
+     // Cập nhật link mới (Drive) trong Supabase RỒI MỚI xoá bản gốc.
+     // Bắt buộc dùng .select() để biết CHẮC CHẮN có dòng nào được sửa thật:
+     // nếu quyền (RLS) chặn, Supabase trả về "không lỗi" nhưng 0 dòng — mà cứ
+     // thế xoá file gốc thì ảnh mất luôn, không còn link Drive để tra lại.
+     let updErr=null, updRows=null;
+     if(job.kind==='ticket_attachment') ({data:updRows,error:updErr}=await sb.from('tickets').update({attachment_url:ar.driveUrl}).eq('id',job.id).select('id'));
+     else if(job.kind==='ticket_pdf') ({data:updRows,error:updErr}=await sb.from('tickets').update({bienban_pdf_url:ar.driveUrl}).eq('id',job.id).select('id'));
+     else ({data:updRows,error:updErr}=await sb.from('ticket_photos').update({url:ar.driveUrl}).eq('id',job.id).select('id'));
+     if(updErr||!updRows||!updRows.length){
+       failed++;
+       errors.push(`${job.name||job.url}: ${updErr?(updErr.message||updErr):'không cập nhật được link (thiếu quyền) — KHÔNG xoá file gốc'}`);
+       continue; // giữ nguyên file gốc trên Supabase, không xoá
+     }
      const path=storagePathFromUrl(job.url);
      if(path) await sb.storage.from('ticket-attachments').remove([path]);
      done++;
