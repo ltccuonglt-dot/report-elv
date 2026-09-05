@@ -3846,7 +3846,17 @@ $('#cc_f_work').onchange=e=>$('#wrap_cc_work_other').style.display=e.target.valu
 $('#cc_f_date').onchange=()=>{
  const v=$('#cc_f_date').value; if(!v) return;
  const dow=new Date(v+'T00:00:00').getDay();
- $('#cc_f_days').value=dow===6?0:1;
+ // Đúng mẫu công ty: ngày thường 8:00-17:00, đủ Số công; Thứ 7 chỉ làm nửa
+ // buổi sáng 8:00-12:00, để TRỐNG Số công (không phải 0).
+ $('#cc_f_days').value=dow===6?'':1;
+ $('#cc_f_in').value='08:00'; $('#cc_f_out').value=dow===6?'12:00':'17:00';
+ // Đang để đúng 1 trong 2 mẫu có sẵn (chưa gõ tay "Khác…") thì đổi ngày qua
+ // lại thường/thứ 7 tự nhảy đúng mẫu nội dung công việc tương ứng luôn,
+ // khỏi phải tự chọn lại — còn đã gõ tay riêng thì giữ nguyên, không đụng.
+ const workSel=$('#cc_f_work');
+ if(workSel.value==='Trực thông tin sự cố' || workSel.value==='Trực chờ thông tin sáng thứ 7'){
+   workSel.value=dow===6?'Trực chờ thông tin sáng thứ 7':'Trực thông tin sự cố';
+ }
 };
 
 async function ccLoadList(){
@@ -3890,7 +3900,7 @@ function ccRenderList(){
    <td data-label="Địa chỉ">${esc(r.workAddress)}</td>
    <td data-label="IN">${esc(r.timeIn)}</td>
    <td data-label="OUT">${esc(r.timeOut)}</td>
-   <td class="num" data-label="Công">${r.workDays||0}</td>
+   <td class="num" data-label="Công">${r.workDays==null?'':r.workDays}</td>
    <td class="issue-cell" data-label="Nội dung CV">${esc(r.workContent)}</td>
    <td data-label="Sale">${esc(r.salePhuTrach)}</td>
    <td data-label="Ghi chú">${esc(r.note)}</td>
@@ -3913,7 +3923,7 @@ function ccEditRow(no){
  setFieldOrOther('cc_f_project','wrap_cc_project_other','cc_f_project_other',r.projectContent||'');
  $('#cc_f_code').value=r.projectCode||'';
  setFieldOrOther('cc_f_addr','wrap_cc_addr_other','cc_f_addr_other',r.workAddress||'');
- $('#cc_f_in').value=r.timeIn||''; $('#cc_f_out').value=r.timeOut||''; $('#cc_f_days').value=r.workDays||1;
+ $('#cc_f_in').value=r.timeIn||''; $('#cc_f_out').value=r.timeOut||''; $('#cc_f_days').value=r.workDays==null?'':r.workDays;
  setFieldOrOther('cc_f_work','wrap_cc_work_other','cc_f_work_other',r.workContent||'');
  $('#cc_f_sale').value=r.salePhuTrach||''; $('#cc_f_note').value=r.note||'';
  $('#btnCcAddRow span').textContent='💾 Lưu sửa dòng #'+no;
@@ -3923,12 +3933,13 @@ function ccEditRow(no){
 function ccResetAddForm(){
  ccEditingNo=null;
  $('#cc_f_date').value=vnTodayIso();
+ const isSat=new Date($('#cc_f_date').value+'T00:00:00').getDay()===6;
  $('#cc_f_project').value='Làm việc tại văn phòng'; $('#wrap_cc_project_other').style.display='none'; $('#cc_f_project_other').value='';
  $('#cc_f_code').value='';
  $('#cc_f_addr').value='Văn phòng Soeco'; $('#wrap_cc_addr_other').style.display='none'; $('#cc_f_addr_other').value='';
- $('#cc_f_in').value='08:00'; $('#cc_f_out').value='17:00';
- $('#cc_f_days').value=new Date($('#cc_f_date').value+'T00:00:00').getDay()===6?0:1;
- $('#cc_f_work').value='Trực thông tin sự cố'; $('#wrap_cc_work_other').style.display='none'; $('#cc_f_work_other').value='';
+ $('#cc_f_in').value='08:00'; $('#cc_f_out').value=isSat?'12:00':'17:00';
+ $('#cc_f_days').value=isSat?'':1;
+ $('#cc_f_work').value=isSat?'Trực chờ thông tin sáng thứ 7':'Trực thông tin sự cố'; $('#wrap_cc_work_other').style.display='none'; $('#cc_f_work_other').value='';
  $('#cc_f_sale').value=''; $('#cc_f_note').value='';
  $('#btnCcAddRow span').textContent='+ Thêm dòng';
  $('#btnCcCancelEdit').style.display='none';
@@ -3950,7 +3961,8 @@ $('#btnCcAddRow').onclick=async()=>{
  let workContent=$('#cc_f_work').value; if(workContent==='__other') workContent=$('#cc_f_work_other').value.trim();
  const payload={date, employee:$('#cc_f_employee').value, projectContent,
    projectCode:$('#cc_f_code').value.trim(), workAddress,
-   timeIn:$('#cc_f_in').value, timeOut:$('#cc_f_out').value, workDays:Number($('#cc_f_days').value)||0,
+   timeIn:$('#cc_f_in').value, timeOut:$('#cc_f_out').value,
+   workDays:$('#cc_f_days').value===''?null:(Number($('#cc_f_days').value)||0),
    workContent, salePhuTrach:$('#cc_f_sale').value.trim(), note:$('#cc_f_note').value.trim()};
  const j=isEdit
    ? await DB.updateAttendance(ccEditingNo,payload,adminPassword.chamcong_ctp)
@@ -3983,8 +3995,9 @@ $('#btnCcAutoFill').onclick=()=>{
    } else if(dow===0){
      continue; // Chủ nhật, không có phiếu On-Site — bỏ qua, không chấm công
    } else if(dow===6){
+     // Đúng mẫu công ty: Thứ 7 để TRỐNG cột Số công (không phải 0 hay 0.5).
      ccDraft.push({date:dateStr, employee:emp, projectContent:'Làm việc tại văn phòng', projectCode:'', workAddress:'Văn phòng Soeco',
-       timeIn:'08:00', timeOut:'12:00', workDays:0.5, workContent:'Trực chờ thông tin sáng thứ 7', salePhuTrach:'', note:''});
+       timeIn:'08:00', timeOut:'12:00', workDays:null, workContent:'Trực chờ thông tin sáng thứ 7', salePhuTrach:'', note:''});
    } else {
      ccDraft.push({date:dateStr, employee:emp, projectContent:'Làm việc tại văn phòng', projectCode:'', workAddress:'Văn phòng Soeco',
        timeIn:'08:00', timeOut:'17:00', workDays:1, workContent:'Trực thông tin sự cố', salePhuTrach:'', note:''});
@@ -4003,14 +4016,14 @@ function ccRenderDraft(){
    <td><input type="text" data-i="${i}" data-f="workAddress" value="${esc(r.workAddress)}" style="width:100px"></td>
    <td><input type="time" data-i="${i}" data-f="timeIn" value="${esc(r.timeIn)}" style="width:82px"></td>
    <td><input type="time" data-i="${i}" data-f="timeOut" value="${esc(r.timeOut)}" style="width:82px"></td>
-   <td><input type="number" step="0.5" data-i="${i}" data-f="workDays" value="${r.workDays}" style="width:52px"></td>
+   <td><input type="number" step="0.5" data-i="${i}" data-f="workDays" value="${r.workDays==null?'':r.workDays}" style="width:52px"></td>
    <td><input type="text" data-i="${i}" data-f="workContent" value="${esc(r.workContent)}" style="width:160px"></td>
    <td><input type="text" data-i="${i}" data-f="salePhuTrach" value="${esc(r.salePhuTrach)}" style="width:100px"></td>
    <td><input type="text" data-i="${i}" data-f="note" value="${esc(r.note)}" style="width:100px"></td>
  </tr>`).join('');
  $$('#ccDraftBody input').forEach(inp=>inp.oninput=()=>{
    const i=Number(inp.dataset.i), f=inp.dataset.f;
-   ccDraft[i][f]=(f==='workDays')?(Number(inp.value)||0):inp.value;
+   ccDraft[i][f]=(f==='workDays')?(inp.value===''?null:(Number(inp.value)||0)):inp.value;
  });
 }
 
@@ -4050,7 +4063,7 @@ $('#btnCcExport').onclick=()=>{
  $('#ccExportPreviewDesc').textContent=`Tháng ${month}/${year}${$('#cc_employee').value?' — '+$('#cc_employee').value:' (tất cả nhân viên)'} — ${rows.length} dòng`;
  $('#ccExportPreviewBody').innerHTML=rows.map(r=>`<tr>
    <td>${esc(fmtDMYFull(r.date))}</td><td>${esc(thuVN(r.date))}</td><td>${esc(r.projectContent)}</td><td>${esc(r.projectCode)}</td>
-   <td>${esc(r.workAddress)}</td><td>${esc(r.employee)}</td><td>${esc(r.timeIn)}</td><td>${esc(r.timeOut)}</td><td>${r.workDays||0}</td>
+   <td>${esc(r.workAddress)}</td><td>${esc(r.employee)}</td><td>${esc(r.timeIn)}</td><td>${esc(r.timeOut)}</td><td>${r.workDays==null?'':r.workDays}</td>
    <td>${esc(r.workContent)}</td><td>${esc(r.salePhuTrach)}</td><td>${esc(r.note)}</td>
  </tr>`).join('');
  $('#ccExportPreviewModal').classList.add('show');
