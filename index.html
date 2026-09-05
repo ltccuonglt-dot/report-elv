@@ -1838,11 +1838,13 @@ const DB={
  // Chuyển 1 file từ Supabase Storage sang Google Drive — gọi qua Apps Script
  // (Code.gs) vì nó đã có sẵn quyền Drive dưới tài khoản Google của admin,
  // không cần thêm thông tin đăng nhập/khóa API nào mới.
- async archiveFileToDrive(fileUrl,fileName,adminPassword){
+ // customer/ticketDate quyết định thư mục con lưu vào Drive (Tên dự án/Ngày
+ // phiếu) — để sau này kiểm duyệt lại dễ tìm, không đổ hết vào 1 thư mục.
+ async archiveFileToDrive(fileUrl,fileName,adminPassword,customer,ticketDate){
    if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
    try{
      const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-       body:JSON.stringify({token:CFG.token,action:'archiveFileToDrive',fileUrl,fileName,adminPassword})});
+       body:JSON.stringify({token:CFG.token,action:'archiveFileToDrive',fileUrl,fileName,adminPassword,customer,ticketDate})});
      return await res.json();
    }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
  },
@@ -3571,7 +3573,7 @@ async function findOldTicketAttachments(){
  // ảnh biên bản/PDF nhưng vẫn có "ảnh khác" trong bảng ticket_photos; lọc
  // trước ở đây sẽ bỏ sót đúng nhóm phiếu đó.
  const {data:tix,error:e1}=await sb.from('tickets')
-   .select('id,attachment_url,attachment_name,attachment_back_url,attachment_back_name,bienban_pdf_url,bienban_pdf_name')
+   .select('id,customer,ticket_date,attachment_url,attachment_name,attachment_back_url,attachment_back_name,bienban_pdf_url,bienban_pdf_name')
    .lt('ticket_date',cutoffStr).limit(5000);
  if(e1) throw new Error(e1.message);
  const ids=(tix||[]).map(t=>t.id);
@@ -3583,7 +3585,12 @@ async function findOldTicketAttachments(){
  }
  // chỉ giữ phiếu thật sự còn file trên Supabase cần chuyển
  const tickets=(tix||[]).filter(t=>isSupabaseStorageUrl(t.attachment_url)||isSupabaseStorageUrl(t.attachment_back_url)||isSupabaseStorageUrl(t.bienban_pdf_url));
- return {tickets, photos};
+ // Map id->{customer,ticketDate} cho CẢ tickets (kể cả phiếu không có ảnh
+ // biên bản/PDF, chỉ có "ảnh khác") — dùng để đặt tên/thư mục Drive cho
+ // đúng dự án khi lưu trữ ảnh trong ticket_photos (bảng đó không tự có sẵn
+ // 2 cột này).
+ const metaById={}; (tix||[]).forEach(t=>{ metaById[t.id]={customer:t.customer,ticketDate:t.ticket_date}; });
+ return {tickets, photos, metaById};
 }
 function storagePathFromUrl(url){
  const m=url.match(/\/ticket-attachments\/(.+)$/);
@@ -3597,14 +3604,16 @@ $('#btnArchiveOldPhotos').onclick=async()=>{
  const statusBox=$('#archivePhotosStatus'); statusBox.style.display='block'; statusBox.className='period-notice';
  statusBox.textContent='Đang quét phiếu cũ...';
  try{
-   const {tickets,photos}=await findOldTicketAttachments();
-   let jobs=[]; // {kind, ticketId/photoId, url, name}
+   const {tickets,photos,metaById}=await findOldTicketAttachments();
+   let jobs=[]; // {kind, ticketId/photoId, url, name, customer, ticketDate}
    tickets.forEach(t=>{
-     if(isSupabaseStorageUrl(t.attachment_url)) jobs.push({kind:'ticket_attachment',id:t.id,url:t.attachment_url,name:t.attachment_name});
-     if(isSupabaseStorageUrl(t.attachment_back_url)) jobs.push({kind:'ticket_attachment_back',id:t.id,url:t.attachment_back_url,name:t.attachment_back_name});
-     if(isSupabaseStorageUrl(t.bienban_pdf_url)) jobs.push({kind:'ticket_pdf',id:t.id,url:t.bienban_pdf_url,name:t.bienban_pdf_name});
+     if(isSupabaseStorageUrl(t.attachment_url)) jobs.push({kind:'ticket_attachment',id:t.id,url:t.attachment_url,name:t.attachment_name,customer:t.customer,ticketDate:t.ticket_date});
+     if(isSupabaseStorageUrl(t.attachment_back_url)) jobs.push({kind:'ticket_attachment_back',id:t.id,url:t.attachment_back_url,name:t.attachment_back_name,customer:t.customer,ticketDate:t.ticket_date});
+     if(isSupabaseStorageUrl(t.bienban_pdf_url)) jobs.push({kind:'ticket_pdf',id:t.id,url:t.bienban_pdf_url,name:t.bienban_pdf_name,customer:t.customer,ticketDate:t.ticket_date});
    });
-   photos.forEach(p=>jobs.push({kind:'ticket_photo',id:p.id,url:p.url,name:p.name}));
+   // ticket_photos không tự có sẵn dự án/ngày — tra qua metaById (id phiếu
+   // cha) để vẫn lưu đúng thư mục/tên file, không bị lộn xộn với dòng khác.
+   photos.forEach(p=>{ const meta=metaById[p.ticket_id]||{}; jobs.push({kind:'ticket_photo',id:p.id,url:p.url,name:p.name,customer:meta.customer,ticketDate:meta.ticketDate}); });
    if(!jobs.length){ statusBox.textContent='Không có ảnh/PDF nào của phiếu quá 6 tháng cần chuyển.'; btn.disabled=false; return; }
    let done=0, failed=0; const errors=[];
    for(let idx=0; idx<jobs.length; idx++){
@@ -3615,7 +3624,7 @@ $('#btnArchiveOldPhotos').onclick=async()=>{
      // không bị bỏ sót file vì 1 trục trặc thoáng qua.
      let ar=null;
      for(let attempt=1; attempt<=3; attempt++){
-       ar=await DB.archiveFileToDrive(job.url,job.name,adminPassword.settings);
+       ar=await DB.archiveFileToDrive(job.url,job.name,adminPassword.settings,job.customer,job.ticketDate);
        if(ar.ok) break;
        if(attempt<3){ statusBox.textContent=`Đang chuyển ${idx+1}/${jobs.length} (thử lại lần ${attempt+1})...`; await new Promise(r=>setTimeout(r,2000)); }
      }
