@@ -1210,7 +1210,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <div class="divider"></div>
       <div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột — dùng nút +/− ở trên để phóng to/thu nhỏ bảng</div>
       <div class="rpt-wrap" id="ctpLineWrap"><table class="rpt ctp-grid" id="ctpLineTable"><thead><tr>
-        <th>Tên NV</th><th>Nội dung</th><th>Diễn giải</th><th>Km</th><th>SL</th><th>Định mức</th><th>Thành tiền</th><th>Ghi chú</th><th>Xoá</th>
+        <th>STT</th><th>Tên NV</th><th>Bộ phận</th><th>Nội dung</th><th>Diễn giải</th><th>Từ ngày</th><th>Đến ngày</th><th>Km</th><th>SL</th><th>Định mức</th><th>Thành tiền</th><th>Mã vụ việc</th><th>Tên DA</th><th>Loại dịch vụ</th><th>Ghi chú</th><th>Xoá</th>
       </tr></thead><tbody id="ctpLineBody"></tbody></table></div>
       <div style="text-align:right;font-weight:800;margin:10px 0" id="ctpTotalBox">Tổng cộng: 0 đ</div>
 
@@ -4676,6 +4676,11 @@ function ctpCalcQtyAmount(expenseType,km,rate){
  }
  return {quantity:1, amount:Math.round(1*rate)};
 }
+// "Công tác phí" (phụ cấp/ngày) đúng mẫu công ty là mức CỐ ĐỊNH 100,000đ,
+// không cho gõ tay đổi khác (khác với xăng/các loại khác — định mức đó biến
+// động theo giá xăng/chi phí thực tế nên vẫn để nhập tay). Trả về null nếu
+// loại chi phí này KHÔNG có mức cố định (vẫn cho nhập tay như cũ).
+function ctpFixedRateFor(expenseType){ return expenseType==='Công tác phí' ? 100000 : null; }
 
 async function ctpLoadAll(){
  const j=await DB.listExpenses(adminPassword.chamcong_ctp);
@@ -4822,16 +4827,32 @@ function ctpRenderLines(){
  ctpLocalRows=ctpCurrentLines().map(r=>Object.assign({},r));
  ctpRenderLinesFromLocal();
 }
+// Cột KHỚP ĐÚNG mẫu "Giấy đề nghị thanh toán chi phí công tác" thật của công
+// ty — chỗ nào NGƯỜI DÙNG tự nhập/sửa được thì để input/select (đúng các ô
+// khoanh đỏ trong mẫu: Tên NV, Từ-Đến ngày dòng này, Km, Định mức (trừ Công
+// tác phí cố định), Mã vụ việc/Tên DA/Loại dịch vụ dòng này, Ghi chú); chỗ
+// nào CỐ ĐỊNH thì chỉ hiện chữ (STT, Bộ phận luôn "TEC", Số lượng/Thành tiền
+// luôn tự tính).
 function ctpRowHtml(r,i){
  const isFuel=(r.expenseType||'').includes('xăng');
+ const fixedRate=ctpFixedRateFor(r.expenseType);
  return `<tr data-i="${i}">
+   <td class="num" data-label="STT">${i+1}</td>
    <td data-label="Tên NV"><select class="ctp-cell" data-f="requesterName">${engineerList.map(n=>`<option value="${esc(n)}" ${n===r.requesterName?'selected':''}>${esc(n)}</option>`).join('')}</select></td>
+   <td data-label="Bộ phận">TEC</td>
    <td data-label="Nội dung"><select class="ctp-cell" data-f="expenseType">${CTP_TYPES.map(t=>`<option value="${esc(t.v)}" ${t.v===r.expenseType?'selected':''}>${esc(t.desc)}</option>`).join('')}</select></td>
    <td class="issue-cell" data-label="Diễn giải"><input class="ctp-cell" data-f="description" type="text" value="${esc(r.description||'')}"></td>
+   <td data-label="Từ ngày"><input class="ctp-cell" data-f="lineFromDate" type="date" value="${esc(r.lineFromDate||'')}"></td>
+   <td data-label="Đến ngày"><input class="ctp-cell" data-f="lineToDate" type="date" value="${esc(r.lineToDate||'')}"></td>
    <td class="num" data-label="Km"><input class="ctp-cell" data-f="km" type="number" step="0.1" value="${r.km||''}" ${isFuel?'':'disabled'}></td>
    <td class="num" data-label="SL">${r.quantity||0}</td>
-   <td class="num" data-label="Định mức"><input class="ctp-cell" data-f="rate" type="number" step="1000" value="${r.rate||''}"></td>
+   <td class="num" data-label="Định mức">${fixedRate!=null
+     ? `${fixedRate.toLocaleString('vi-VN')}<span class="hint" style="display:block;font-weight:400">(cố định)</span>`
+     : `<input class="ctp-cell" data-f="rate" type="number" step="1000" value="${r.rate||''}">`}</td>
    <td class="num" data-label="Thành tiền">${(r.amount||0).toLocaleString('vi-VN')}</td>
+   <td data-label="Mã vụ việc"><input class="ctp-cell" data-f="projectCode" type="text" value="${esc(r.projectCode||'')}"></td>
+   <td data-label="Tên DA"><input class="ctp-cell" data-f="projectName" type="text" value="${esc(r.projectName||'')}"></td>
+   <td data-label="Loại dịch vụ"><select class="ctp-cell" data-f="serviceType">${['Bảo trì','Bảo hành','Lắp mới','Khảo sát'].map(v=>`<option value="${esc(v)}" ${v===r.serviceType?'selected':''}>${esc(v)}</option>`).join('')}</select></td>
    <td data-label="Ghi chú"><input class="ctp-cell" data-f="note" type="text" value="${esc(r.note||'')}"></td>
    <td data-label="Xoá"><button type="button" class="btn-row-delete" data-i="${i}" aria-label="Xoá dòng" title="Xoá dòng chi phí này"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></td>
  </tr>`;
@@ -4850,6 +4871,8 @@ async function ctpCellChanged(i,field,el){
  const row=ctpLocalRows[i]; if(!row) return;
  row[field]=el.type==='number'?(Number(el.value)||0):el.value;
  if(field==='expenseType'||field==='km'||field==='rate'){
+   const fixedRate=ctpFixedRateFor(row.expenseType);
+   if(fixedRate!=null) row.rate=fixedRate; // "Công tác phí" luôn 100,000, không cho gõ tay đổi khác
    Object.assign(row,ctpCalcQtyAmount(row.expenseType,row.km,row.rate));
    if(field==='expenseType' && !row.description){ const t=CTP_TYPES.find(x=>x.v===row.expenseType); if(t) row.description=t.desc; }
  }
@@ -4865,8 +4888,8 @@ async function ctpPersistRow(i){
    expenseType:row.expenseType||'Công tác phí', description:row.description||'',
    lineFromDate:row.lineFromDate||$('#ctp_f_fromdate').value, lineToDate:row.lineToDate||$('#ctp_f_todate').value,
    km:Number(row.km)||0, quantity:Number(row.quantity)||0, rate:Number(row.rate)||0, amount:Number(row.amount)||0,
-   serviceType:segVal('ctp_f_tripservice'),
-   projectCode:$('#ctp_f_pjcode').value.trim(), projectName:$('#ctp_f_pjname').value.trim(),
+   serviceType:row.serviceType||segVal('ctp_f_tripservice'),
+   projectCode:(row.projectCode||'').trim()||$('#ctp_f_pjcode').value.trim(), projectName:(row.projectName||'').trim()||$('#ctp_f_pjname').value.trim(),
    note:row.note||'', mapImage:ctpMapValueForSave()
  };
  if(row.no){
@@ -4942,9 +4965,16 @@ $('#btnCtpAddLine').onclick=async()=>{
  if(!$('#ctp_f_reqdate').value){ toast('Chọn ngày đề nghị ở phần đợt công tác trước',true); return; }
  const defaultEng=ctpRequesterValue().split(' - ')[0]||engineerList[0]||'';
  const defType=CTP_TYPES[0];
- const row={no:null, requesterName:defaultEng, expenseType:defType.v, description:defType.desc, km:0, note:''};
- Object.assign(row,ctpCalcQtyAmount(row.expenseType,row.km,0));
- row.rate=0;
+ // Dòng mới mặc định lấy theo thông tin chung của cả đợt (ngày, mã vụ việc,
+ // tên DA, loại dịch vụ) — vẫn sửa riêng được từng dòng ngay trong bảng nếu
+ // dòng đó khác với phần còn lại của đợt công tác.
+ const fixedRate=ctpFixedRateFor(defType.v);
+ const row={no:null, requesterName:defaultEng, expenseType:defType.v, description:defType.desc, km:0, note:'',
+   lineFromDate:$('#ctp_f_fromdate').value, lineToDate:$('#ctp_f_todate').value,
+   projectCode:$('#ctp_f_pjcode').value.trim(), projectName:$('#ctp_f_pjname').value.trim(),
+   serviceType:segVal('ctp_f_tripservice')};
+ row.rate=fixedRate!=null?fixedRate:0;
+ Object.assign(row,ctpCalcQtyAmount(row.expenseType,row.km,row.rate));
  ctpLocalRows.push(row);
  await ctpPersistRow(ctpLocalRows.length-1);
  ctpRenderLinesFromLocal();
