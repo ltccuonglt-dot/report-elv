@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 :root{
   --ground:#f2eef4; --surface:#ffffff; --surface-2:#f8f5fa;
@@ -125,6 +126,12 @@ label.field:last-child{margin-bottom:0}
 .lab{display:block;font-size:13px;font-weight:600;margin-bottom:7px;color:var(--ink)}
 .lab .req{color:var(--brand);font-weight:700}
 .hint{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:5px}
+.attach-preview{margin-top:10px;display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 10px}
+.attach-preview span{font-size:13px;color:var(--muted);word-break:break-all;flex:1}
+.attach-uploading{display:none;font-size:13px;color:var(--muted);margin-top:6px}
+.other-photo-item{display:flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:6px 10px;font-size:13px}
+.other-photo-item span{flex:1;color:var(--muted);word-break:break-all}
+.other-photo-item img{width:32px;height:32px;object-fit:cover;border-radius:6px}
 
 input[type=text],textarea,select{width:100%;font-family:var(--font);font-size:15px;color:var(--ink);background:var(--surface-2);border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:12px 13px;transition:border-color .15s,box-shadow .15s}
 input.masked{-webkit-text-security:disc;text-security:disc}
@@ -261,9 +268,10 @@ table.rpt select.status-sel.s-prog{background-color:var(--warn-soft);color:var(-
 table.rpt select.status-sel.s-pend{background-color:var(--danger-soft);color:var(--danger);border-color:transparent}
 table.rpt select.status-sel:disabled{opacity:.5}
 .row-actions{display:flex;gap:6px}
-.btn-row-view,.btn-row-edit,.btn-row-delete{border:1.5px solid var(--line);background:var(--surface-2);color:var(--muted);width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
-.btn-row-view svg,.btn-row-edit svg,.btn-row-delete svg{width:15px;height:15px}
+.btn-row-view,.btn-row-photos,.btn-row-edit,.btn-row-delete{border:1.5px solid var(--line);background:var(--surface-2);color:var(--muted);width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
+.btn-row-view svg,.btn-row-photos svg,.btn-row-edit svg,.btn-row-delete svg{width:15px;height:15px}
 .btn-row-view:hover{color:var(--info);border-color:var(--info)}
+.btn-row-photos:hover{color:var(--brand);border-color:var(--brand)}
 .btn-row-edit:hover{color:var(--brand);border-color:var(--brand)}
 .btn-row-delete:hover{color:var(--danger);border-color:var(--danger)}
 
@@ -535,6 +543,48 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
           </label>
         </div>
 
+        <div class="card">
+          <div class="section-title">Đính kèm</div>
+
+          <label class="field">
+            <span class="lab">Ảnh Biên bản làm việc</span>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button type="button" class="btn" id="btnBbImgCamera" style="flex:1;min-width:140px">📷 Chụp ảnh</button>
+              <button type="button" class="btn" id="btnBbImgFile" style="flex:1;min-width:140px">📎 Chọn ảnh</button>
+            </div>
+            <input type="file" id="f_bbimg_camera" accept="image/*" capture="environment" hidden />
+            <input type="file" id="f_bbimg_file" accept="image/*" hidden />
+            <div id="bbImgPreview" class="attach-preview" style="display:none">
+              <span id="bbImgPreviewName"></span>
+              <button type="button" class="btn-row-delete" id="btnBbImgRemove" aria-label="Bỏ ảnh biên bản">✕</button>
+            </div>
+            <div id="bbImgUploading" class="attach-uploading" style="display:none">⏳ Đang tải lên...</div>
+          </label>
+
+          <label class="field">
+            <span class="lab">File PDF Biên bản làm việc</span>
+            <button type="button" class="btn" id="btnBbPdfFile" style="width:100%">📄 Chọn file PDF</button>
+            <input type="file" id="f_bbpdf_file" accept="application/pdf" hidden />
+            <div id="bbPdfPreview" class="attach-preview" style="display:none">
+              <span id="bbPdfPreviewName"></span>
+              <button type="button" class="btn-row-delete" id="btnBbPdfRemove" aria-label="Bỏ file PDF biên bản">✕</button>
+            </div>
+            <div id="bbPdfUploading" class="attach-uploading" style="display:none">⏳ Đang tải lên...</div>
+          </label>
+
+          <label class="field" style="margin-bottom:0">
+            <span class="lab">Ảnh khác (chụp thêm để theo dõi, được nhiều ảnh)</span>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button type="button" class="btn" id="btnOtherCamera" style="flex:1;min-width:140px">📷 Chụp thêm</button>
+              <button type="button" class="btn" id="btnOtherFile" style="flex:1;min-width:140px">📎 Chọn nhiều ảnh</button>
+            </div>
+            <input type="file" id="f_other_camera" accept="image/*" capture="environment" hidden />
+            <input type="file" id="f_other_file" accept="image/*" multiple hidden />
+            <div id="otherPhotosList" style="margin-top:8px;display:flex;flex-direction:column;gap:6px"></div>
+            <div id="otherUploading" class="attach-uploading" style="display:none">⏳ Đang tải lên...</div>
+          </label>
+        </div>
+
         <button type="submit" class="btn btn-primary" id="btnSubmit">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>
           <span>Gửi phiếu</span>
@@ -550,6 +600,11 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         <select id="histMonth" class="mini-date"><option value="">Tháng</option></select>
         <select id="histYear" class="mini-date"><option value="">Năm</option></select>
       </div>
+      <div class="seg sm" id="histSource" style="margin-bottom:10px">
+        <button type="button" data-v="live" class="on">📋 Đang dùng</button>
+        <button type="button" data-v="archived">🗄 Đã lưu trữ</button>
+      </div>
+      <p class="hint" id="histSourceHint" style="margin:-4px 0 10px">Đang xem dữ liệu hiện hành trên Supabase. Chuyển sang "Đã lưu trữ" để tra cứu phiếu cũ đã sao lưu sang Google Sheet (ảnh mở từ Google Drive) — kể cả phiếu đã xoá khỏi Supabase.</p>
       <div class="toolbar" style="margin-bottom:12px">
         <input type="text" id="histSearch" placeholder="🔍 Tìm theo tên kỹ sư, sự cố..." />
       </div>
@@ -635,6 +690,14 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
   </div>
 </div>
 
+<div class="modal" id="photosModal">
+  <div class="sheet">
+    <h2 id="photosModalTitle">Ảnh phiếu</h2>
+    <div id="photosModalBody" style="max-height:60vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px"></div>
+    <button class="btn btn-ghost" id="btnClosePhotos">Đóng</button>
+  </div>
+</div>
+
 <div class="modal" id="installGuideModal">
   <div class="sheet">
     <h2>Cài đặt ứng dụng</h2>
@@ -698,10 +761,11 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <button type="button" class="btn btn-primary" id="btnAddEngineer" style="width:auto;padding:12px 18px;margin:0;flex:none">Thêm</button>
     </div>
     <div class="divider"></div>
-    <div class="section-title" style="margin-bottom:8px">Sao lưu dữ liệu</div>
-    <p class="desc" style="margin-top:-4px">Backup <b>KHÔNG</b> tự cập nhật theo mỗi lần gửi/sửa/xóa phiếu — chỉ cập nhật khi bạn bấm nút này. Nút chỉ <b>THÊM</b> phiếu backup chưa có (tự kiểm tra trước, phiếu nào đã có rồi thì bỏ qua, không tạo trùng) — an toàn bấm bao nhiêu lần cũng được, kể cả đồng bộ dần từng ít một trong ngày, không xóa/ghi đè dữ liệu cũ trong backup.</p>
+    <div class="section-title" style="margin-bottom:8px">Sao lưu dữ liệu sang Google Sheet</div>
+    <p class="desc" style="margin-top:-4px">Dữ liệu phiếu hiện lưu chính ở Supabase; Google Sheet đóng vai trò <b>bản sao lưu</b>. Bấm nút này để chép toàn bộ phiếu (kèm link ảnh Biên bản, PDF và ảnh khác — kể cả ảnh đã chuyển sang Drive) sang file Sheet backup, tab <b>"Tickets"</b>. Phiếu đã có sẽ được cập nhật lại, không tạo dòng trùng — bấm bao nhiêu lần cũng an toàn. Sau khi sao lưu, mục <b>Lịch sử</b> có thể tra cứu lại dữ liệu này kể cả khi đã xoá khỏi Supabase.</p>
+    <div id="syncBackupStatus" class="period-notice" style="margin-bottom:10px;display:none"></div>
     <button type="button" class="btn" id="btnSyncBackup" style="margin-bottom:16px">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span>Đồng bộ Sheet chính → Backup</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span>Đồng bộ Supabase → Google Sheet</span>
     </button>
     <p class="desc" style="margin-top:-4px">Dọn bớt backup nếu đã lưu trữ quá lâu (vd hơn 2 năm) — xóa các phiếu có ngày nằm trong khoảng chọn dưới đây, CHỈ xóa trong backup, không đụng Sheet chính.</p>
     <div style="display:flex;gap:8px;margin-bottom:8px">
@@ -723,6 +787,13 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     <p class="desc" style="margin-top:-4px">Cứ 6 tháng nên xóa hết phiếu cũ để Sheet luôn gọn, app luôn nhanh. Toàn bộ phiếu sẽ được LƯU LẠI vào backup (nối thêm, không mất) trước khi xóa Sheet chính — nên sau 1 năm (2 lần xóa), 2 năm (4 lần)... backup vẫn còn đủ. Việc xóa Sheet chính KHÔNG THỂ HOÀN TÁC — chỉ bấm khi chắc chắn.</p>
     <button type="button" class="btn" id="btnClearAllData" style="margin-bottom:16px;background:var(--danger-soft);color:var(--danger);border:1.5px solid var(--danger)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Xóa toàn bộ dữ liệu</span>
+    </button>
+    <div class="divider"></div>
+    <div class="section-title" style="margin-bottom:8px">Ảnh đính kèm phiếu cũ</div>
+    <p class="desc" style="margin-top:-4px">Ảnh/PDF đính kèm của phiếu quá 6 tháng sẽ được CHUYỂN sang Google Drive (thư mục "Report ELV - Ảnh Phiếu Lưu Trữ") rồi xóa khỏi Supabase để giải phóng dung lượng lưu trữ — phiếu vẫn xem được ảnh bình thường (chỉ đổi nơi lưu, link tự cập nhật). Bấm thủ công khi cần, có thể mất vài phút nếu nhiều ảnh.</p>
+    <div id="archivePhotosStatus" class="period-notice" style="margin-bottom:10px;display:none"></div>
+    <button type="button" class="btn" id="btnArchiveOldPhotos" style="margin-bottom:16px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg><span>Chuyển ảnh phiếu cũ (&gt;6 tháng) sang Drive</span>
     </button>
     <div class="divider"></div>
     <div class="section-title" style="margin-bottom:8px">Đổi mật khẩu quản trị</div>
@@ -815,12 +886,14 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       </tr></thead><tbody id="ccListBody"></tbody></table></div>
 
       <div class="divider"></div>
-      <button type="button" class="btn btn-primary" id="btnCcExport" style="margin-bottom:10px">
+      <button type="button" class="btn btn-primary" id="btnCcExport" style="margin-bottom:6px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg><span>Xem trước &amp; Xuất Excel chấm công</span>
       </button>
-      <button type="button" class="btn" id="btnCcClearMonth" style="margin-bottom:10px;background:var(--danger-soft);color:var(--danger);border:1.5px solid var(--danger)">
+      <p class="hint" style="margin-bottom:10px">Xuất đúng bảng chấm công tháng đang xem hiện tại (theo bộ lọc Tháng/Năm/Nhân viên phía trên) ra file Excel, giữ nguyên định dạng mẫu công ty.</p>
+      <button type="button" class="btn" id="btnCcClearMonth" style="margin-bottom:6px;background:var(--danger-soft);color:var(--danger);border:1.5px solid var(--danger)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Xoá chấm công tháng này (làm lại tháng mới)</span>
       </button>
+      <p class="hint" style="margin-bottom:10px">Xoá HẲN toàn bộ dòng chấm công của tháng đang xem (mọi nhân viên) — dùng sau khi đã xuất Excel lưu lại, để bắt đầu chấm công tháng mới. Không thể hoàn tác.</p>
     </div>
 
     <!-- ===== TAB CÔNG TÁC PHÍ ===== -->
@@ -828,6 +901,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <div class="section-title" style="margin-bottom:8px">Đợt công tác</div>
       <select id="ctp_tripSelect" style="margin-bottom:10px"></select>
       <button type="button" class="btn-mini" id="btnCtpNewTrip">+ Tạo đợt công tác mới</button>
+      <p class="hint">Chọn 1 đợt có sẵn ở trên để xem/sửa, hoặc bấm đây để bắt đầu ghi 1 đợt công tác hoàn toàn mới (form bên dưới sẽ trống lại).</p>
 
       <div id="ctpTripForm" style="margin-top:12px">
         <div class="cc-add-grid">
@@ -849,7 +923,8 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
             </div>
           </label>
         </div>
-        <button type="button" class="btn" id="btnCtpSaveTrip" style="margin:10px 0"><span>Lưu thông tin đợt công tác</span></button>
+        <button type="button" class="btn" id="btnCtpSaveTrip" style="margin:6px 0"><span>Lưu thông tin đợt công tác</span></button>
+        <p class="hint" style="margin-bottom:10px">Ghi lại các thông tin chung phía trên (người đi, địa điểm, thời gian, loại dịch vụ) cho TOÀN BỘ đợt công tác này — áp dụng cho mọi dòng chi phí bên dưới, không cần lặp lại từng dòng.</p>
       </div>
 
       <div class="divider"></div>
@@ -892,13 +967,29 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <select id="ctp_mapSelect" style="margin-bottom:8px"></select>
       <input type="file" id="ctp_mapUpload" accept="image/*" style="margin-bottom:8px">
       <div id="ctp_mapPreviewWrap" style="display:none;margin-bottom:10px"><img id="ctp_mapPreview" style="max-width:100%;border-radius:8px;border:1px solid var(--line)"></div>
+      <p class="hint">Chọn map có sẵn để in kèm đợt này lần này thôi, hoặc bấm nút dưới để lưu THÊM 1 map mới vào danh sách dùng lại được cho mọi đợt sau.</p>
+      <button type="button" class="btn" id="btnCtpAddMap" style="margin:6px 0 10px">➕ Thêm map mới vào danh sách</button>
+      <div id="ctpAddMapForm" style="display:none;margin-bottom:14px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px">
+        <p class="hint" style="margin-top:0">Tên sẽ tự ghép thành "Tên dự án + Xkm" theo đúng quy định, không cần tự gõ định dạng.</p>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input type="text" id="ctp_newmap_name" placeholder="Tên dự án, VD: DHA" style="flex:2">
+          <input type="number" id="ctp_newmap_km" placeholder="Km" style="flex:1" min="0">
+        </div>
+        <input type="file" id="ctp_newmap_file" accept="image/*" style="margin-bottom:8px">
+        <div style="display:flex;gap:8px">
+          <button type="button" class="btn btn-primary" id="btnCtpSaveMap" style="flex:1">Lưu vào danh sách</button>
+          <button type="button" class="btn btn-ghost" id="btnCtpCancelAddMap" style="flex:1">Huỷ</button>
+        </div>
+      </div>
 
-      <button type="button" class="btn btn-primary" id="btnCtpPrint" style="margin:10px 0">
+      <button type="button" class="btn btn-primary" id="btnCtpPrint" style="margin:10px 0 6px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg><span>In / Xuất PDF công tác phí</span>
       </button>
-      <button type="button" class="btn" id="btnCtpDeleteTrip" style="margin-bottom:10px;background:var(--danger-soft);color:var(--danger);border:1.5px solid var(--danger)">
+      <p class="hint" style="margin-bottom:10px">Xem trước rồi in/xuất PDF "Giấy đề nghị thanh toán chi phí công tác" cho đợt đang chọn — kèm bản đồ nếu đã chọn ở trên.</p>
+      <button type="button" class="btn" id="btnCtpDeleteTrip" style="margin-bottom:6px;background:var(--danger-soft);color:var(--danger);border:1.5px solid var(--danger)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Xoá hẳn đợt công tác này</span>
       </button>
+      <p class="hint">Xoá TOÀN BỘ đợt công tác đang chọn — mọi dòng chi phí của tất cả kỹ sư trong đợt này đều mất theo. Không thể hoàn tác.</p>
     </div>
 
     <button class="btn btn-ghost" id="btnCloseAdminTools">Đóng</button>
@@ -940,7 +1031,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 /* ===== CẤU HÌNH — mở app, bấm ⚙️ để dán link, KHÔNG cần sửa file ===== */
 // Kết nối mặc định — để mở app trên BẤT KỲ điện thoại/trình duyệt nào cũng
 // tự kết nối sẵn, không cần vào ⚙️ cấu hình lại. Vào ⚙️ vẫn đổi được nếu cần.
-const DEFAULT_URL='https://script.google.com/macros/s/AKfycbxic9nR-RTc8lSeTr1ZhMisZJyEqVv8Yt1LVOVqanceQUwM475FCOu6xIvy4jUvFbOSwA/exec';
+const DEFAULT_URL='https://script.google.com/macros/s/AKfycbxI7LhPoN7XhNWoYvWiXQnMjF-97IHl3EL4pMSGSYLK1aPX83ogHzxdYTHJUDU4hBaO/exec';
 const DEFAULT_TOKEN='AEON-KT-2026';
 const DEFAULT_STORE='Report -ELV';
 // Mật khẩu quản trị KHÔNG còn hardcode ở đây nữa (đổi được qua app, lưu bên
@@ -949,10 +1040,9 @@ const DEFAULT_STORE='Report -ELV';
 // admin khác trong cùng phiên (xóa, đồng bộ backup, sửa không giới hạn...).
 let adminPasswordRuntime=null;
 async function verifyAdminPassword(pin){
- if(!pin || !CFG.url) return false;
+ if(!pin) return false;
  try{
-   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:CFG.token,action:'verifyAdmin',pass:pin})});
-   const j=await res.json();
+   const j=await DB.verifyAdmin(pin);
    if(j.ok){ isAdminUnlocked=true; adminPasswordRuntime=pin; $('#btnAdminTools').style.display='flex'; return true; }
  }catch(err){}
  return false;
@@ -960,8 +1050,183 @@ async function verifyAdminPassword(pin){
 // Khớp EDIT_LIMIT bên Code.gs — người dùng thường chỉ sửa 1 phiếu tối đa
 // bấy nhiêu lần, sửa thêm phải nhập đúng mật khẩu quản trị ngay lúc đó.
 const EDIT_LIMIT=5;
+/* Backend Apps Script đã chuyển sang bản triển khai mới (project độc lập,
+   có thêm chức năng lưu ảnh sang Drive). Máy nào từng lưu URL CŨ trong ⚙️
+   Cài đặt sẽ tự được chuyển sang URL mới 1 lần, khỏi phải vào sửa tay. */
+(function(){
+ var OLD_URLS=['AKfycbxic9nR-RTc8lSeTr1ZhMisZJyEqVv8Yt1LVOVqanceQUwM475FCOu6xIvy4jUvFbOSwA'];
+ try{
+   var saved=localStorage.getItem('kt_url')||'';
+   if(saved && OLD_URLS.some(function(id){return saved.indexOf(id)>=0;})) localStorage.setItem('kt_url',DEFAULT_URL);
+ }catch(e){}
+})();
 const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get token(){return localStorage.getItem('kt_token')||DEFAULT_TOKEN},get store(){return localStorage.getItem('kt_store')||DEFAULT_STORE}};
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+
+/* ===== Supabase — backend CHÍNH cho phần Phiếu kỹ thuật (chấm công/công tác
+   phí vẫn tạm dùng Google Apps Script ở trên cho tới khi tới lượt chuyển) =====
+   Khóa localStorage riêng (không dùng chung kt_url/kt_token) vì 2 backend
+   đang chạy song song theo từng mảng dữ liệu trong giai đoạn chuyển đổi. */
+const DEFAULT_SB_URL='https://vlhwagmqpnbsijkzztvi.supabase.co';
+const DEFAULT_SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsaHdhZ21xcG5ic2lqa3p6dHZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MjkxMjksImV4cCI6MjEwNDEwNTEyOX0.nEu_LcTdx8-Lic37B_YYARZQARQ_UO7RCwdkfMp7JtE';
+CFG.sbUrl=localStorage.getItem('kt_sb_url')||DEFAULT_SB_URL;
+CFG.sbKey=localStorage.getItem('kt_sb_key')||DEFAULT_SB_KEY;
+const sb=(window.supabase && CFG.sbUrl && CFG.sbKey)?window.supabase.createClient(CFG.sbUrl,CFG.sbKey):null;
+
+function mapTicket(row){
+ return {no:row.id, date:row.ticket_date, customer:row.customer, system:row.system, issue:row.issue,
+   priority:row.priority, engineer:row.engineer, support:row.support, status:row.status, remark:row.remark,
+   editCount:row.edit_count, workType:row.work_type, attachmentUrl:row.attachment_url, attachmentName:row.attachment_name,
+   bienbanPdfUrl:row.bienban_pdf_url, bienbanPdfName:row.bienban_pdf_name};
+}
+const DB={
+ async verifyAdmin(pass){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('verify_admin',{p_password:pass});
+   return error?{ok:false,error:error.message}:{ok:!!data};
+ },
+ async listTicketsFull(){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.from('tickets').select('*').order('id');
+   return error?{ok:false,error:error.message}:{ok:true,data:data.map(mapTicket)};
+ },
+ async listTickets(year,month){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   let q=sb.from('tickets').select('*');
+   if(year&&month){
+     const y=Number(year), m=Number(month);
+     const from=`${y}-${String(m).padStart(2,'0')}-01`;
+     const lastDay=new Date(y,m,0).getDate();
+     const to=`${y}-${String(m).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+     q=q.gte('ticket_date',from).lte('ticket_date',to);
+   }
+   const {data,error}=await q.order('id');
+   return error?{ok:false,error:error.message}:{ok:true,data:data.map(mapTicket)};
+ },
+ async getOne(no){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.from('tickets').select('*').eq('id',no).single();
+   return error?{ok:false,error:error.message}:{ok:true,data:mapTicket(data)};
+ },
+ async createTicket(payload){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.from('tickets').insert({
+     ticket_date:payload.date, customer:payload.customer, system:payload.system, issue:payload.issue,
+     priority:payload.priority, engineer:payload.engineer, support:payload.support, status:payload.status,
+     remark:payload.remark, work_type:payload.workType,
+     attachment_url:payload.attachmentUrl||null, attachment_name:payload.attachmentName||null,
+     bienban_pdf_url:payload.bienbanPdfUrl||null, bienban_pdf_name:payload.bienbanPdfName||null
+   }).select().single();
+   return error?{ok:false,error:error.message}:{ok:true,no:data.id};
+ },
+ async editTicket(no,payload,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('edit_ticket',{p_id:Number(no),p_admin_password:adminPassword||null,p_fields:{
+     ticket_date:payload.date, customer:payload.customer, system:payload.system, issue:payload.issue,
+     priority:payload.priority, engineer:payload.engineer, support:payload.support, status:payload.status,
+     remark:payload.remark, work_type:payload.workType,
+     attachment_url:payload.attachmentUrl, attachment_name:payload.attachmentName,
+     bienban_pdf_url:payload.bienbanPdfUrl, bienban_pdf_name:payload.bienbanPdfName
+   }});
+   return error?{ok:false,error:error.message}:{ok:true,no:data.id};
+ },
+ async addTicketPhotos(ticketId,photos){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const rows=photos.map(p=>({ticket_id:Number(ticketId),url:p.url,name:p.name}));
+   const {error}=await sb.from('ticket_photos').insert(rows);
+   return error?{ok:false,error:error.message}:{ok:true};
+ },
+ async listTicketPhotos(ticketId){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.from('ticket_photos').select('*').eq('ticket_id',ticketId).order('id');
+   return error?{ok:false,error:error.message}:{ok:true,data};
+ },
+ async updateTicketStatus(no,status){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {error}=await sb.from('tickets').update({status}).eq('id',no);
+   return error?{ok:false,error:error.message}:{ok:true};
+ },
+ async deleteTicket(no,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {error}=await sb.rpc('delete_ticket',{p_id:Number(no),p_admin_password:adminPassword});
+   return error?{ok:false,error:error.message}:{ok:true};
+ },
+ async listEngineers(){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.from('engineers').select('name').order('name');
+   return error?{ok:false,error:error.message}:{ok:true,data:data.map(r=>r.name)};
+ },
+ async addEngineer(name,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('add_engineer',{p_name:name,p_admin_password:adminPassword});
+   return error?{ok:false,error:error.message}:{ok:true,data:data.map(r=>r.name)};
+ },
+ async deleteEngineer(name,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('delete_engineer',{p_name:name,p_admin_password:adminPassword});
+   return error?{ok:false,error:error.message}:{ok:true,data:data.map(r=>r.name)};
+ },
+ // Đẩy toàn bộ phiếu từ Supabase sang Google Sheet backup (kèm link ảnh,
+ // kể cả ảnh đã chuyển sang Drive) — gọi qua Apps Script, chia lô cho nhẹ.
+ async backupTicketsToSheet(rows,adminPassword){
+   if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
+   try{
+     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+       body:JSON.stringify({token:CFG.token,action:'backupTickets',rows,adminPassword})});
+     return await res.json();
+   }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
+ },
+ async listBackupTickets(){
+   if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
+   try{
+     const res=await fetch(`${CFG.url}?action=listBackupTickets&token=${encodeURIComponent(CFG.token)}`);
+     return await res.json();
+   }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
+ },
+ async listCtpMaps(){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.from('ctp_maps').select('*').order('label');
+   return error?{ok:false,error:error.message}:{ok:true,data};
+ },
+ async addCtpMap(label,fileUrl,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('add_ctp_map',{p_label:label,p_file_url:fileUrl,p_admin_password:adminPassword});
+   return error?{ok:false,error:error.message}:{ok:true,data};
+ },
+ // Chuyển 1 file từ Supabase Storage sang Google Drive — gọi qua Apps Script
+ // (Code.gs) vì nó đã có sẵn quyền Drive dưới tài khoản Google của admin,
+ // không cần thêm thông tin đăng nhập/khóa API nào mới.
+ async archiveFileToDrive(fileUrl,fileName,adminPassword){
+   if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
+   try{
+     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+       body:JSON.stringify({token:CFG.token,action:'archiveFileToDrive',fileUrl,fileName,adminPassword})});
+     return await res.json();
+   }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
+ },
+ async uploadCtpMap(file,label){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+   // Đặt tên file lưu trữ đúng quy định "Tên dự án Xkm" (khớp label hiển thị)
+   // thay vì tên ngẫu nhiên, để sau này xem trực tiếp trong Storage vẫn dễ
+   // nhận ra map nào — thêm hậu tố ngẫu nhiên ngắn để tránh trùng tên.
+   const safeName=(label||'map').replace(/[^\p{L}\p{N} _-]/gu,'').trim().replace(/\s+/g,' ')||'map';
+   const path=`${safeName}_${Math.random().toString(36).slice(2,6)}.${ext}`;
+   const {error}=await sb.storage.from('ctp-maps').upload(path,file);
+   if(error) return {ok:false,error:error.message};
+   const {data:pub}=sb.storage.from('ctp-maps').getPublicUrl(path);
+   return {ok:true,url:pub.publicUrl};
+ },
+ async uploadAttachment(file){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const ext=(file.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'')||'bin';
+   const path=`${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+   const {error}=await sb.storage.from('ticket-attachments').upload(path,file);
+   if(error) return {ok:false,error:error.message};
+   const {data:pub}=sb.storage.from('ticket-attachments').getPublicUrl(path);
+   return {ok:true,url:pub.publicUrl,name:file.name};
+ }
+};
 const LS_HIST='kt_history_v1';
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const initials=n=>(n||'?').trim().split(/\s+/).slice(-2).map(w=>w[0]).join('').toUpperCase()||'?';
@@ -1019,8 +1284,8 @@ document.addEventListener('click',e=>{ if(!$('#f_date_field').contains(e.target)
 (function(){const d=new Date();
  setDateValue(d.toISOString().slice(0,10));})();
 function refreshBanner(){const b=$('#banner'),t=$('#bannerText');
- if(CFG.url){b.className='banner live';t.textContent='Đã kết nối'}
- else{b.className='banner';t.textContent='Chế độ thử nghiệm — chưa kết nối Google Sheet.'}}
+ if(sb){b.className='banner live';t.textContent='Đã kết nối'}
+ else{b.className='banner';t.textContent='Chế độ thử nghiệm — chưa kết nối.'}}
 
 /* tabs */
 $$('nav.tabs button').forEach(btn=>btn.onclick=()=>{const tab=btn.dataset.tab;
@@ -1216,10 +1481,9 @@ function setEngineerValue(str){
 const FALLBACK_ENGINEERS=['Nguyễn Thái Bảo','Võ Quỳnh Bảo Châu','Lê Minh Anh','Phạm Nguyễn Gia Huy','Nguyễn Trung Hiếu','Lê Tấn Cường'];
 let engineerList=[];
 async function loadEngineers(){
- if(CFG.url){
+ if(sb){
    try{
-     const res=await fetch(CFG.url+'?action=engineers&token='+encodeURIComponent(CFG.token));
-     const j=await res.json();
+     const j=await DB.listEngineers();
      engineerList=j.ok?(j.data||[]):FALLBACK_ENGINEERS;
    }catch(err){ engineerList=FALLBACK_ENGINEERS; }
  } else engineerList=FALLBACK_ENGINEERS;
@@ -1244,22 +1508,18 @@ function renderEngineerManageList(){
 async function addEngineer(){
  const input=$('#engNewName'); const name=input.value.trim();
  if(!name){ toast('Nhập tên kỹ sư',true); return; }
- if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
+ if(!sb){ toast('Chưa kết nối Supabase',true); return; }
  try{
-   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-     body:JSON.stringify({token:CFG.token,action:'addEngineer',name,adminPassword:adminPasswordRuntime})});
-   const j=await res.json();
+   const j=await DB.addEngineer(name,adminPasswordRuntime);
    if(j.ok){ engineerList=j.data||engineerList; input.value=''; renderEngineerChecklist(); renderEngineerManageList(); buildEngineerFilterOptions(); toast('✅ Đã thêm kỹ sư'); }
    else toast(j.error||'Lỗi thêm kỹ sư',true);
  }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
 }
 async function deleteEngineer(name){
  if(!confirm(`Xóa kỹ sư "${name}" khỏi danh sách?`)) return;
- if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
+ if(!sb){ toast('Chưa kết nối Supabase',true); return; }
  try{
-   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-     body:JSON.stringify({token:CFG.token,action:'deleteEngineer',name,adminPassword:adminPasswordRuntime})});
-   const j=await res.json();
+   const j=await DB.deleteEngineer(name,adminPasswordRuntime);
    if(j.ok){ engineerList=j.data||engineerList; renderEngineerChecklist(); renderEngineerManageList(); buildEngineerFilterOptions(); toast('✅ Đã xóa kỹ sư'); }
    else toast(j.error||'Lỗi xóa kỹ sư',true);
  }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
@@ -1274,6 +1534,74 @@ if(localStorage.getItem('kt_cus'))$('#f_customer').value=localStorage.getItem('k
 })();
 
 /* sửa phiếu đã có (khi nhập sai) */
+/* ===== Đính kèm: Ảnh Biên bản làm việc + File PDF Biên bản (mỗi loại 1 file,
+   ảnh/file mới thay ảnh/file cũ) + Ảnh khác (chụp thêm để theo dõi, được
+   nhiều ảnh — lưu riêng ở bảng ticket_photos, gắn theo ticket_id sau khi
+   phiếu được tạo/sửa xong). Mọi thứ tải lên Supabase Storage NGAY khi chọn,
+   payload gửi kèm phiếu chỉ có link công khai, không phải nội dung file. */
+let bbImage={url:null,name:null};
+let bbPdf={url:null,name:null};
+let otherPhotos=[]; // ảnh MỚI thêm trong phiên sửa/tạo này — {url,name}, chưa gắn ticket_id
+function renderBbImagePreview(){
+ const wrap=$('#bbImgPreview');
+ if(bbImage.url){ wrap.style.display='flex'; $('#bbImgPreviewName').textContent='🖼 '+bbImage.name; }
+ else wrap.style.display='none';
+}
+function renderBbPdfPreview(){
+ const wrap=$('#bbPdfPreview');
+ if(bbPdf.url){ wrap.style.display='flex'; $('#bbPdfPreviewName').textContent='📄 '+bbPdf.name; }
+ else wrap.style.display='none';
+}
+function renderOtherPhotosList(){
+ $('#otherPhotosList').innerHTML=otherPhotos.map((p,i)=>
+   `<div class="other-photo-item"><img src="${esc(p.url)}" onerror="this.style.display='none'"><span>${esc(p.name)}</span><button type="button" class="btn-row-delete" data-i="${i}" aria-label="Bỏ ảnh này">✕</button></div>`
+ ).join('');
+ $$('#otherPhotosList button').forEach(b=>b.onclick=()=>{otherPhotos.splice(Number(b.dataset.i),1); renderOtherPhotosList();});
+}
+async function handleBbImage(file){
+ if(!file||!sb) return;
+ $('#bbImgUploading').style.display='block';
+ try{ const j=await DB.uploadAttachment(file);
+   if(j.ok){ bbImage={url:j.url,name:j.name}; renderBbImagePreview(); toast('✅ Đã tải lên ảnh biên bản'); }
+   else toast(j.error||'Lỗi tải lên',true);
+ }catch(err){ toast('Không tải lên được. Kiểm tra mạng.',true); }
+ finally{ $('#bbImgUploading').style.display='none'; }
+}
+async function handleBbPdf(file){
+ if(!file||!sb) return;
+ $('#bbPdfUploading').style.display='block';
+ try{ const j=await DB.uploadAttachment(file);
+   if(j.ok){ bbPdf={url:j.url,name:j.name}; renderBbPdfPreview(); toast('✅ Đã tải lên file PDF biên bản'); }
+   else toast(j.error||'Lỗi tải lên',true);
+ }catch(err){ toast('Không tải lên được. Kiểm tra mạng.',true); }
+ finally{ $('#bbPdfUploading').style.display='none'; }
+}
+async function handleOtherFiles(files){
+ if(!files||!files.length||!sb) return;
+ $('#otherUploading').style.display='block';
+ try{
+   for(const f of files){
+     const j=await DB.uploadAttachment(f);
+     if(j.ok) otherPhotos.push({url:j.url,name:j.name});
+     else toast(j.error||'Lỗi tải lên 1 ảnh',true);
+   }
+   renderOtherPhotosList();
+ }catch(err){ toast('Không tải lên được. Kiểm tra mạng.',true); }
+ finally{ $('#otherUploading').style.display='none'; }
+}
+$('#btnBbImgCamera').onclick=()=>$('#f_bbimg_camera').click();
+$('#btnBbImgFile').onclick=()=>$('#f_bbimg_file').click();
+$('#f_bbimg_camera').onchange=e=>{handleBbImage(e.target.files[0]); e.target.value='';};
+$('#f_bbimg_file').onchange=e=>{handleBbImage(e.target.files[0]); e.target.value='';};
+$('#btnBbImgRemove').onclick=()=>{bbImage={url:null,name:null}; renderBbImagePreview();};
+$('#btnBbPdfFile').onclick=()=>$('#f_bbpdf_file').click();
+$('#f_bbpdf_file').onchange=e=>{handleBbPdf(e.target.files[0]); e.target.value='';};
+$('#btnBbPdfRemove').onclick=()=>{bbPdf={url:null,name:null}; renderBbPdfPreview();};
+$('#btnOtherCamera').onclick=()=>$('#f_other_camera').click();
+$('#btnOtherFile').onclick=()=>$('#f_other_file').click();
+$('#f_other_camera').onchange=e=>{handleOtherFiles([...e.target.files]); e.target.value='';};
+$('#f_other_file').onchange=e=>{handleOtherFiles([...e.target.files]); e.target.value='';};
+
 let editingNo=null;
 // Số hiển thị (#1,#2...) của phiếu đang sửa — CHỈ để hiện chữ cho người dùng
 // đọc (khớp đúng số họ thấy trên danh sách, vì danh sách xếp theo NGÀY chứ
@@ -1306,6 +1634,9 @@ function startEdit(no,displayNo){
  segSet('f_status',/prog|xử/i.test(rec.status||'')?'In Progress':/pend|chờ/i.test(rec.status||'')?'Pending':'Done');
  segSet('f_workType',rec.workType||'Bảo trì');
  setEngineerValue(rec.engineer||'');
+ bbImage={url:rec.attachmentUrl||null,name:rec.attachmentName||null}; renderBbImagePreview();
+ bbPdf={url:rec.bienbanPdfUrl||null,name:rec.bienbanPdfName||null}; renderBbPdfPreview();
+ otherPhotos=[]; renderOtherPhotosList(); // ảnh khác cũ xem qua nút "Xem ảnh", ở đây chỉ để thêm ảnh MỚI
  $('#editBannerText').textContent=`Đang sửa phiếu #${editingDisplayNo} — sửa xong bấm "Cập nhật phiếu" bên dưới`;
  $('#editBanner').style.display='flex';
  submitBtnIdle();
@@ -1322,6 +1653,9 @@ function cancelEdit(){
  $('#wrap_customer_other').style.display='none';$('#wrap_system_other').style.display='none';
  setEngineerValue('');
  segSet('f_priority','Medium');segSet('f_support','Online');segSet('f_status','Done');segSet('f_workType','Bảo trì');
+ bbImage={url:null,name:null}; renderBbImagePreview();
+ bbPdf={url:null,name:null}; renderBbPdfPreview();
+ otherPhotos=[]; renderOtherPhotosList();
  submitBtnIdle();
 }
 $('#btnCancelEdit').onclick=cancelEdit;
@@ -1356,7 +1690,8 @@ $('#tkForm').onsubmit=async e=>{
    if(!engineer){toast('Chọn ít nhất 1 kỹ sư xử lý',true);return}
    const payload={token:CFG.token,date:$('#f_date').value,customer,system,issue,
      priority:segVal('f_priority'),engineer,support:segVal('f_support'),status:segVal('f_status'),remark:$('#f_remark').value.trim(),
-     workType:segVal('f_workType')};
+     workType:segVal('f_workType'), attachmentUrl:bbImage.url||null, attachmentName:bbImage.name||null,
+     bienbanPdfUrl:bbPdf.url||null, bienbanPdfName:bbPdf.name||null};
    localStorage.setItem('kt_eng',engineer);localStorage.setItem('kt_cus',customer);
 
    const isEdit=!!editingNo;
@@ -1399,10 +1734,9 @@ $('#tkForm').onsubmit=async e=>{
    // Nếu khác với lúc mở form sửa — tức có người khác vừa sửa xong trong lúc
    // mình đang gõ — cho xem thử họ sửa thành gì rồi hỏi lại trước khi ghi đè,
    // tránh làm mất nội dung của người kia mà không hay biết.
-   if(isEdit && CFG.url){
+   if(isEdit && sb){
      try{
-       const cres=await fetch(`${CFG.url}?action=getOne&token=${encodeURIComponent(CFG.token)}&no=${encodeURIComponent(no)}`);
-       const cj=await cres.json();
+       const cj=await DB.getOne(no);
        if(cj.ok && Number(cj.data.editCount||0)!==Number(editingStartEditCount||0)){
          const proceed=confirm(`⚠️ Phiếu #${displayNo} vừa bị người khác sửa trong lúc bạn đang sửa!\n\nHọ vừa sửa thành:\nKhách hàng: ${cj.data.customer}\nSự cố: ${cj.data.issue}\nHướng xử lý: ${cj.data.remark||'—'}\nTrạng thái: ${cj.data.status}\n\nBạn có chắc vẫn muốn LƯU ĐÈ bằng nội dung bạn vừa sửa không?`);
          if(!proceed) return;
@@ -1426,22 +1760,30 @@ $('#tkForm').onsubmit=async e=>{
      if($('#view-history').classList.contains('active')) renderHistory();
      cancelEdit();
    } else {
-     const rec={...payload,no,thoiGian:new Date().toISOString(),_local:!CFG.url};
+     const rec={...payload,no,thoiGian:new Date().toISOString(),_local:!sb};
      const h=JSON.parse(localStorage.getItem(LS_HIST)||'[]');h.unshift(rec);localStorage.setItem(LS_HIST,JSON.stringify(h.slice(0,120)));
-     toast(CFG.url?'✅ Đã gửi phiếu!':'✅ Đã lưu (thử nghiệm)');
+     toast(sb?'✅ Đã gửi phiếu!':'✅ Đã lưu (thử nghiệm)');
      $('#f_issue').value='';$('#f_remark').value='';
      setDateValue(new Date().toISOString().slice(0,10));
+     bbImage={url:null,name:null}; renderBbImagePreview();
+     bbPdf={url:null,name:null}; renderBbPdfPreview();
    }
    submitBtnIdle();
 
-   if(!CFG.url) return; // chế độ thử nghiệm — không có máy chủ để gửi thật
+   if(!sb) return; // chế độ thử nghiệm — không có Supabase để gửi thật
 
-   const body=isEdit?{...payload,action:'edit',no,...(isAdminUnlocked?{adminPassword:adminPasswordRuntime}:{})}:payload;
+   const pendingOtherPhotos=otherPhotos; otherPhotos=[]; renderOtherPhotosList();
    try{
-     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
-     const j=await res.json();
+     const j=isEdit
+       ? await DB.editTicket(no,payload,isAdminUnlocked?adminPasswordRuntime:null)
+       : await DB.createTicket(payload);
      if(!j.ok) toast(`⚠️ Gửi ${isEdit?'cập nhật':''} phiếu${isEdit?` #${displayNo}`:''} thất bại: ${j.error||'máy chủ báo lỗi'} — thử gửi lại`,true);
-     else if(!isEdit) silentRefreshData(); // đồng bộ lại đúng số No thật + dữ liệu mới nhất từ server
+     else if(pendingOtherPhotos.length){
+       const ticketId=isEdit?no:j.no;
+       const pj=await DB.addTicketPhotos(ticketId,pendingOtherPhotos);
+       if(!pj.ok) toast(`⚠️ Phiếu đã lưu nhưng ảnh khác chưa gắn được: ${pj.error||'lỗi'}`,true);
+     }
+     // không cần tự làm mới danh sách phiếu — Realtime sẽ tự đẩy thay đổi về mgrData
    }catch(err){
      toast(`⚠️ Không gửi được phiếu${isEdit?` #${displayNo}`:''} (mất mạng) — thử gửi lại`,true);
    }
@@ -1479,36 +1821,113 @@ function emptyState(t,d){return `<div class="empty"><svg viewBox="0 0 24 24" fil
 /* history — lấy đúng dữ liệu THẬT từ Sheet (mgrData), giống hệt Quản lý,
    lọc theo Ngày/Tuần/Tháng/Tất cả — không dùng bộ nhớ máy riêng nữa nên
    luôn khớp với Quản lý (trước đây dùng localStorage nên có thể lệch/sót). */
-function findTicket(no){
+function findTicket(no,fromArchive){
+ if(fromArchive) return (archivedData||[]).find(r=>String(r.no)===String(no));
  return mgrData.find(r=>String(r.no)===String(no))
-   || JSON.parse(localStorage.getItem(LS_HIST)||'[]').find(r=>String(r.no)===String(no));
+   || JSON.parse(localStorage.getItem(LS_HIST)||'[]').find(r=>String(r.no)===String(no))
+   || (archivedData||[]).find(r=>String(r.no)===String(no));
 }
 // Xem "Hướng xử lý" (remark) của 1 phiếu — không hiện thành cột riêng trong
 // bảng (quá dài, chiếm chỗ), nên bấm nút 👁 cạnh nút Sửa để xem trong popup.
-function showRemark(no,displayNo){
- const rec=findTicket(no);
+function showRemark(no,displayNo,fromArchive){
+ const rec=findTicket(no,fromArchive);
  $('#remarkModalTitle').textContent=`Hướng xử lý — Phiếu #${displayNo||no}`;
  $('#remarkModalText').textContent=(rec&&rec.remark)?rec.remark:'Chưa có hướng xử lý.';
  $('#remarkModal').classList.add('show');
 }
 $('#btnCloseRemark').onclick=()=>$('#remarkModal').classList.remove('show');
 $('#remarkModal').onclick=e=>{if(e.target===$('#remarkModal'))$('#remarkModal').classList.remove('show')};
+
+// Xem ảnh của 1 phiếu: ảnh Biên bản làm việc, file PDF Biên bản, và các ảnh
+// khác chụp thêm để theo dõi (bảng ticket_photos, tải riêng khi mở popup).
+// Ảnh đã chuyển sang Drive thì hiện nút mở Drive thay vì nhúng thẳng <img>
+// (Drive chặn nhúng ảnh trực tiếp từ trang khác nên nhúng sẽ bị vỡ ảnh).
+function isDriveLink(u){ return /drive\.google\.com/.test(u||''); }
+function photoTile(url,label){
+ return isDriveLink(url)
+   ? `<a href="${esc(url)}" target="_blank" rel="noopener" class="btn btn-ghost" style="display:inline-flex">🖼 ${esc(label||'Mở ảnh trên Drive')}</a>`
+   : `<a href="${esc(url)}" target="_blank" rel="noopener"><img src="${esc(url)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--line)" /></a>`;
+}
+async function showPhotos(no,displayNo,fromArchive){
+ const rec=findTicket(no,fromArchive);
+ $('#photosModalTitle').textContent=`Ảnh phiếu #${displayNo||no}${fromArchive?' (đã lưu trữ)':''}`;
+ const parts=[];
+ if(rec&&rec.attachmentUrl) parts.push(`<div><div class="section-title" style="margin-top:0">Ảnh Biên bản làm việc</div>${isDriveLink(rec.attachmentUrl)?photoTile(rec.attachmentUrl,'Mở ảnh biên bản trên Drive'):`<img src="${esc(rec.attachmentUrl)}" style="max-width:100%;border-radius:10px;border:1px solid var(--line)" />`}</div>`);
+ if(rec&&rec.bienbanPdfUrl) parts.push(`<div><div class="section-title">File PDF Biên bản</div><a href="${esc(rec.bienbanPdfUrl)}" target="_blank" rel="noopener" class="btn btn-ghost" style="display:inline-flex">📄 Mở file PDF</a></div>`);
+ $('#photosModalBody').innerHTML=parts.join('')||'<div class="hint">Đang tải ảnh khác...</div>';
+ $('#photosModal').classList.add('show');
+ // Phiếu lưu trữ: danh sách ảnh khác lấy sẵn từ Google Sheet, không cần gọi Supabase
+ if(fromArchive){
+   const others=(rec&&rec.photos)||[];
+   const otherHtml=others.length
+     ? `<div><div class="section-title">Ảnh khác (${others.length})</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">${others.map(u=>photoTile(u)).join('')}</div></div>`
+     : '';
+   $('#photosModalBody').innerHTML=(parts.join('')+otherHtml)||'<div class="hint">Phiếu này không có ảnh nào được lưu trữ.</div>';
+   return;
+ }
+ if(!sb) return;
+ try{
+   const j=await DB.listTicketPhotos(no);
+   const others=j.ok?(j.data||[]):[];
+   const otherHtml=others.length
+     ? `<div><div class="section-title">Ảnh khác</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">${others.map(p=>photoTile(p.url)).join('')}</div></div>`
+     : '';
+   $('#photosModalBody').innerHTML=(parts.join('')+otherHtml)||'<div class="hint">Phiếu này chưa có ảnh nào.</div>';
+ }catch(err){ $('#photosModalBody').innerHTML=parts.join('')||'<div class="hint">Không tải được ảnh khác.</div>'; }
+}
+$('#btnClosePhotos').onclick=()=>$('#photosModal').classList.remove('show');
+$('#photosModal').onclick=e=>{if(e.target===$('#photosModal'))$('#photosModal').classList.remove('show')};
+/* ===== Lịch sử: xem được 2 nguồn dữ liệu =====
+   - "Đang dùng": phiếu hiện hành trên Supabase (mgrData)
+   - "Đã lưu trữ": phiếu đã sao lưu sang Google Sheet — dùng để tra cứu dữ
+     liệu cũ đã xoá khỏi Supabase; ảnh mở trực tiếp từ link Google Drive. */
+let histSource='live';
+let archivedData=null;      // nạp 1 lần rồi giữ lại, bấm "Làm mới" để tải lại
+let archivedLoading=false;
+async function loadArchivedTickets(force){
+ if(archivedLoading) return;
+ if(archivedData && !force) return;
+ archivedLoading=true;
+ $('#historyList').innerHTML='<div class="empty"><div class="t">Đang tải dữ liệu lưu trữ từ Google Sheet...</div></div>';
+ try{
+   const j=await DB.listBackupTickets();
+   archivedData=j.ok?(j.data||[]):[];
+   if(!j.ok) toast(j.error||'Không tải được dữ liệu lưu trữ',true);
+ }catch(err){ archivedData=[]; toast('Không tải được dữ liệu lưu trữ',true); }
+ archivedLoading=false;
+ renderHistory();
+}
+$$('#histSource button').forEach(b=>b.onclick=()=>{
+ $$('#histSource button').forEach(x=>x.classList.toggle('on',x===b));
+ histSource=b.dataset.v;
+ $('#histSourceHint').textContent = histSource==='live'
+   ? 'Đang xem dữ liệu hiện hành trên Supabase. Chuyển sang "Đã lưu trữ" để tra cứu phiếu cũ đã sao lưu sang Google Sheet (ảnh mở từ Google Drive) — kể cả phiếu đã xoá khỏi Supabase.'
+   : 'Đang xem dữ liệu đã sao lưu trong Google Sheet (tab "Tickets"). Đây là dữ liệu chỉ đọc — muốn cập nhật thì bấm "Đồng bộ Supabase → Google Sheet" trong ⚙️ Cài đặt.';
+ if(histSource==='archived') loadArchivedTickets(false); else renderHistory();
+});
 function renderHistory(){
  const fYear=$('#histYear').value, fMonth=$('#histMonth').value, fDay=$('#histDay').value, fWeek=$('#histWeek').value;
  const q=($('#histSearch').value||'').trim().toLowerCase();
- let h=mgrData.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
+ const isArchived=histSource==='archived';
+ const source=isArchived?(archivedData||[]):mgrData;
+ let h=source.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
  if(q) h=h.filter(r=>((r.engineer||'')+' '+(r.issue||'')+' '+(r.customer||'')+' '+(r.system||'')+' '+(r.workType||'')).toLowerCase().includes(q));
  h.sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(Number(a.no)-Number(b.no))); // ngày nhỏ (cũ) đến lớn (mới), xem chú thích ở renderManager
  const lbl=[fYear&&('Năm '+fYear),fMonth&&('Tháng '+Number(fMonth)),fDay&&('Ngày '+Number(fDay)),fWeek&&('Tuần '+fWeek)].filter(Boolean).join(', ')||'Tất cả';
- $('#histListTitle').textContent=`Lịch sử phiếu · ${lbl} (${h.length})`;
- if(!h.length){$('#historyList').innerHTML=emptyState(q?'Không tìm thấy':'Chưa có phiếu',q?'Không có phiếu khớp tìm kiếm.':CFG.url?'Không có phiếu trong khoảng thời gian này.':'Kết nối Google Sheet để xem lịch sử.');return}
+ $('#histListTitle').textContent=`${isArchived?'Phiếu đã lưu trữ':'Lịch sử phiếu'} · ${lbl} (${h.length})`;
+ if(isArchived && archivedLoading) return;
+ if(!h.length){$('#historyList').innerHTML=emptyState(q?'Không tìm thấy':'Chưa có phiếu',
+   q?'Không có phiếu khớp tìm kiếm.'
+   :isArchived?'Chưa có phiếu nào trong Google Sheet. Vào ⚙️ Cài đặt bấm "Đồng bộ Supabase → Google Sheet" để sao lưu.'
+   :sb?'Không có phiếu trong khoảng thời gian này.':'Kết nối Supabase để xem lịch sử.');return}
  $('#historyList').innerHTML=`<div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột</div>
    <div class="rpt-wrap"><table class="rpt">
    <thead><tr><th>No</th><th>Ngày</th><th>Khách hàng</th><th>Hệ thống</th><th>Loại công việc</th><th>Sự cố</th><th>Ưu tiên</th><th>Kỹ sư</th><th>Hỗ trợ</th><th>Trạng thái</th><th>Sửa</th></tr></thead>
-   <tbody>${h.map((r,i)=>rptRow(r,i+1)).join('')}</tbody>
+   <tbody>${h.map((r,i)=>rptRow(r,i+1,isArchived)).join('')}</tbody>
  </table></div>`;
  $$('#historyList .status-sel').forEach(sel=>sel.onchange=()=>updateStatus(sel.dataset.no,sel.value,sel));
- $$('#historyList .btn-row-view').forEach(b=>b.onclick=()=>showRemark(b.dataset.no,b.dataset.displayNo));
+ $$('#historyList .btn-row-view').forEach(b=>b.onclick=()=>showRemark(b.dataset.no,b.dataset.displayNo,b.dataset.archived==='1'));
+ $$('#historyList .btn-row-photos').forEach(b=>b.onclick=()=>showPhotos(b.dataset.no,b.dataset.displayNo,b.dataset.archived==='1'));
  $$('#historyList .btn-row-edit').forEach(b=>b.onclick=()=>startEdit(b.dataset.no,b.dataset.displayNo));
  $$('#historyList .btn-row-delete').forEach(b=>b.onclick=()=>deleteTicket(b.dataset.no,b.dataset.displayNo));
 }
@@ -1534,71 +1953,56 @@ function renderAllFromMgrData(){
    qua im lặng (đã có dữ liệu cũ/ưu tiên hiện sẵn trên màn hình rồi, khỏi làm
    phiền); silent=false thì báo lỗi rõ (không còn gì khác để hiện). */
 async function fetchFullMgrData(silent){
- try{const res=await fetch(CFG.url+'?action=list&token='+encodeURIComponent(CFG.token));const j=await res.json();
+ try{const j=await DB.listTicketsFull();
    if(j.ok){ mgrData=j.data||[]; localStorage.setItem(MGR_CACHE_KEY,JSON.stringify(mgrData)); renderAllFromMgrData(); }
    else if(!silent){ mgrData=[]; toast(j.error||'Lỗi tải dữ liệu',true); renderAllFromMgrData(); }}
  catch(err){ if(!silent){ mgrData=[]; toast('Không tải được dữ liệu',true); renderAllFromMgrData(); } }
 }
 async function loadManager(){const list=$('#managerList');
- const cached=CFG.url?JSON.parse(localStorage.getItem(MGR_CACHE_KEY)||'null'):null;
+ setupRealtime();
+ const cached=sb?JSON.parse(localStorage.getItem(MGR_CACHE_KEY)||'null'):null;
  if(cached && cached.length){
    // Đã có dữ liệu lần trước — hiện ngay, rồi âm thầm tải bản đầy đủ mới
    // nhất phía sau (không chờ, không báo lỗi nếu mạng chập chờn).
    mgrData=cached; renderAllFromMgrData();
-   if(CFG.url) fetchFullMgrData(true);
+   if(sb) fetchFullMgrData(true);
    return;
  }
- if(!CFG.url){ mgrData=JSON.parse(localStorage.getItem(LS_HIST)||'[]'); renderAllFromMgrData(); return; }
+ if(!sb){ mgrData=JSON.parse(localStorage.getItem(LS_HIST)||'[]'); renderAllFromMgrData(); return; }
  // Lần đầu mở app (chưa có gì lưu sẵn) — tải NHANH đúng tháng hiện tại
  // trước (nhẹ, ít dữ liệu hơn hẳn toàn bộ lịch sử) để có gì đó hiện ra ngay,
  // rồi mới tải đầy đủ toàn bộ lịch sử ở phía sau.
  const now=new Date();
  let gotPriority=false;
  try{
-   const res=await fetch(`${CFG.url}?action=list&token=${encodeURIComponent(CFG.token)}&year=${now.getFullYear()}&month=${pad2(now.getMonth()+1)}`);
-   const j=await res.json();
+   const j=await DB.listTickets(now.getFullYear(),now.getMonth()+1);
    if(j.ok){ mgrData=j.data||[]; renderAllFromMgrData(); gotPriority=true; }
  }catch(err){}
  if(!gotPriority) list.innerHTML='<div class="empty"><div class="t">Đang tải...</div></div>';
  await fetchFullMgrData(false);
 }
 
-/* ===== Tự động tải lại dữ liệu ngầm (mỗi 15 giây) =====
-   Để nhiều người dùng cùng lúc thấy phiếu của nhau cập nhật mà không cần bấm
-   "Làm mới" tay — chạy nền, KHÔNG hiện "Đang tải...", không hiện toast lỗi
-   (lỗi mạng tạm thời cứ bỏ qua, tự thử lại ở lần kế tiếp 15s sau). Tạm dừng
-   khi tab đang ẩn (đỡ tốn dữ liệu/quota khi không ai nhìn màn hình). */
-let lastKnownSheetSignal=null;
-async function silentRefreshData(){
- if(!CFG.url || document.hidden) return;
- try{
-   // Kiểm tra NHẸ trước (chỉ 1 chuỗi ngắn, không phải toàn bộ dữ liệu) — nếu
-   // không có gì mới thì dừng luôn, khỏi tải lại + vẽ lại cả bảng mỗi 15s.
-   // Quan trọng khi dữ liệu phình to dần (hàng nghìn phiếu trở lên).
-   const metaRes=await fetch(CFG.url+'?action=meta&token='+encodeURIComponent(CFG.token));
-   const meta=await metaRes.json();
-   if(meta.ok){
-     if(lastKnownSheetSignal===meta.signal) return; // không đổi gì — bỏ qua lần này
-     lastKnownSheetSignal=meta.signal;
-   }
-   // Có gì đó đổi — nhưng CHỈ tải lại đúng THÁNG HIỆN TẠI (ưu tiên tháng
-   // đang dùng, nhẹ hơn nhiều so với tải hết toàn bộ kỳ 6 tháng mỗi lần có
-   // 1 thay đổi nhỏ), rồi ghép vào các tháng khác đã có sẵn trong mgrData
-   // (giữ nguyên, không đụng tới). Đủ dùng vì hầu hết thao tác thực tế đều
-   // rơi vào phiếu THÁNG NÀY — ai sửa phiếu tháng cũ hơn thì người khác sẽ
-   // thấy khi họ tự mở lại app / bấm "Làm mới" (không tức thì như tháng này).
-   const now=new Date(), curY=String(now.getFullYear()), curM=pad2(now.getMonth()+1);
-   const res=await fetch(`${CFG.url}?action=list&token=${encodeURIComponent(CFG.token)}&year=${curY}&month=${curM}`);
-   const j=await res.json();
-   if(j.ok){
-     const others=mgrData.filter(r=>!((r.date||'').slice(0,4)===curY && (r.date||'').slice(5,7)===curM));
-     mgrData=others.concat(j.data||[]);
+/* ===== Realtime — thay cho polling 15s cũ =====
+   Supabase đẩy thẳng thay đổi (thêm/sửa/xóa phiếu, của bất kỳ ai) về mọi
+   trình duyệt đang mở, không cần hỏi lại máy chủ định kỳ nữa. */
+let realtimeChannel=null;
+function setupRealtime(){
+ if(!sb || realtimeChannel) return;
+ realtimeChannel=sb.channel('tickets-changes').on('postgres_changes',
+   {event:'*',schema:'public',table:'tickets'},
+   payload=>{
+     if(payload.eventType==='DELETE'){
+       mgrData=mgrData.filter(r=>String(r.no)!==String(payload.old.id));
+     } else {
+       const row=mapTicket(payload.new);
+       const idx=mgrData.findIndex(r=>String(r.no)===String(row.no));
+       if(idx>=0) mgrData[idx]=row; else mgrData.push(row);
+     }
      localStorage.setItem(MGR_CACHE_KEY,JSON.stringify(mgrData));
      renderAllFromMgrData();
    }
- }catch(err){ /* lỗi mạng tạm thời — im lặng bỏ qua, không làm phiền */ }
+ ).subscribe();
 }
-setInterval(silentRefreshData,15000);
 
 function buildFilterOptions(selId,values){
  const sel=$('#'+selId);const cur=sel.value;
@@ -1736,7 +2140,7 @@ function statusOptions(cur){
    hiển thị — vì danh sách xếp theo NGÀY mới nhất lên trước, không theo No
    thật lưu trong Sheet). r.no (No thật) vẫn giữ nguyên, không đổi, chỉ dùng
    ngầm để gọi sửa/xóa đúng phiếu — người dùng chỉ thấy displayNo. */
-function rptRow(r,displayNo){
+function rptRow(r,displayNo,readOnly){
  const dd=(r.date||'').split('-').reverse().join('/');
  const supCls=(r.support||'').toLowerCase().includes('site')?'sup-onsite':'sup-online';
  const dow=r.date?new Date(r.date+'T00:00:00').getDay():-1; // 0=CN, 6=Thứ 7
@@ -1751,9 +2155,13 @@ function rptRow(r,displayNo){
    <td data-label="Ưu tiên"><span class="pill ${pcls(r.priority)}">${esc(r.priority||'')}</span></td>
    <td data-label="Kỹ sư">${esc(r.engineer||'')}</td>
    <td data-label="Hỗ trợ"><span class="pill ${supCls}">${esc(r.support||'')}</span></td>
-   <td data-label="Trạng thái">${r.no&&CFG.url?`<select class="status-sel ${scls(r.status)}" data-no="${esc(r.no)}">${statusOptions(r.status)}</select>`:`<span class="pill ${scls(r.status)}">${esc(slabel(r.status))}</span>`}</td>
-   <td data-label="Sửa">${r.no&&CFG.url?`<div class="row-actions">
+   <td data-label="Trạng thái">${r.no&&sb&&!readOnly?`<select class="status-sel ${scls(r.status)}" data-no="${esc(r.no)}">${statusOptions(r.status)}</select>`:`<span class="pill ${scls(r.status)}">${esc(slabel(r.status))}</span>`}</td>
+   <td data-label="Sửa">${readOnly?`<div class="row-actions">
+     <button type="button" class="btn-row-view" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" data-archived="1" aria-label="Xem hướng xử lý"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+     <button type="button" class="btn-row-photos" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" data-archived="1" aria-label="Xem ảnh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-4 4-3-3-4 4"/></svg></button>
+   </div>`:r.no&&sb?`<div class="row-actions">
      <button type="button" class="btn-row-view" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" aria-label="Xem hướng xử lý phiếu #${esc(displayNo||r.no)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+     <button type="button" class="btn-row-photos" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" aria-label="Xem ảnh phiếu #${esc(displayNo||r.no)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-4 4-3-3-4 4"/></svg></button>
      <button type="button" class="btn-row-edit" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" aria-label="Sửa phiếu #${esc(displayNo||r.no)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
      ${isAdminUnlocked?`<button type="button" class="btn-row-delete" data-no="${esc(r.no)}" data-display-no="${esc(displayNo||r.no)}" aria-label="Xóa phiếu #${esc(displayNo||r.no)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>`:''}
    </div>`:''}</td>
@@ -1762,8 +2170,7 @@ function rptRow(r,displayNo){
 async function updateStatus(no,status,selEl){
  selEl.disabled=true;
  try{
-   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:CFG.token,action:'update',no,status})});
-   const j=await res.json();
+   const j=await DB.updateTicketStatus(no,status);
    if(j.ok){
      toast(`✅ Đã cập nhật phiếu #${no}`);
      // Cập nhật toàn bộ nơi hiển thị dữ liệu này trong app
@@ -1810,7 +2217,7 @@ function renderManager(){
  const lbl=[fYear&&('Năm '+fYear),fMonth&&('Tháng '+Number(fMonth)),fDay&&('Ngày '+Number(fDay)),fWeek&&('Tuần '+fWeek)].filter(Boolean).join(', ')||'Tất cả';
  $('#mgrListTitle').textContent=`Danh sách phiếu · ${lbl} (${data.length})`;
  if(!data.length){
-   $('#managerList').innerHTML=emptyState('Không có phiếu',CFG.url?'Không có phiếu khớp bộ lọc hiện tại.':'Kết nối Google Sheet để xem dữ liệu cả nhóm.');
+   $('#managerList').innerHTML=emptyState('Không có phiếu',sb?'Không có phiếu khớp bộ lọc hiện tại.':'Kết nối Supabase để xem dữ liệu cả nhóm.');
    return;
  }
  $('#managerList').innerHTML=`<div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột</div>
@@ -1820,6 +2227,7 @@ function renderManager(){
  </table></div>`;
  $$('#managerList .status-sel').forEach(sel=>sel.onchange=()=>updateStatus(sel.dataset.no,sel.value,sel));
  $$('#managerList .btn-row-view').forEach(b=>b.onclick=()=>showRemark(b.dataset.no,b.dataset.displayNo));
+ $$('#managerList .btn-row-photos').forEach(b=>b.onclick=()=>showPhotos(b.dataset.no,b.dataset.displayNo));
  $$('#managerList .btn-row-edit').forEach(b=>b.onclick=()=>startEdit(b.dataset.no,b.dataset.displayNo));
  $$('#managerList .btn-row-delete').forEach(b=>b.onclick=()=>deleteTicket(b.dataset.no,b.dataset.displayNo));
 }
@@ -1828,8 +2236,7 @@ async function deleteTicket(no,displayNo){
  if(!isAdminUnlocked){toast('Chỉ quản trị viên mới được xóa phiếu',true);return}
  if(!confirm(`Xóa hẳn phiếu #${displayNo}? Không thể hoàn tác.`)) return;
  try{
-   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:CFG.token,action:'delete',no,adminPassword:adminPasswordRuntime})});
-   const j=await res.json();
+   const j=await DB.deleteTicket(no,adminPasswordRuntime);
    if(j.ok){
      toast(`🗑️ Đã xóa phiếu #${displayNo}`);
      mgrData=mgrData.filter(r=>String(r.no)!==String(no));
@@ -1941,16 +2348,43 @@ async function loadPeriodInfo(){
      : `📅 Kỳ dữ liệu bắt đầu ${fmtDMYFull(j.periodStart)} — nên xóa vào khoảng ${fmtDMYFull(j.dueDate)} (còn ${j.daysRemaining} ngày).`;
  }catch(err){ box.textContent='Không kết nối được để kiểm tra.'; box.className='period-notice'; }
 }
+/* Sao lưu Supabase → Google Sheet: đọc hết phiếu + ảnh từ Supabase rồi gửi
+   sang Apps Script ghi vào tab "Tickets" của file backup. Chia lô 50 phiếu
+   mỗi lần để không vượt giới hạn kích thước request của Apps Script. */
 $('#btnSyncBackup').onclick=async()=>{
- if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
+ if(!sb){ toast('Chưa kết nối Supabase',true); return; }
+ if(!CFG.url){ toast('Chưa cấu hình Apps Script URL',true); return; }
  const btn=$('#btnSyncBackup'); btn.disabled=true;
+ const box=$('#syncBackupStatus'); box.style.display='block'; box.className='period-notice';
+ box.textContent='Đang đọc dữ liệu từ Supabase...';
  try{
-   const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-     body:JSON.stringify({token:CFG.token,action:'syncBackup',adminPassword:adminPasswordRuntime})});
-   const j=await res.json();
-   if(j.ok) toast(j.count?`✅ Đã thêm ${j.count} phiếu mới vào backup${j.skipped?` (${j.skipped} phiếu đã có sẵn, bỏ qua)`:''}`:'Backup đã đủ, không có phiếu mới để thêm');
-   else toast(j.error||'Lỗi đồng bộ backup',true);
- }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
+   const tj=await DB.listTicketsFull();
+   if(!tj.ok){ throw new Error(tj.error||'Không đọc được phiếu'); }
+   const tickets=tj.data||[];
+   if(!tickets.length){ box.textContent='Chưa có phiếu nào để sao lưu.'; btn.disabled=false; return; }
+   // gom ảnh "khác" theo từng phiếu (1 truy vấn, gộp lại phía app)
+   const {data:allPhotos}=await sb.from('ticket_photos').select('ticket_id,url');
+   const photoMap={};
+   (allPhotos||[]).forEach(p=>{ (photoMap[p.ticket_id]=photoMap[p.ticket_id]||[]).push(p.url); });
+   const rows=tickets.map(t=>({id:t.no,date:t.date,customer:t.customer,system:t.system,issue:t.issue,
+     priority:t.priority,engineer:t.engineer,support:t.support,status:t.status,remark:t.remark,
+     workType:t.workType,attachmentUrl:t.attachmentUrl,attachmentName:t.attachmentName,
+     bienbanPdfUrl:t.bienbanPdfUrl,bienbanPdfName:t.bienbanPdfName,photos:photoMap[t.no]||[]}));
+   let added=0, updated=0;
+   for(let i=0;i<rows.length;i+=50){
+     const batch=rows.slice(i,i+50);
+     box.textContent=`Đang sao lưu ${Math.min(i+batch.length,rows.length)}/${rows.length} phiếu...`;
+     const j=await DB.backupTicketsToSheet(batch,adminPasswordRuntime);
+     if(!j.ok) throw new Error(j.error||'Lỗi ghi vào Sheet');
+     added+=j.added||0; updated+=j.updated||0;
+   }
+   box.className='period-notice';
+   box.textContent=`✅ Đã sao lưu ${rows.length} phiếu sang Google Sheet (thêm mới ${added}, cập nhật ${updated}).`;
+   toast(`✅ Đã sao lưu ${rows.length} phiếu sang Google Sheet`);
+ }catch(err){
+   box.className='period-notice overdue'; box.textContent='Lỗi: '+err.message;
+   toast('⚠️ Sao lưu thất bại',true);
+ }
  btn.disabled=false;
 };
 $('#btnClearBackupRange').onclick=async()=>{
@@ -2004,6 +2438,84 @@ $('#btnClearAllData').onclick=async()=>{
    } else toast(j.error||'Lỗi xóa dữ liệu',true);
  }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
 };
+
+/* ===== Chuyển ảnh/PDF đính kèm của phiếu cũ (>6 tháng) sang Google Drive,
+   xóa bản gốc khỏi Supabase Storage để giải phóng dung lượng free tier.
+   Thủ công, admin tự bấm khi cần — không tự động chạy định kỳ. */
+async function findOldTicketAttachments(){
+ const cutoff=new Date(); cutoff.setMonth(cutoff.getMonth()-6);
+ const cutoffStr=cutoff.toISOString().slice(0,10);
+ const {data:tix,error:e1}=await sb.from('tickets')
+   .select('id,attachment_url,attachment_name,bienban_pdf_url,bienban_pdf_name')
+   .lt('ticket_date',cutoffStr)
+   .or('attachment_url.not.is.null,bienban_pdf_url.not.is.null');
+ if(e1) throw new Error(e1.message);
+ const ids=(tix||[]).map(t=>t.id);
+ let photos=[];
+ if(ids.length){
+   const {data,error:e2}=await sb.from('ticket_photos').select('id,ticket_id,url,name').in('ticket_id',ids);
+   if(e2) throw new Error(e2.message);
+   photos=data||[];
+ }
+ return {tickets:tix||[], photos};
+}
+function storagePathFromUrl(url){
+ const m=url.match(/\/ticket-attachments\/(.+)$/);
+ return m?decodeURIComponent(m[1]):null;
+}
+$('#btnArchiveOldPhotos').onclick=async()=>{
+ if(!sb){ toast('Chưa kết nối Supabase',true); return; }
+ if(!CFG.url){ toast('Chưa cấu hình Apps Script URL (cần để lưu vào Drive)',true); return; }
+ if(!confirm('Chuyển toàn bộ ảnh/PDF đính kèm của phiếu quá 6 tháng sang Google Drive và xóa bản gốc khỏi Supabase?\n\nViệc này không thể hoàn tác (bản gốc trên Supabase sẽ bị xóa sau khi chuyển xong).')) return;
+ const btn=$('#btnArchiveOldPhotos'); btn.disabled=true;
+ const statusBox=$('#archivePhotosStatus'); statusBox.style.display='block'; statusBox.className='period-notice';
+ statusBox.textContent='Đang quét phiếu cũ...';
+ try{
+   const {tickets,photos}=await findOldTicketAttachments();
+   let jobs=[]; // {kind, ticketId/photoId, url, name}
+   tickets.forEach(t=>{
+     if(t.attachment_url) jobs.push({kind:'ticket_attachment',id:t.id,url:t.attachment_url,name:t.attachment_name});
+     if(t.bienban_pdf_url) jobs.push({kind:'ticket_pdf',id:t.id,url:t.bienban_pdf_url,name:t.bienban_pdf_name});
+   });
+   photos.forEach(p=>jobs.push({kind:'ticket_photo',id:p.id,url:p.url,name:p.name}));
+   if(!jobs.length){ statusBox.textContent='Không có ảnh/PDF nào của phiếu quá 6 tháng cần chuyển.'; btn.disabled=false; return; }
+   let done=0, failed=0; const errors=[];
+   for(let idx=0; idx<jobs.length; idx++){
+     const job=jobs[idx];
+     statusBox.textContent=`Đang chuyển ${idx+1}/${jobs.length}...`;
+     // Gọi Apps Script đôi khi lỗi tạm thời (khởi động nguội, nghẽn khoá) —
+     // thử lại tối đa 3 lần trước khi coi là thất bại, để chạy hàng loạt
+     // không bị bỏ sót file vì 1 trục trặc thoáng qua.
+     let ar=null;
+     for(let attempt=1; attempt<=3; attempt++){
+       ar=await DB.archiveFileToDrive(job.url,job.name,adminPasswordRuntime);
+       if(ar.ok) break;
+       if(attempt<3){ statusBox.textContent=`Đang chuyển ${idx+1}/${jobs.length} (thử lại lần ${attempt+1})...`; await new Promise(r=>setTimeout(r,2000)); }
+     }
+     if(!ar.ok){ failed++; errors.push(`${job.name||job.url}: ${ar.error||'lỗi'}`); continue; }
+     // Cập nhật link mới (Drive) trong Supabase rồi mới xóa bản gốc — tránh
+     // mất link giữa chừng nếu có lỗi ở bước nào đó.
+     let updErr=null;
+     if(job.kind==='ticket_attachment') ({error:updErr}=await sb.from('tickets').update({attachment_url:ar.driveUrl}).eq('id',job.id));
+     else if(job.kind==='ticket_pdf') ({error:updErr}=await sb.from('tickets').update({bienban_pdf_url:ar.driveUrl}).eq('id',job.id));
+     else ({error:updErr}=await sb.from('ticket_photos').update({url:ar.driveUrl}).eq('id',job.id));
+     if(updErr){ failed++; errors.push(`${job.name||job.url}: ${updErr.message||updErr}`); continue; }
+     const path=storagePathFromUrl(job.url);
+     if(path) await sb.storage.from('ticket-attachments').remove([path]);
+     done++;
+   }
+   statusBox.className='period-notice'+(failed?' soon':'');
+   statusBox.textContent=`✅ Đã chuyển ${done}/${jobs.length} file sang Drive`
+     +(failed?`, ${failed} file lỗi — bấm lại nút để thử tiếp. Chi tiết: ${errors.slice(0,3).join(' | ')}`:'')+'.';
+   toast(`✅ Đã chuyển ${done} ảnh/PDF phiếu cũ sang Drive`);
+   fetchFullMgrData(true);
+ }catch(err){
+   statusBox.className='period-notice overdue'; statusBox.textContent='Lỗi: '+err.message;
+   toast('⚠️ Có lỗi khi chuyển ảnh sang Drive',true);
+ }
+ btn.disabled=false;
+};
+
 $('#btnSettings').onclick=()=>{$('#admin_pin').value='';$('#admin_pin').classList.add('masked');gate.classList.add('show');setTimeout(()=>$('#admin_pin').focus(),100)};
 $('#btnCloseAdminGate').onclick=()=>gate.classList.remove('show');
 $('#btnToggleAdminPin').onclick=()=>{$('#admin_pin').classList.toggle('masked')};
@@ -2145,6 +2657,7 @@ $('#btnAdminTools').onclick=()=>{
  ccPopulateSelects();
  ctpRenderRequesterChecklist('');
  ctpPopulateMapSelect();
+ loadCtpMaps();
  $('#adminToolsModal').classList.add('show');
  ccLoadList();
  ctpLoadAll();
@@ -2435,14 +2948,55 @@ function ctpRenderRequesterChecklist(selectedNames){
 }
 function ctpRequesterValue(){ return $$('#ctp_f_requester_list input:checked').map(c=>c.value).join(' - '); }
 
+/* Map = ảnh cố định trong ./maps/ (đặt sẵn trong code, tên file) HOẶC map
+   admin tự thêm mới qua nút "Thêm map mới vào danh sách" (ảnh tải lên
+   Supabase Storage, lưu link đầy đủ https://...) — mapSrcFor() phân biệt
+   2 dạng này khi cần hiển thị/in. */
+function mapSrcFor(v){ return v && /^https?:\/\//.test(v) ? v : ('./maps/'+encodeURIComponent(v||'')); }
+let ctpMapsFromDb=[];
+async function loadCtpMaps(){
+ if(!sb) return;
+ const j=await DB.listCtpMaps();
+ ctpMapsFromDb=j.ok?(j.data||[]):[];
+ ctpPopulateMapSelect();
+}
 function ctpPopulateMapSelect(){
- $('#ctp_mapSelect').innerHTML='<option value="">— Không chọn bản đồ —</option>'+MAP_IMAGES.map(m=>`<option value="${esc(m.file)}">${esc(m.label)}</option>`).join('');
+ const cur=$('#ctp_mapSelect').value;
+ const staticOpts=MAP_IMAGES.map(m=>`<option value="${esc(m.file)}">${esc(m.label)}</option>`).join('');
+ const dbOpts=ctpMapsFromDb.map(m=>`<option value="${esc(m.file_url)}">${esc(m.label)}</option>`).join('');
+ $('#ctp_mapSelect').innerHTML='<option value="">— Không chọn bản đồ —</option>'+staticOpts+dbOpts;
+ if(cur) $('#ctp_mapSelect').value=cur;
 }
 $('#ctp_mapSelect').onchange=()=>{
  const f=$('#ctp_mapSelect').value;
  ctpUploadedMapDataUrl=null; $('#ctp_mapUpload').value='';
- if(f){ $('#ctp_mapPreview').src='./maps/'+encodeURIComponent(f); $('#ctp_mapPreviewWrap').style.display='block'; }
+ if(f){ $('#ctp_mapPreview').src=mapSrcFor(f); $('#ctp_mapPreviewWrap').style.display='block'; }
  else $('#ctp_mapPreviewWrap').style.display='none';
+};
+$('#btnCtpAddMap').onclick=()=>{ $('#ctpAddMapForm').style.display='block'; };
+$('#btnCtpCancelAddMap').onclick=()=>{ $('#ctpAddMapForm').style.display='none'; $('#ctp_newmap_name').value=''; $('#ctp_newmap_km').value=''; $('#ctp_newmap_file').value=''; };
+$('#btnCtpSaveMap').onclick=async()=>{
+ const name=$('#ctp_newmap_name').value.trim();
+ const km=$('#ctp_newmap_km').value.trim();
+ const file=$('#ctp_newmap_file').files[0];
+ if(!name){ toast('Nhập tên dự án',true); return; }
+ if(!km){ toast('Nhập số km',true); return; }
+ if(!file){ toast('Chọn ảnh map',true); return; }
+ if(!sb){ toast('Chưa kết nối Supabase',true); return; }
+ // Đúng quy định đặt tên map: "Tên dự án Xkm" — tự ghép, không để nhập tay tự
+ // do (tránh mỗi người gõ 1 kiểu, sau này khó tìm/khó khớp giữa các map).
+ const label=`${name} ${km}km`;
+ try{
+   const up=await DB.uploadCtpMap(file,label);
+   if(!up.ok){ toast(up.error||'Lỗi tải ảnh lên',true); return; }
+   const j=await DB.addCtpMap(label,up.url,adminPasswordRuntime);
+   if(j.ok){
+     ctpMapsFromDb=j.data||ctpMapsFromDb; ctpPopulateMapSelect();
+     $('#ctp_mapSelect').value=up.url; $('#ctp_mapSelect').dispatchEvent(new Event('change'));
+     $('#ctpAddMapForm').style.display='none'; $('#ctp_newmap_name').value=''; $('#ctp_newmap_km').value=''; $('#ctp_newmap_file').value='';
+     toast(`✅ Đã thêm map "${label}" vào danh sách`);
+   } else toast(j.error||'Lỗi lưu map',true);
+ }catch(err){ toast('Không tải lên được. Kiểm tra mạng.',true); }
 };
 $('#ctp_mapUpload').onchange=()=>{
  const file=$('#ctp_mapUpload').files[0];
@@ -2541,7 +3095,7 @@ function ctpLoadTripIntoForm(){
  $('#ctp_f_pjcode').value=first.projectCode||''; $('#ctp_f_pjname').value=first.projectName||'';
  segSet('ctp_f_tripservice', first.serviceType||'Bảo trì');
  if(first.mapImage && first.mapImage.startsWith('data:')){ ctpUploadedMapDataUrl=first.mapImage; $('#ctp_mapSelect').value=''; $('#ctp_mapPreview').src=first.mapImage; $('#ctp_mapPreviewWrap').style.display='block'; }
- else if(first.mapImage){ $('#ctp_mapSelect').value=first.mapImage; ctpUploadedMapDataUrl=null; $('#ctp_mapPreview').src='./maps/'+encodeURIComponent(first.mapImage); $('#ctp_mapPreviewWrap').style.display='block'; }
+ else if(first.mapImage){ $('#ctp_mapSelect').value=first.mapImage; ctpUploadedMapDataUrl=null; $('#ctp_mapPreview').src=mapSrcFor(first.mapImage); $('#ctp_mapPreviewWrap').style.display='block'; }
  else { $('#ctp_mapSelect').value=''; ctpUploadedMapDataUrl=null; $('#ctp_mapPreviewWrap').style.display='none'; }
  ctpRenderLines();
 }
@@ -2713,7 +3267,7 @@ $('#btnCtpPrint').onclick=()=>{
    <td style="${tdS}">${esc(r.serviceType)}</td>
    <td style="${tdS}">${esc(r.note)}</td>
  </tr>`).join('');
- const mapSrc = ctpUploadedMapDataUrl || (($('#ctp_mapSelect').value)?('./maps/'+encodeURIComponent($('#ctp_mapSelect').value)):'');
+ const mapSrc = ctpUploadedMapDataUrl || (($('#ctp_mapSelect').value)?mapSrcFor($('#ctp_mapSelect').value):'');
  const first=lines[0]||{};
  // Dòng đầu phiếu "Họ tên người đề nghị" gộp TẤT CẢ người có mặt trong đợt
  // (mỗi người 1 dòng riêng trong bảng) — không chỉ lấy tên ở dòng đầu tiên.
