@@ -154,6 +154,16 @@ label.field:last-child{margin-bottom:0}
 .other-photo-item img{width:36px;height:36px;object-fit:cover;border-radius:7px;border:1px solid var(--line);flex:none}
 .attach-count{font-size:12px;font-weight:700;color:var(--brand);margin-top:8px}
 
+/* ===== Biên tập ảnh scan (kéo góc + duỗi phối cảnh) ===== */
+#scanEditorStage{position:relative;width:100%;max-height:60vh;overflow:hidden;border-radius:var(--radius-sm);background:#000;
+  display:flex;align-items:center;justify-content:center;touch-action:none}
+#scanEditorImg{max-width:100%;max-height:60vh;display:block;user-select:none;-webkit-user-drag:none}
+#scanEditorSvg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#scanEditorPoly{fill:color-mix(in srgb,var(--brand) 22%,transparent);stroke:var(--brand);stroke-width:2}
+.scan-handle{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
+  background:var(--brand);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);cursor:grab;touch-action:none}
+.scan-handle:active{cursor:grabbing;transform:scale(1.15)}
+
 input[type=text],textarea,select{width:100%;font-family:var(--font);font-size:15px;color:var(--ink);background:var(--surface-2);border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:12px 13px;transition:border-color .15s,box-shadow .15s}
 input.masked{-webkit-text-security:disc;text-security:disc}
 /* Ô Ngày tự vẽ — hiển thị dd/mm/yyyy canh trái + icon lịch giống hệt trên mọi
@@ -744,6 +754,29 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     <h2 id="photosModalTitle">Ảnh phiếu</h2>
     <div id="photosModalBody" style="max-height:60vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px"></div>
     <button class="btn btn-ghost" id="btnClosePhotos">Đóng</button>
+  </div>
+</div>
+
+<!-- ===== Biên tập ảnh scan: kéo 4 góc đúng viền giấy → duỗi thẳng phối
+     cảnh + tăng tương phản giống bản scan thật, không phải ảnh chụp thường ===== -->
+<div class="modal" id="scanEditorModal">
+  <div class="sheet" style="max-width:520px">
+    <h2>Chỉnh khung quét</h2>
+    <p class="desc" style="margin-top:-4px">Kéo 4 chấm vào đúng 4 góc tờ giấy, rồi bấm "Dùng ảnh này" — ảnh sẽ được duỗi thẳng và làm rõ như bản scan.</p>
+    <div id="scanEditorStage">
+      <img id="scanEditorImg" alt="" draggable="false">
+      <svg id="scanEditorSvg"><polygon id="scanEditorPoly" points=""></polygon></svg>
+      <div class="scan-handle" data-corner="tl"></div>
+      <div class="scan-handle" data-corner="tr"></div>
+      <div class="scan-handle" data-corner="br"></div>
+      <div class="scan-handle" data-corner="bl"></div>
+    </div>
+    <button type="button" class="btn-mini" id="btnScanResetCorners" style="margin:10px 0">Đặt lại toàn khung ảnh</button>
+    <div style="display:flex;gap:8px">
+      <button type="button" class="btn btn-primary" id="btnScanConfirm" style="flex:1">Dùng ảnh này</button>
+      <button type="button" class="btn btn-ghost" id="btnScanCancel" style="flex:1">Huỷ</button>
+    </div>
+    <canvas id="scanEditorCanvas" hidden></canvas>
   </div>
 </div>
 
@@ -1656,12 +1689,161 @@ async function handleOtherFiles(files){
 }
 $('#btnBbImgCamera').onclick=()=>$('#f_bbimg_camera').click();
 $('#btnBbImgFile').onclick=()=>$('#f_bbimg_file').click();
-$('#f_bbimg_camera').onchange=e=>{handleBbSide(e.target.files[0],bbFront,v=>bbFront=v,renderBbFrontPreview,'bbImgUploading'); e.target.value='';};
-$('#f_bbimg_file').onchange=e=>{handleBbSide(e.target.files[0],bbFront,v=>bbFront=v,renderBbFrontPreview,'bbImgUploading'); e.target.value='';};
+$('#f_bbimg_camera').onchange=e=>{openScanEditor(e.target.files[0],blob=>handleBbSide(blob,bbFront,v=>bbFront=v,renderBbFrontPreview,'bbImgUploading')); e.target.value='';};
+$('#f_bbimg_file').onchange=e=>{openScanEditor(e.target.files[0],blob=>handleBbSide(blob,bbFront,v=>bbFront=v,renderBbFrontPreview,'bbImgUploading')); e.target.value='';};
 $('#btnBbBackCamera').onclick=()=>$('#f_bbback_camera').click();
 $('#btnBbBackFile').onclick=()=>$('#f_bbback_file').click();
-$('#f_bbback_camera').onchange=e=>{handleBbSide(e.target.files[0],bbBack,v=>bbBack=v,renderBbBackPreview,'bbBackUploading'); e.target.value='';};
-$('#f_bbback_file').onchange=e=>{handleBbSide(e.target.files[0],bbBack,v=>bbBack=v,renderBbBackPreview,'bbBackUploading'); e.target.value='';};
+$('#f_bbback_camera').onchange=e=>{openScanEditor(e.target.files[0],blob=>handleBbSide(blob,bbBack,v=>bbBack=v,renderBbBackPreview,'bbBackUploading')); e.target.value='';};
+$('#f_bbback_file').onchange=e=>{openScanEditor(e.target.files[0],blob=>handleBbSide(blob,bbBack,v=>bbBack=v,renderBbBackPreview,'bbBackUploading')); e.target.value='';};
+
+/* ===== Biên tập ảnh scan ===== ================================================
+   Sau khi chụp/chọn ảnh giấy tờ, cho kéo 4 góc đúng viền tờ giấy rồi "duỗi
+   thẳng" bằng phép biến đổi phối cảnh (homography) — kết quả giống hệt máy
+   scan: vuông vắn, không còn góc nghiêng/nền bàn xung quanh. Có thêm chế độ
+   "trắng đen" tăng tương phản cho rõ chữ, đúng cảm giác bản scan thật thay vì
+   ảnh chụp thường. Không cần thư viện ngoài — tự tính ma trận phối cảnh. */
+let scanEditorFile=null, scanEditorOnDone=null, scanEditorNatural={w:0,h:0};
+let scanCorners=null; // {tl,tr,br,bl} — toạ độ HIỂN THỊ (px trong khung ảnh đang xem), quy đổi sang toạ độ ảnh gốc lúc xử lý
+function openScanEditor(file,onDone){
+ if(!file) return;
+ scanEditorFile=file; scanEditorOnDone=onDone;
+ const reader=new FileReader();
+ reader.onload=()=>{
+   const dataUrl=reader.result;
+   // Đo kích thước bằng 1 Image() TẠM RIÊNG (không phải thẻ <img> đang hiển
+   // thị) — vì nếu tái sử dụng cùng thẻ <img> và ảnh mới trùng hệt src ảnh
+   // cũ, trình duyệt không bắn lại "load" (và decode() cũng từng bị treo
+   // không rõ lý do trong môi trường này), khiến góc kéo tính sai theo kích
+   // thước hiển thị của LẦN TRƯỚC. Image() mới luôn bắn "load" chắc chắn.
+   const probe=new Image();
+   probe.onload=()=>{
+     scanEditorNatural={w:probe.naturalWidth,h:probe.naturalHeight};
+     const img=$('#scanEditorImg');
+     img.src=dataUrl;
+     $('#scanEditorModal').classList.add('show');
+     // Đọc clientWidth/Height tự ép trình duyệt LAYOUT ngay lập tức (đồng
+     // bộ), không cần đợi khung hình vẽ xong — requestAnimationFrame từng bị
+     // treo vì tab preview chạy nền (trình duyệt tạm dừng rAF cho tab ẩn).
+     resetScanCorners();
+   };
+   probe.src=dataUrl;
+ };
+ reader.readAsDataURL(file);
+}
+function resetScanCorners(){
+ const img=$('#scanEditorImg');
+ const w=img.clientWidth||img.width, h=img.clientHeight||img.height;
+ // Chừa lề nhỏ (6%) để mặc định không đúng sát mép — dễ kéo chỉnh vào hơn là kéo ra ngoài ảnh
+ const mx=w*0.06, my=h*0.06;
+ scanCorners={tl:{x:mx,y:my}, tr:{x:w-mx,y:my}, br:{x:w-mx,y:h-my}, bl:{x:mx,y:h-my}};
+ renderScanHandles();
+}
+function renderScanHandles(){
+ const stage=$('#scanEditorStage'), img=$('#scanEditorImg');
+ const offX=img.offsetLeft, offY=img.offsetTop;
+ ['tl','tr','br','bl'].forEach(k=>{
+   const h=stage.querySelector(`.scan-handle[data-corner="${k}"]`);
+   h.style.left=(offX+scanCorners[k].x)+'px'; h.style.top=(offY+scanCorners[k].y)+'px';
+ });
+ const pts=['tl','tr','br','bl'].map(k=>(offX+scanCorners[k].x)+','+(offY+scanCorners[k].y)).join(' ');
+ $('#scanEditorPoly').setAttribute('points',pts);
+}
+(function wireScanHandleDrag(){
+ const stage=$('#scanEditorStage');
+ let dragging=null;
+ stage.addEventListener('pointerdown',e=>{
+   const h=e.target.closest('.scan-handle'); if(!h) return;
+   dragging=h.dataset.corner; e.target.setPointerCapture(e.pointerId);
+ });
+ stage.addEventListener('pointermove',e=>{
+   if(!dragging) return;
+   const img=$('#scanEditorImg'), rect=img.getBoundingClientRect();
+   const x=Math.max(0,Math.min(rect.width, e.clientX-rect.left));
+   const y=Math.max(0,Math.min(rect.height, e.clientY-rect.top));
+   scanCorners[dragging]={x,y};
+   renderScanHandles();
+ });
+ const stop=()=>dragging=null;
+ stage.addEventListener('pointerup',stop); stage.addEventListener('pointercancel',stop);
+})();
+$('#btnScanResetCorners').onclick=resetScanCorners;
+$('#btnScanCancel').onclick=()=>{ $('#scanEditorModal').classList.remove('show'); scanEditorFile=null; scanEditorOnDone=null; };
+$('#scanEditorModal').onclick=e=>{ if(e.target.id==='scanEditorModal') $('#btnScanCancel').click(); };
+
+/* Giải hệ 8 ẩn (DLT) tìm ma trận phối cảnh H sao cho dst 4 điểm ánh xạ ĐÚNG
+   sang src 4 điểm tương ứng — dùng để, với mỗi điểm ảnh ĐÍCH (khung vuông
+   thẳng), tính ra điểm ảnh NGUỒN (trong ảnh chụp nghiêng) mà lấy màu sang. */
+function solveHomography(src,dst){
+ const A=[];
+ for(let i=0;i<4;i++){
+   const {x:X,y:Y}=dst[i], {x:x,y:y}=src[i];
+   A.push([X,Y,1,0,0,0,-x*X,-x*Y,x]);
+   A.push([0,0,0,X,Y,1,-y*X,-y*Y,y]);
+ }
+ // Gauss-Jordan trên ma trận mở rộng 8x9
+ for(let col=0;col<8;col++){
+   let piv=col; for(let r=col+1;r<8;r++) if(Math.abs(A[r][col])>Math.abs(A[piv][col])) piv=r;
+   [A[col],A[piv]]=[A[piv],A[col]];
+   const d=A[col][col]||1e-12;
+   for(let c=col;c<9;c++) A[col][c]/=d;
+   for(let r=0;r<8;r++){ if(r===col) continue; const f=A[r][col]; for(let c=col;c<9;c++) A[r][c]-=f*A[col][c]; }
+ }
+ const h=A.map(r=>r[8]);
+ return [h[0],h[1],h[2],h[3],h[4],h[5],h[6],h[7],1];
+}
+async function applyScanTransform(){
+ return new Promise(resolve=>{
+   const stageImg=$('#scanEditorImg');
+   const scaleX=scanEditorNatural.w/stageImg.clientWidth, scaleY=scanEditorNatural.h/stageImg.clientHeight;
+   const src=['tl','tr','br','bl'].map(k=>({x:scanCorners[k].x*scaleX, y:scanCorners[k].y*scaleY}));
+   // Kích thước khung ra ước theo cạnh dài nhất của tứ giác đã kéo — giữ đúng
+   // tỉ lệ giấy thay vì ép cứng về khổ A4.
+   const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+   const outW=Math.round(Math.max(dist(src[0],src[1]),dist(src[3],src[2])));
+   const outH=Math.round(Math.max(dist(src[0],src[3]),dist(src[1],src[2])));
+   const dst=[{x:0,y:0},{x:outW,y:0},{x:outW,y:outH},{x:0,y:outH}];
+   const H=solveHomography(src,dst);
+   const srcCanvas=document.createElement('canvas');
+   srcCanvas.width=scanEditorNatural.w; srcCanvas.height=scanEditorNatural.h;
+   srcCanvas.getContext('2d').drawImage(stageImg,0,0);
+   const srcData=srcCanvas.getContext('2d').getImageData(0,0,srcCanvas.width,srcCanvas.height).data;
+   const outCanvas=$('#scanEditorCanvas'); outCanvas.width=outW; outCanvas.height=outH;
+   const outCtx=outCanvas.getContext('2d');
+   const outImg=outCtx.createImageData(outW,outH);
+   for(let Y=0;Y<outH;Y++){
+     for(let X=0;X<outW;X++){
+       const w_=H[6]*X+H[7]*Y+H[8];
+       const sx=Math.round((H[0]*X+H[1]*Y+H[2])/w_), sy=Math.round((H[3]*X+H[4]*Y+H[5])/w_);
+       const di=(Y*outW+X)*4;
+       if(sx>=0&&sx<srcCanvas.width&&sy>=0&&sy<srcCanvas.height){
+         const si=(sy*srcCanvas.width+sx)*4;
+         let r=srcData[si],g=srcData[si+1],b=srcData[si+2];
+         // Luôn giữ màu thật, chỉ tăng nhẹ tương phản/độ sáng cho rõ như bản
+         // scan màu thật (không phải để nguyên y hệt ảnh chụp gốc) — không
+         // cần người dùng chọn gì, tự động áp dụng.
+         const adj=v=>Math.max(0,Math.min(255,(v-128)*1.18+128+8));
+         r=adj(r); g=adj(g); b=adj(b);
+         outImg.data[di]=r; outImg.data[di+1]=g; outImg.data[di+2]=b; outImg.data[di+3]=255;
+       } else { outImg.data[di]=255; outImg.data[di+1]=255; outImg.data[di+2]=255; outImg.data[di+3]=255; }
+     }
+   }
+   outCtx.putImageData(outImg,0,0);
+   outCanvas.toBlob(blob=>resolve(blob),'image/jpeg',0.9);
+ });
+}
+$('#btnScanConfirm').onclick=async()=>{
+ const btn=$('#btnScanConfirm'); btn.disabled=true; btn.querySelector('span')?.remove();
+ const oldHtml=btn.innerHTML; btn.textContent='Đang xử lý...';
+ try{
+   const blob=await applyScanTransform();
+   const ext=(scanEditorFile.name||'scan.jpg').replace(/\.[^.]+$/,'')+'-scan.jpg';
+   const file=new File([blob], ext, {type:'image/jpeg'});
+   $('#scanEditorModal').classList.remove('show');
+   const done=scanEditorOnDone; scanEditorFile=null; scanEditorOnDone=null;
+   if(done) done(file);
+ }catch(err){ toast('⚠️ Không xử lý được ảnh, thử lại',true); }
+ finally{ btn.disabled=false; btn.innerHTML=oldHtml; }
+};
 $('#btnOtherCamera').onclick=()=>$('#f_other_camera').click();
 $('#btnOtherFile').onclick=()=>$('#f_other_file').click();
 $('#f_other_camera').onchange=e=>{handleOtherFiles([...e.target.files]); e.target.value='';};
