@@ -5412,7 +5412,9 @@ function ctpEmbedLogo(u8){
    files['xl/worksheets/_rels/sheet1.xml.rels']=enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>');
    files['xl/media/image1.png']=logo;
    let ct=dec.decode(files['[Content_Types].xml']);
-   if(!/Extension="png"/.test(ct)) ct=ct.replace('>','><Default Extension="png" ContentType="image/png"/>');
+   // Chèn TRƯỚC </Types> (bên TRONG thẻ gốc) — KHÔNG dùng replace('>') vì nó
+   // thay dấu > đầu tiên (ở <?xml?>) làm thẻ nằm ngoài <Types> => XML hỏng.
+   if(!/Extension="png"/.test(ct)) ct=ct.replace('</Types>','<Default Extension="png" ContentType="image/png"/></Types>');
    if(!/drawing1\.xml/.test(ct)) ct=ct.replace('</Types>','<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>');
    files['[Content_Types].xml']=enc.encode(ct);
    return fflate.zipSync(files);
