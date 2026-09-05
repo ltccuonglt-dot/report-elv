@@ -129,6 +129,10 @@ body{background:var(--ground);color:var(--ink);font-family:var(--font);font-size
 .row-del-btn svg{width:16px;height:16px}
 #ctpPrintArea{display:none}
 @media print{
+  /* Bảng công tác phí nhiều cột, in dọc (mặc định) sẽ bị cắt/thu nhỏ khó đọc
+     — đặt sẵn khổ ngang để khi lưu PDF/in ra xem đủ cột trên điện thoại lẫn
+     giấy A4. Trình duyệt vẫn cho đổi lại khổ dọc trong hộp thoại in nếu cần. */
+  @page{size:landscape}
   body *{visibility:hidden}
   #ctpPrintArea, #ctpPrintArea *{visibility:visible}
   #ctpPrintArea{display:block;position:absolute;left:0;top:0;width:100%}
@@ -4665,7 +4669,9 @@ async function ctpApplyMapKmToFuelLines(){
  for(let i=0;i<ctpLocalRows.length;i++){
    if((ctpLocalRows[i].expenseType||'').includes('xăng')){
      ctpLocalRows[i].km=km;
-     Object.assign(ctpLocalRows[i],ctpCalcQtyAmount(ctpLocalRows[i].expenseType,ctpLocalRows[i].km,ctpLocalRows[i].rate));
+     const days=ctpDaysBetween(ctpLocalRows[i].lineFromDate,ctpLocalRows[i].lineToDate);
+     Object.assign(ctpLocalRows[i],ctpCalcQtyAmount(ctpLocalRows[i].expenseType,ctpLocalRows[i].km,ctpLocalRows[i].rate,days));
+     if(!ctpLocalRows[i].noteOther) ctpLocalRows[i].note=ctpFuelNoteFor(ctpLocalRows[i]);
      await ctpPersistRow(i);
      applied++;
    }
@@ -4712,16 +4718,34 @@ $('#ctp_mapUpload').onchange=()=>{
  reader.readAsDataURL(file);
 };
 
+// Số ngày THẬT của dòng (Từ ngày → Đến ngày, tính cả 2 đầu) — dòng xăng kéo
+// dài nhiều ngày thì tiền xăng nhân theo đúng số ngày đó (đi-về mỗi ngày của
+// chuyến công tác), không chỉ tính 1 lượt duy nhất dù khai nhiều ngày.
+function ctpDaysBetween(from,to){
+ if(!from||!to) return 1;
+ const d1=new Date(from+'T00:00:00'), d2=new Date(to+'T00:00:00');
+ const diff=Math.round((d2-d1)/86400000);
+ return diff>=0 ? diff+1 : 1;
+}
 // Số lượng KHÔNG cho gõ tay (đúng mẫu — luôn tự tính): 1 cho mọi loại chi
-// phí thường (1 lần/1 ngày công), riêng xăng tự tính km/30 (lít).
-function ctpCalcQtyAmount(expenseType,km,rate){
+// phí thường (1 lần/1 ngày công), riêng xăng tự tính km/30 (lít) NHÂN THEO
+// SỐ NGÀY của dòng (đi-về mỗi ngày trong khoảng Từ-Đến ngày).
+function ctpCalcQtyAmount(expenseType,km,rate,days){
  const isFuel=(expenseType||'').includes('xăng');
  rate=Number(rate)||0;
  if(isFuel){
-   const q=(Number(km)||0)/30;
+   const d=Math.max(1,Number(days)||1);
+   const q=(Number(km)||0)/30*d;
    return {quantity:q?Number(q.toFixed(3)):0, amount:Math.round(q*2*rate)};
  }
  return {quantity:1, amount:Math.round(1*rate)};
+}
+// Ghi chú dòng xăng tự sinh công thức (đúng mẫu: "(Xkm/30*2 lượt *Giá *Nngày)")
+// — tự cập nhật theo Km/Giá/Số ngày, trừ khi người dùng đã tự gõ đè riêng.
+function ctpFuelNoteFor(row){
+ const km=Number(row.km)||0, rate=Number(row.rate)||0;
+ const days=ctpDaysBetween(row.lineFromDate,row.lineToDate);
+ return `(${km}km/30*2 lượt *${rate.toLocaleString('vi-VN')} *${days}ngày)`;
 }
 // "Công tác phí" (phụ cấp/ngày) đúng mẫu công ty là mức CỐ ĐỊNH 100,000đ,
 // không cho gõ tay đổi khác (khác với xăng/các loại khác — định mức đó biến
@@ -4915,6 +4939,7 @@ function ctpRowHtml(r,i){
  // đổi loại/ngày không tự nhảy vào chế độ "Khác" chỉ vì câu mẫu đổi khác đi.
  if(r.descOther==null) r.descOther = r.description!==fixedDesc; // suy đoán 1 LẦN cho dòng cũ tải từ DB lên
  const usingOther=!!r.descOther;
+ if(isFuel && r.noteOther==null) r.noteOther = r.note!==ctpFuelNoteFor(r); // suy đoán 1 lần cho dòng xăng cũ
  return `<tr data-i="${i}">
    <td class="num" data-label="STT">${i+1}</td>
    <td data-label="Tên NV"><select class="ctp-cell" data-f="requesterName">${engineerList.map(n=>`<option value="${esc(n)}" ${n===r.requesterName?'selected':''}>${esc(n)}</option>`).join('')}</select></td>
@@ -4965,16 +4990,25 @@ async function ctpCellChanged(i,field,el){
  }
  row[field]=el.type==='number'?(Number(el.value)||0):el.value;
  if(field==='description') row.descOther=true; // gõ tay trong ô "Khác" -> chắc chắn đang ở chế độ tự gõ
- if(field==='expenseType'||field==='km'||field==='rate'){
+ if(field==='note' && (row.expenseType||'').includes('xăng')) row.noteOther=true; // gõ tay đè công thức xăng
+ if(field==='expenseType'||field==='km'||field==='rate'||field==='lineFromDate'||field==='lineToDate'){
    const fixedRate=ctpFixedRateFor(row.expenseType);
    if(fixedRate!=null) row.rate=fixedRate; // "Công tác phí" luôn 100,000, không cho gõ tay đổi khác
-   Object.assign(row,ctpCalcQtyAmount(row.expenseType,row.km,row.rate));
+   const days=ctpDaysBetween(row.lineFromDate,row.lineToDate);
+   Object.assign(row,ctpCalcQtyAmount(row.expenseType,row.km,row.rate,days));
  }
  // Đổi loại chi phí/ngày dòng — nếu đang KHÔNG ở chế độ "Khác" tự gõ, tự cập
  // nhật lại Diễn giải theo đúng câu mẫu mới (vd đổi ngày thì câu xăng ghép
  // đúng ngày mới); nếu đang gõ tay riêng thì giữ nguyên, không đụng vào.
  if((field==='expenseType'||field==='lineFromDate'||field==='lineToDate') && !row.descOther){
    row.description=ctpDescriptionFor(row);
+ }
+ // Ghi chú công thức xăng — tự cập nhật theo Km/Giá/Số ngày, trừ khi đang gõ
+ // tay đè riêng (noteOther). Đổi sang loại KHÔNG phải xăng thì giữ nguyên
+ // ghi chú cũ, không xoá/đụng vào (loại khác không có công thức tự sinh).
+ if((field==='expenseType'||field==='km'||field==='rate'||field==='lineFromDate'||field==='lineToDate')
+    && (row.expenseType||'').includes('xăng') && !row.noteOther){
+   row.note=ctpFuelNoteFor(row);
  }
  await ctpPersistRow(i);
  ctpRenderLinesFromLocal();
@@ -5071,8 +5105,10 @@ function ctpBuildBlankRow(expenseTypeVal,engineerName){
    projectCode:$('#ctp_f_pjcode').value.trim(), projectName:$('#ctp_f_pjname').value.trim(),
    serviceType:segVal('ctp_f_tripservice')};
  row.rate=fixedRate!=null?fixedRate:(expenseTypeVal.includes('xăng')?(ctpFuelRate||0):0);
- Object.assign(row,ctpCalcQtyAmount(row.expenseType,row.km,row.rate));
+ const days=ctpDaysBetween(row.lineFromDate,row.lineToDate);
+ Object.assign(row,ctpCalcQtyAmount(row.expenseType,row.km,row.rate,days));
  row.description=ctpDescriptionFor(row);
+ if(expenseTypeVal.includes('xăng')) row.note=ctpFuelNoteFor(row);
  return row;
 }
 $('#btnCtpAddLine').onclick=async()=>{
