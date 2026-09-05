@@ -1551,8 +1551,24 @@ const DB={
  async addTicketPhotos(ticketId,photos){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
    const rows=photos.map(p=>({ticket_id:Number(ticketId),url:p.url,name:p.name}));
-   const {error}=await sb.from('ticket_photos').insert(rows);
-   return error?{ok:false,error:error.message}:{ok:true};
+   const {data,error}=await sb.from('ticket_photos').insert(rows).select();
+   return error?{ok:false,error:error.message}:{ok:true,data};
+ },
+ // Chuyển 1 file vừa upload lên Supabase Storage sang Drive NGAY (không đợi
+ // 6 tháng) — Supabase Storage giờ chỉ là trạm trung chuyển/dự phòng, Drive
+ // mới là nơi lưu chính. Không cần mật khẩu (đúng UX tạo phiếu không mật khẩu).
+ async relayFileToDrive(fileUrl,fileName,customer,ticketDate){
+   const r=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+     body:JSON.stringify({token:CFG.token,action:'relayFileToDrive',fileUrl,fileName,customer,ticketDate})});
+   return r.json();
+ },
+ async relayTicketFile(ticketId,column,oldUrl,newUrl){
+   const {data,error}=await sb.rpc('relay_ticket_file',{p_ticket_id:Number(ticketId),p_column:column,p_old_url:oldUrl,p_new_url:newUrl});
+   return error?{ok:false,error:error.message}:{ok:true,done:!!data};
+ },
+ async relayTicketPhotoFile(photoId,oldUrl,newUrl){
+   const {data,error}=await sb.rpc('relay_ticket_photo_file',{p_photo_id:Number(photoId),p_old_url:oldUrl,p_new_url:newUrl});
+   return error?{ok:false,error:error.message}:{ok:true,done:!!data};
  },
  async listTicketPhotos(ticketId){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
@@ -2363,6 +2379,36 @@ $('#btnBbBackFile').onclick=()=>$('#f_bbback_file').click();
 $('#f_bbback_camera').onchange=e=>{openScanEditor(e.target.files[0],blob=>handleBbSide(blob,bbBack,v=>bbBack=v,renderBbBackPreview,'bbBackUploading')); e.target.value='';};
 $('#f_bbback_file').onchange=e=>{openScanEditor(e.target.files[0],blob=>handleBbSide(blob,bbBack,v=>bbBack=v,renderBbBackPreview,'bbBackUploading')); e.target.value='';};
 
+/* Ngay sau khi phiếu (và ảnh khác, nếu có) đã lưu xong ở Supabase, âm thầm
+   chuyển từng file vừa upload sang Google Drive — Drive giờ là nơi lưu CHÍNH
+   cho ảnh/PDF BBLV, Supabase Storage chỉ còn là trạm trung chuyển tạm/dự
+   phòng. Chạy ngầm, không chặn/không báo gì nếu thành công; nếu 1 file lỡ
+   chuyển thất bại (mất mạng, Drive tạm lỗi...) thì cứ để nguyên trên Supabase
+   Storage — vẫn xem được bình thường, đợi lượt quét sau dọn tiếp. */
+async function relayOneFileToDrive(url,name,customer,ticketDate,onSwapped){
+ if(!url||!isSupabaseStorageUrl(url)) return;
+ try{
+   const ar=await DB.relayFileToDrive(url,name,customer,ticketDate);
+   if(!ar.ok||!ar.driveUrl) return;
+   const swapped=await onSwapped(ar.driveUrl);
+   if(swapped){
+     const m=url.match(/\/ticket-attachments\/(.+)$/);
+     if(m) await sb.storage.from('ticket-attachments').remove([decodeURIComponent(m[1])]);
+   }
+ }catch(err){ /* im lặng — có lỗi thì file vẫn còn nguyên trên Supabase, không mất dữ liệu */ }
+}
+async function relayNewTicketFilesToDrive(ticketId,payload,photoRows){
+ const customer=payload.customer, ticketDate=payload.date;
+ if(payload.attachmentUrl) relayOneFileToDrive(payload.attachmentUrl,payload.attachmentName,customer,ticketDate,
+   async(driveUrl)=>(await DB.relayTicketFile(ticketId,'attachment_url',payload.attachmentUrl,driveUrl)).done);
+ if(payload.attachmentBackUrl) relayOneFileToDrive(payload.attachmentBackUrl,payload.attachmentBackName,customer,ticketDate,
+   async(driveUrl)=>(await DB.relayTicketFile(ticketId,'attachment_back_url',payload.attachmentBackUrl,driveUrl)).done);
+ (photoRows||[]).forEach(row=>{
+   relayOneFileToDrive(row.url,row.name,customer,ticketDate,
+     async(driveUrl)=>(await DB.relayTicketPhotoFile(row.id,row.url,driveUrl)).done);
+ });
+}
+
 /* ===== Biên tập ảnh scan ===== ================================================
    Sau khi chụp/chọn ảnh giấy tờ, cho kéo 4 góc đúng viền tờ giấy rồi "duỗi
    thẳng" bằng phép biến đổi phối cảnh (homography) — kết quả giống hệt máy
@@ -2737,6 +2783,9 @@ $('#tkForm').onsubmit=async e=>{
        const ticketId=isEdit?no:j.no;
        const pj=await DB.addTicketPhotos(ticketId,pendingOtherPhotos);
        if(!pj.ok) toast(`⚠️ Phiếu đã lưu nhưng ảnh khác chưa gắn được: ${pj.error||'lỗi'}`,true);
+       else relayNewTicketFilesToDrive(ticketId,payload,pj.data);
+     } else if(j.ok){
+       relayNewTicketFilesToDrive(isEdit?no:j.no,payload,[]);
      }
      // không cần tự làm mới danh sách phiếu — Realtime sẽ tự đẩy thay đổi về mgrData
    }catch(err){
