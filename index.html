@@ -1664,14 +1664,18 @@ const DB={
    const {data,error}=await sb.rpc('admin_add_user',{p_req_username:'',p_req_password:adminPassword,p_new_username:username,p_new_password:password,p_new_role:role});
    return error?{ok:false,error:error.message}:{ok:true,data};
  },
- async deleteUser(username,adminPassword){
+ // username KHÔNG còn là khoá duy nhất — nhiều cụm có thể dùng chung 1 tên
+ // đăng nhập, khác nhau ở role + mật khẩu (vd "admin" cho cả 3 cụm). Xoá/đổi
+ // mật khẩu phải chỉ rõ ĐÚNG role đi kèm, không thì có thể đụng nhầm tài
+ // khoản khác cụm đang trùng tên.
+ async deleteUser(username,role,adminPassword){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
-   const {data,error}=await sb.rpc('admin_delete_user',{p_req_username:'',p_req_password:adminPassword,p_target_username:username});
+   const {data,error}=await sb.rpc('admin_delete_user',{p_req_username:'',p_req_password:adminPassword,p_target_username:username,p_target_role:role});
    return error?{ok:false,error:error.message}:{ok:true,data};
  },
- async resetUserPassword(username,newPassword,adminPassword){
+ async resetUserPassword(username,role,newPassword,adminPassword){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
-   const {data,error}=await sb.rpc('admin_reset_user_password',{p_req_username:'',p_req_password:adminPassword,p_target_username:username,p_new_password:newPassword});
+   const {data,error}=await sb.rpc('admin_reset_user_password',{p_req_username:'',p_req_password:adminPassword,p_target_username:username,p_target_role:role,p_new_password:newPassword});
    return error?{ok:false,error:error.message}:{ok:true};
  },
  async listAttendance(employee,year,month,adminPassword){
@@ -2111,17 +2115,20 @@ async function renameEngineer(oldName,newName){
 // ===== Người dùng (app_users) — Administrator quản lý ai được đăng nhập
 // từng cụm (AEON / Chấm công-CTP) và ai là Administrator (được xoá) =====
 const USER_ROLE_LABEL={administrator:'Administrator (toàn quyền)',aeon:'Admin cụm AEON',chamcong_ctp:'Admin cụm Chấm công & CTP'};
+// 1 username có thể dùng chung cho NHIỀU role (khác mật khẩu) — mọi thao
+// tác trên 1 dòng đều phải mang theo ĐÚNG cặp username+role (không chỉ
+// username) để không đụng nhầm tài khoản khác cụm đang trùng tên.
 function usersRenderList(list){
  $('#usersList').innerHTML = (list&&list.length) ? list.map(u=>`
-   <div class="user-row" data-username="${esc(u.username)}">
+   <div class="user-row" data-username="${esc(u.username)}" data-role="${esc(u.role)}">
      <div class="user-row-info"><b>${esc(u.username)}</b><span class="user-role-tag">${esc(USER_ROLE_LABEL[u.role]||u.role)}</span></div>
      <div class="user-row-actions">
-       <button type="button" class="btn-mini user-reset-btn" data-username="${esc(u.username)}">Đổi mật khẩu</button>
-       <button type="button" class="btn-mini btn-danger user-del-btn" data-username="${esc(u.username)}">Xoá</button>
+       <button type="button" class="btn-mini user-reset-btn" data-username="${esc(u.username)}" data-role="${esc(u.role)}">Đổi mật khẩu</button>
+       <button type="button" class="btn-mini btn-danger user-del-btn" data-username="${esc(u.username)}" data-role="${esc(u.role)}">Xoá</button>
      </div>
    </div>`).join('') : '<span class="hint">Chưa có người dùng nào.</span>';
- $$('#usersList .user-reset-btn').forEach(b=>b.onclick=()=>usersResetPassword(b.dataset.username));
- $$('#usersList .user-del-btn').forEach(b=>b.onclick=()=>usersDelete(b.dataset.username));
+ $$('#usersList .user-reset-btn').forEach(b=>b.onclick=()=>usersResetPassword(b.dataset.username,b.dataset.role));
+ $$('#usersList .user-del-btn').forEach(b=>b.onclick=()=>usersDelete(b.dataset.username,b.dataset.role));
 }
 async function usersLoadList(){
  const pw=$('#s_users_adminpw').value;
@@ -2132,16 +2139,16 @@ async function usersLoadList(){
  $('#usersListWrap').style.display='block';
  usersRenderList(j.data);
 }
-async function usersResetPassword(username){
- const newPw=prompt(`Mật khẩu mới cho "${username}" (tối thiểu 4 ký tự):`);
+async function usersResetPassword(username,role){
+ const newPw=prompt(`Mật khẩu mới cho "${username}" (${USER_ROLE_LABEL[role]||role}) (tối thiểu 4 ký tự):`);
  if(newPw===null) return;
  if(newPw.length<4){ toast('Mật khẩu quá ngắn (tối thiểu 4 ký tự)',true); return; }
- const j=await DB.resetUserPassword(username,newPw,$('#s_users_adminpw').value);
- if(j.ok) toast(`✅ Đã đổi mật khẩu cho ${username}`); else toast(j.error||'Lỗi đổi mật khẩu',true);
+ const j=await DB.resetUserPassword(username,role,newPw,$('#s_users_adminpw').value);
+ if(j.ok) toast(`✅ Đã đổi mật khẩu cho ${username} (${USER_ROLE_LABEL[role]||role})`); else toast(j.error||'Lỗi đổi mật khẩu',true);
 }
-async function usersDelete(username){
- if(!confirm(`Xoá tài khoản "${username}"?`)) return;
- const j=await DB.deleteUser(username,$('#s_users_adminpw').value);
+async function usersDelete(username,role){
+ if(!confirm(`Xoá tài khoản "${username}" (${USER_ROLE_LABEL[role]||role})?`)) return;
+ const j=await DB.deleteUser(username,role,$('#s_users_adminpw').value);
  if(j.ok){ toast('✅ Đã xoá tài khoản'); usersRenderList(j.data); } else toast(j.error||'Lỗi xoá',true);
 }
 $('#btnUsersLoad').onclick=usersLoadList;
