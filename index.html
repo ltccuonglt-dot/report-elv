@@ -939,6 +939,14 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <button type="button" class="btn btn-primary" id="btnAddEngineer" style="width:auto;padding:12px 18px;margin:0;flex:none">Thêm</button>
     </div>
     <div class="divider"></div>
+    <div class="section-title" style="margin-bottom:8px">Danh mục cơ sở AEON</div>
+    <p class="desc" style="margin-top:-4px">Nguồn chuẩn tên cơ sở AEON cho báo cáo. <b>Đổi tên</b> ở đây sẽ tự cập nhật tên trên <b>toàn bộ phiếu cũ</b> của cơ sở đó. Không xoá được cơ sở đang còn phiếu.</p>
+    <div id="aeonSiteManageList" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <input type="text" id="aeonSiteNewName" placeholder="Tên cơ sở AEON mới…" style="flex:1" autocomplete="off" autocorrect="off" spellcheck="false" />
+      <button type="button" class="btn btn-primary" id="btnAddAeonSite" style="width:auto;padding:12px 18px;margin:0;flex:none">Thêm</button>
+    </div>
+    <div class="divider"></div>
     <div class="section-title" style="margin-bottom:8px">Chế độ hiển thị (popup Báo cáo AEON / Chấm công-CTP)</div>
     <p class="desc" style="margin-top:-4px">Mặc định popup tự co giãn theo đúng cửa sổ trình duyệt. Chọn cố định 1 độ phân giải bên dưới nếu muốn popup luôn hiện đúng khổ quen thuộc, không tự co giãn nữa.</p>
     <label class="field">
@@ -1319,10 +1327,9 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     <div class="section-title" style="margin-bottom:8px">Thêm / sửa 1 phiếu AEON</div>
     <div class="cc-add-grid">
       <label class="field"><span class="lab">Ngày</span><input type="date" id="aeon_f_date"></label>
-      <label class="field"><span class="lab">Cơ sở</span>
+      <label class="field"><span class="lab">Cơ sở <button type="button" class="btn-mini" id="btnAeonAddSite" style="margin-left:6px" title="Thêm cơ sở AEON mới vào danh mục">+ cơ sở mới</button></span>
         <select id="aeon_f_customer"></select>
       </label>
-      <label class="field" id="wrap_aeon_customer_other" style="display:none"><span class="lab">Nhập tên cơ sở mới</span><input type="text" id="aeon_f_customer_other" placeholder="VD: AEON Mall Hải Phòng Lê Chân"></label>
       <label class="field"><span class="lab">Hệ thống</span><input type="text" id="aeon_f_system" value="CCTV"></label>
       <label class="field"><span class="lab">Ưu tiên</span>
         <select id="aeon_f_priority"><option value="Low">Low</option><option value="Medium" selected>Medium</option><option value="High">High</option></select>
@@ -1644,6 +1651,29 @@ const DB={
  async updateEngineer(oldName,newName,adminPassword){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
    const {data,error}=await sb.rpc('update_engineer',{p_old_name:oldName,p_new_name:newName,p_admin_password:adminPassword});
+   return error?{ok:false,error:error.message}:{ok:true,data:data.map(r=>r.name)};
+ },
+ // Danh mục cơ sở AEON — nguồn chuẩn duy nhất cho tên cơ sở (mirror engineers).
+ // Đọc công khai; thêm cho phép mật khẩu AEON hoặc Administrator; đổi tên/xoá
+ // chỉ Administrator (đổi tên GHI ĐÈ tên trên toàn bộ phiếu cũ của cơ sở đó).
+ async listAeonSites(){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.from('aeon_sites').select('name').order('name');
+   return error?{ok:false,error:error.message}:{ok:true,data:data.map(r=>r.name)};
+ },
+ async addAeonSite(name,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('add_aeon_site',{p_name:name,p_admin_password:adminPassword});
+   return error?{ok:false,error:error.message}:{ok:true,data:data.map(r=>r.name)};
+ },
+ async updateAeonSite(oldName,newName,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('update_aeon_site',{p_old_name:oldName,p_new_name:newName,p_admin_password:adminPassword});
+   return error?{ok:false,error:error.message}:{ok:true,data:data.map(r=>r.name)};
+ },
+ async deleteAeonSite(name,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('delete_aeon_site',{p_name:name,p_admin_password:adminPassword});
    return error?{ok:false,error:error.message}:{ok:true,data:data.map(r=>r.name)};
  },
  // Đẩy toàn bộ phiếu từ Supabase sang Google Sheet backup (kèm link ảnh,
@@ -2300,6 +2330,71 @@ async function deleteEngineer(name){
 }
 $('#btnAddEngineer').onclick=addEngineer;
 $('#engNewName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addEngineer();}});
+
+/* ===== Quản lý DANH MỤC CƠ SỞ AEON (Cài đặt) — mirror quản lý kỹ sư =====
+   Nguồn chuẩn tên cơ sở AEON. Thêm/đổi tên/xoá gate bằng mật khẩu Administrator
+   (nhóm settings). Đổi tên GHI ĐÈ tên trên toàn bộ phiếu cũ (RPC update_aeon_site). */
+async function loadAeonSiteManage(){
+ if(!sb){ $('#aeonSiteManageList').innerHTML='<span class="hint">Chưa kết nối Supabase.</span>'; return; }
+ try{ const j=await DB.listAeonSites(); if(j.ok) aeonSitesCatalog=j.data||[]; }catch(err){}
+ renderAeonSiteManageList();
+}
+function renderAeonSiteManageList(){
+ const wrap=$('#aeonSiteManageList'); if(!wrap) return;
+ if(!aeonSitesCatalog.length){ wrap.innerHTML='<span class="hint">Chưa có cơ sở AEON nào.</span>'; return; }
+ wrap.innerHTML=aeonSitesCatalog.map(n=>
+   `<span class="eng-chip" data-name="${esc(n)}">
+     <span class="eng-chip-label">${esc(n)}</span>
+     <button type="button" class="asite-chip-edit" data-name="${esc(n)}" aria-label="Sửa tên ${esc(n)}" title="Sửa tên (đổi cả trên phiếu cũ)">✎</button>
+     <button type="button" class="asite-chip-del" data-name="${esc(n)}" aria-label="Xóa ${esc(n)}" title="Xóa khỏi danh mục">✕</button>
+   </span>`
+ ).join('');
+ $$('#aeonSiteManageList .asite-chip-del').forEach(b=>b.onclick=()=>deleteAeonSiteSettings(b.dataset.name));
+ $$('#aeonSiteManageList .asite-chip-edit').forEach(b=>b.onclick=()=>startEditAeonSite(b.dataset.name));
+}
+function startEditAeonSite(oldName){
+ const chip=$(`#aeonSiteManageList .eng-chip[data-name="${CSS.escape(oldName)}"]`);
+ if(!chip) return;
+ chip.innerHTML=`<input type="text" class="eng-edit-input" value="${esc(oldName)}">
+   <button type="button" class="asite-chip-save" aria-label="Lưu">✓</button>
+   <button type="button" class="asite-chip-cancel" aria-label="Huỷ">✕</button>`;
+ const input=chip.querySelector('input'); input.focus(); input.select();
+ const save=()=>renameAeonSite(oldName,input.value.trim());
+ chip.querySelector('.asite-chip-save').onclick=save;
+ chip.querySelector('.asite-chip-cancel').onclick=renderAeonSiteManageList;
+ input.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); save(); } else if(e.key==='Escape'){ renderAeonSiteManageList(); } });
+}
+async function renameAeonSite(oldName,newName){
+ if(!newName){ toast('Nhập tên cơ sở',true); return; }
+ if(newName===oldName){ renderAeonSiteManageList(); return; }
+ if(!adminPassword.settings){ toast('Cần mở khoá Cài đặt (Administrator) trước',true); renderAeonSiteManageList(); return; }
+ try{
+   const j=await DB.updateAeonSite(oldName,newName,adminPassword.settings);
+   if(j.ok){ aeonSitesCatalog=j.data||aeonSitesCatalog; renderAeonSiteManageList(); toast('✅ Đã đổi tên cơ sở (đã cập nhật cả phiếu cũ)'); }
+   else { toast(j.error||'Lỗi đổi tên cơ sở',true); renderAeonSiteManageList(); }
+ }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); renderAeonSiteManageList(); }
+}
+async function addAeonSiteSettings(){
+ const input=$('#aeonSiteNewName'); const name=input.value.trim();
+ if(!name){ toast('Nhập tên cơ sở AEON',true); return; }
+ if(!adminPassword.settings){ toast('Cần mở khoá Cài đặt (Administrator) trước',true); return; }
+ try{
+   const j=await DB.addAeonSite(name,adminPassword.settings);
+   if(j.ok){ aeonSitesCatalog=j.data||aeonSitesCatalog; input.value=''; renderAeonSiteManageList(); toast('✅ Đã thêm cơ sở AEON'); }
+   else toast(j.error||'Lỗi thêm cơ sở',true);
+ }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
+}
+async function deleteAeonSiteSettings(name){
+ if(!confirm(`Xoá cơ sở "${name}" khỏi danh mục?\n(Chỉ xoá được khi cơ sở KHÔNG còn phiếu nào.)`)) return;
+ if(!adminPassword.settings){ toast('Cần mở khoá Cài đặt (Administrator) trước',true); return; }
+ try{
+   const j=await DB.deleteAeonSite(name,adminPassword.settings);
+   if(j.ok){ aeonSitesCatalog=j.data||aeonSitesCatalog; renderAeonSiteManageList(); toast('✅ Đã xoá cơ sở'); }
+   else toast(j.error==='site still has tickets'?'Không xoá được: cơ sở này vẫn còn phiếu':(j.error||'Lỗi xoá cơ sở'),true);
+ }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
+}
+$('#btnAddAeonSite').onclick=addAeonSiteSettings;
+$('#aeonSiteNewName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addAeonSiteSettings();}});
 
 /* nhớ lựa chọn gần nhất */
 if(localStorage.getItem('kt_cus'))$('#f_customer').value=localStorage.getItem('kt_cus');
@@ -3375,7 +3470,7 @@ $('#btnExport').onclick=()=>{
 const gate=$('#adminGateModal');
 function openSettingsModal(){$('#s_url').value=CFG.url;$('#s_token').value=CFG.token;$('#s_token').classList.add('masked');$('#s_store').value=CFG.store;
  $('#s_display').value=localStorage.getItem('kt_display_mode')||'auto';
- const cs=$('#connStatus');cs.className='status-dot'+(CFG.url?' live':'');cs.querySelector('span').textContent=CFG.url?'Đã kết nối':'Chưa kết nối';modal.classList.add('show');loadEngineers();loadPeriodInfo();}
+ const cs=$('#connStatus');cs.className='status-dot'+(CFG.url?' live':'');cs.querySelector('span').textContent=CFG.url?'Đã kết nối':'Chưa kết nối';modal.classList.add('show');loadEngineers();loadAeonSiteManage();loadPeriodInfo();}
 // Áp dụng ngay từ lúc tải trang (không cần mở Cài đặt trước) — nhớ lựa chọn
 // qua các lần mở app sau bằng localStorage.
 function applyDisplayMode(mode){
@@ -3966,11 +4061,15 @@ function aeonSiteStyledSheet(rows){
    khác nhau, danh sách cơ sở lấy ĐỘNG theo đúng dữ liệu thật đang có. */
 let aeonData=[];
 let aeonEditingId=null;
+// Danh mục cơ sở AEON — nguồn CHUẨN (bảng aeon_sites), quản lý ở Cài đặt. Đây
+// là nguồn duy nhất cho tên cơ sở, tránh gõ lệch dấu/hoa thường sinh "cơ sở ma".
+let aeonSitesCatalog=[];
 
-// Danh sách cơ sở AEON — lấy từ dữ liệu thật (distinct customer), sắp xếp
-// theo tên. Dùng chung cho cả dropdown lọc báo cáo lẫn dropdown thêm/sửa phiếu.
+// Danh sách cơ sở để hiện lên dropdown = danh mục chuẩn HỢP cùng mọi cơ sở
+// đang thực sự có phiếu (phòng khi 1 cơ sở có phiếu nhưng chưa kịp vào danh
+// mục — vẫn hiện ra để không "mất" phiếu). Sắp xếp theo tên.
 function aeonSitesList(){
- return [...new Set(aeonData.map(r=>r.customer).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+ return [...new Set([...aeonSitesCatalog, ...aeonData.map(r=>r.customer)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
 }
 function aeonPopulateSiteFilter(){
  const sel=$('#aeon_site_filter');
@@ -3979,20 +4078,35 @@ function aeonPopulateSiteFilter(){
  sel.innerHTML=sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
  sel.value=sites.includes(cur)?cur:(sites[0]||'');
 }
+// Dropdown "Cơ sở" khi thêm/sửa phiếu — CHỈ chọn từ danh mục chuẩn (không còn
+// "Khác…" gõ tay để khỏi sinh cơ sở trùng lệch). Thêm cơ sở mới bằng nút riêng.
 function aeonPopulateCustomerSelect(){
+ const cur=$('#aeon_f_customer').value;
  const sites=aeonSitesList();
- $('#aeon_f_customer').innerHTML=sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('')+'<option value="__other">Khác…</option>';
+ $('#aeon_f_customer').innerHTML=sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+ if(sites.includes(cur)) $('#aeon_f_customer').value=cur;
 }
-$('#aeon_f_customer').onchange=e=>$('#wrap_aeon_customer_other').style.display=e.target.value==='__other'?'block':'none';
-function aeonCustomerValue(){
- const v=$('#aeon_f_customer').value;
- return v==='__other' ? $('#aeon_f_customer_other').value.trim() : v;
-}
+function aeonCustomerValue(){ return $('#aeon_f_customer').value; }
+
+// Thêm cơ sở AEON mới NGAY trong popup báo cáo (không cần vào Cài đặt) — gate
+// bằng đúng mật khẩu AEON đang mở popup. Thêm xong tự chọn luôn cơ sở đó.
+$('#btnAeonAddSite').onclick=async()=>{
+ const name=prompt('Tên cơ sở AEON mới (vd: AEON Mall Hải Phòng Lê Chân):');
+ if(name==null) return;
+ const nm=name.trim(); if(!nm){ toast('Chưa nhập tên cơ sở',true); return; }
+ const j=await DB.addAeonSite(nm,adminPassword.aeon);
+ if(!j.ok){ toast(j.error||'Lỗi thêm cơ sở',true); return; }
+ aeonSitesCatalog=j.data||aeonSitesCatalog;
+ aeonPopulateSiteFilter(); aeonPopulateCustomerSelect();
+ $('#aeon_f_customer').value=nm;
+ toast(`✅ Đã thêm cơ sở "${nm}"`);
+};
 
 async function aeonLoadAndRender(){
- const res=await DB.listAeonTickets();
+ const [res,sitesRes]=await Promise.all([DB.listAeonTickets(), DB.listAeonSites()]);
  if(!res.ok){ toast(res.error||'Không tải được dữ liệu AEON',true); return; }
  aeonData=res.data;
+ if(sitesRes.ok) aeonSitesCatalog=sitesRes.data||[];
  aeonPopulateSiteFilter();
  aeonPopulateCustomerSelect();
  renderAeonReport();
@@ -4084,7 +4198,7 @@ $$('.aeon-translate-btn').forEach(b=>b.onclick=()=>aeonTranslateField(b.dataset.
 
 function aeonResetForm(){
  aeonEditingId=null;
- $('#aeon_f_date').value=''; setFieldOrOther('aeon_f_customer','wrap_aeon_customer_other','aeon_f_customer_other',$('#aeon_site_filter').value||''); $('#aeon_f_system').value='CCTV';
+ $('#aeon_f_date').value=''; aeonPopulateCustomerSelect(); $('#aeon_f_customer').value=$('#aeon_site_filter').value||$('#aeon_f_customer').value; $('#aeon_f_system').value='CCTV';
  $('#aeon_f_priority').value='Medium'; $('#aeon_f_issue').value='';
  setFieldOrOther('aeon_f_engineer','wrap_aeon_engineer_other','aeon_f_engineer_other','');
  $('#aeon_f_support').value='Online'; $('#aeon_f_status').value='Done'; $('#aeon_f_remark').value='';
@@ -4096,7 +4210,7 @@ function aeonEditRow(no){
  const r=aeonData.find(x=>String(x.no)===String(no));
  if(!r) return;
  aeonEditingId=no;
- $('#aeon_f_date').value=r.date||''; setFieldOrOther('aeon_f_customer','wrap_aeon_customer_other','aeon_f_customer_other',r.customer||'');
+ $('#aeon_f_date').value=r.date||''; aeonPopulateCustomerSelect(); $('#aeon_f_customer').value=r.customer||'';
  $('#aeon_f_system').value=r.system||''; $('#aeon_f_priority').value=r.priority||'Medium';
  $('#aeon_f_issue').value=r.issue||'';
  setFieldOrOther('aeon_f_engineer','wrap_aeon_engineer_other','aeon_f_engineer_other',r.engineer||'');
