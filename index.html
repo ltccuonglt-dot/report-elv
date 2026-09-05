@@ -1561,13 +1561,27 @@ const DB={
  },
  async updateTicketStatus(no,status){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
-   const {error}=await sb.from('tickets').update({status}).eq('id',no);
+   const {error}=await sb.rpc('update_ticket_status',{p_id:no,p_status:status});
    return error?{ok:false,error:error.message}:{ok:true};
  },
  async deleteTicket(no,adminPassword){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
    const {error}=await sb.rpc('delete_ticket',{p_id:Number(no),p_admin_password:adminPassword});
    return error?{ok:false,error:error.message}:{ok:true};
+ },
+ // Ghi lại link Drive sau khi chuyển ảnh/PDF phiếu cũ — bắt buộc qua RPC có
+ // mật khẩu Administrator (trước đây dựa vào policy UPDATE công khai của
+ // bảng, đã bỏ policy đó để không ai sửa được tickets/ticket_photos trực
+ // tiếp qua API mà không qua RPC).
+ async archiveTicketUrl(id,column,driveUrl,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('archive_ticket_url',{p_admin_password:adminPassword,p_id:Number(id),p_column:column,p_drive_url:driveUrl});
+   return error?{ok:false,error:error.message}:{ok:true,data};
+ },
+ async archiveTicketPhotoUrl(photoId,driveUrl,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('archive_ticket_photo_url',{p_admin_password:adminPassword,p_photo_id:Number(photoId),p_drive_url:driveUrl});
+   return error?{ok:false,error:error.message}:{ok:true,data};
  },
  // Báo cáo AEON Huế/Thanh Khê — bảng riêng aeon_tickets, tách khỏi tickets sống
  async listAeonTickets(){
@@ -3606,18 +3620,17 @@ $('#btnArchiveOldPhotos').onclick=async()=>{
        if(attempt<3){ statusBox.textContent=`Đang chuyển ${idx+1}/${jobs.length} (thử lại lần ${attempt+1})...`; await new Promise(r=>setTimeout(r,2000)); }
      }
      if(!ar.ok){ failed++; errors.push(`${job.name||job.url}: ${ar.error||'lỗi'}`); continue; }
-     // Cập nhật link mới (Drive) trong Supabase RỒI MỚI xoá bản gốc.
-     // Bắt buộc dùng .select() để biết CHẮC CHẮN có dòng nào được sửa thật:
-     // nếu quyền (RLS) chặn, Supabase trả về "không lỗi" nhưng 0 dòng — mà cứ
-     // thế xoá file gốc thì ảnh mất luôn, không còn link Drive để tra lại.
-     let updErr=null, updRows=null;
-     if(job.kind==='ticket_attachment') ({data:updRows,error:updErr}=await sb.from('tickets').update({attachment_url:ar.driveUrl}).eq('id',job.id).select('id'));
-     else if(job.kind==='ticket_attachment_back') ({data:updRows,error:updErr}=await sb.from('tickets').update({attachment_back_url:ar.driveUrl}).eq('id',job.id).select('id'));
-     else if(job.kind==='ticket_pdf') ({data:updRows,error:updErr}=await sb.from('tickets').update({bienban_pdf_url:ar.driveUrl}).eq('id',job.id).select('id'));
-     else ({data:updRows,error:updErr}=await sb.from('ticket_photos').update({url:ar.driveUrl}).eq('id',job.id).select('id'));
-     if(updErr||!updRows||!updRows.length){
+     // Cập nhật link mới (Drive) trong Supabase RỒI MỚI xoá bản gốc — qua RPC
+     // có mật khẩu Administrator (không còn dựa vào policy UPDATE công khai
+     // nữa, xem archive_ticket_url/archive_ticket_photo_url phía Supabase).
+     let updRes;
+     if(job.kind==='ticket_attachment') updRes=await DB.archiveTicketUrl(job.id,'attachment_url',ar.driveUrl,adminPassword.settings);
+     else if(job.kind==='ticket_attachment_back') updRes=await DB.archiveTicketUrl(job.id,'attachment_back_url',ar.driveUrl,adminPassword.settings);
+     else if(job.kind==='ticket_pdf') updRes=await DB.archiveTicketUrl(job.id,'bienban_pdf_url',ar.driveUrl,adminPassword.settings);
+     else updRes=await DB.archiveTicketPhotoUrl(job.id,ar.driveUrl,adminPassword.settings);
+     if(!updRes.ok){
        failed++;
-       errors.push(`${job.name||job.url}: ${updErr?(updErr.message||updErr):'không cập nhật được link (thiếu quyền) — KHÔNG xoá file gốc'}`);
+       errors.push(`${job.name||job.url}: ${updRes.error||'không cập nhật được link'} — KHÔNG xoá file gốc`);
        continue; // giữ nguyên file gốc trên Supabase, không xoá
      }
      const path=storagePathFromUrl(job.url);
