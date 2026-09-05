@@ -138,9 +138,11 @@ body{background:var(--ground);color:var(--ink);font-family:var(--font);font-size
      cục của CẢ ứng dụng (rất dài, nhiều form/bảng), khiến trình in tính ra
      hàng chục trang trống trước khi tới #ctpPrintArea. display:none xoá hẳn
      khỏi luồng bố cục nên chỉ còn đúng số trang cần cho nội dung thật. */
-  @page{size:landscape}
+  @page{size:A4 landscape;margin:10mm}
   .app, .modal{display:none!important}
   #ctpPrintArea{display:block!important}
+  #ctpPrintArea table{width:100%!important;table-layout:fixed;font-size:9px}
+  #ctpPrintArea td,#ctpPrintArea th{word-wrap:break-word;overflow-wrap:break-word}
 }
 .banner svg{width:16px;height:16px;flex:none}
 
@@ -1271,9 +1273,9 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       </button>
       <p class="hint" style="margin-bottom:10px">Xuất file Excel "Giấy đề nghị thanh toán chi phí công tác" cho đợt đang chọn — đúng bố cục mẫu, MỞ RA SỬA ĐƯỢC bằng Excel/Google Sheet.</p>
       <button type="button" class="btn btn-ghost" id="btnCtpPrint" style="margin:0 0 6px">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg><span>In / Xuất PDF (để in ký)</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg><span>Xem trước &amp; In (để in ký 1 lần)</span>
       </button>
-      <p class="hint" style="margin-bottom:10px">Xem trước rồi in/xuất PDF cho đợt đang chọn — kèm bản đồ nếu đã chọn ở trên (dùng khi cần bản in để ký).</p>
+      <p class="hint" style="margin-bottom:10px">Xem trước đúng bố cục mẫu (như file Excel) rồi bấm In ra giấy để ký — kèm bản đồ nếu đã chọn ở trên.</p>
       <button type="button" class="btn btn-danger" id="btnCtpDeleteTrip" style="margin-bottom:6px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Xoá hẳn đợt công tác này</span>
       </button>
@@ -5505,22 +5507,24 @@ $('#btnCtpPrint').onclick=()=>{
  const total=lines.reduce((s,r)=>s+(Number(r.amount)||0),0);
  const F='font-family:\'Times New Roman\',serif';
  const tdS=`padding:4px 6px;border:1px solid #999;font-size:11px;${F}`;
- const thS=`padding:4px 6px;border:1px solid #999;font-size:11px;font-weight:700;text-align:center;background:#f0f0f0;${F}`;
+ // Header xanh nhạt chữ navy (khớp mẫu/Excel mới, KHÔNG phải navy trắng cũ).
+ const thS=`padding:4px 6px;border:1px solid #8faac6;font-size:11px;font-weight:700;text-align:center;background:#8DB4E2;color:#1F3864;${F}`;
+ const q2=v=>Number(v)?Number(v).toFixed(2):'';
  const rowsHtml=lines.map((r,i)=>`<tr>
    <td style="${tdS};text-align:center">${i+1}</td>
    <td style="${tdS}">${esc(r.requesterName)}</td>
-   <td style="${tdS}">${esc(r.dept||'')}</td>
+   <td style="${tdS};text-align:center">${esc(r.dept||'')}</td>
    <td style="${tdS}">${esc(r.expenseType)}</td>
    <td style="${tdS}">${esc(r.description)}</td>
    <td style="${tdS};text-align:center">${r.lineFromDate?fmtDMYFull(r.lineFromDate):''}</td>
    <td style="${tdS};text-align:center">${r.lineToDate?fmtDMYFull(r.lineToDate):''}</td>
    <td style="${tdS};text-align:center">${r.km||''}</td>
-   <td style="${tdS};text-align:center">${r.quantity||''}</td>
+   <td style="${tdS};text-align:center">${q2(r.quantity)}</td>
    <td style="${tdS};text-align:right">${(r.rate||0).toLocaleString('vi-VN')}</td>
    <td style="${tdS};text-align:right">${(r.amount||0).toLocaleString('vi-VN')}</td>
-   <td style="${tdS}">${esc(r.projectCode)}</td>
+   <td style="${tdS};text-align:center">${esc(r.projectCode)}</td>
    <td style="${tdS}">${esc(r.projectName)}</td>
-   <td style="${tdS}">${esc(r.serviceType)}</td>
+   <td style="${tdS};text-align:center">${esc(r.serviceType)}</td>
    <td style="${tdS}">${esc(r.note)}</td>
  </tr>`).join('');
  const mapSrc = ctpUploadedMapDataUrl || (($('#ctp_mapSelect').value)?mapSrcFor($('#ctp_mapSelect').value):'');
@@ -5531,16 +5535,19 @@ $('#btnCtpPrint').onclick=()=>{
  // 4 ô vuông loại dịch vụ đầu phiếu — đúng mẫu thật, tick đúng ô khớp
  // serviceType của cả đợt (mọi dòng trong 1 đợt luôn cùng 1 loại dịch vụ).
  const svcBoxesOrder=['Lắp mới','Khảo sát','Bảo trì','Bảo hành'];
- const svcBoxesHtml=svcBoxesOrder.map(v=>`<span style="display:inline-block;margin-right:22px">
-    <span style="display:inline-block;width:13px;height:13px;border:1.4px solid #333;text-align:center;line-height:12px;font-size:11px;vertical-align:middle">${v===first.serviceType?'✓':''}</span>
-    <span style="vertical-align:middle"> ${esc(v)}</span></span>`).join('');
+ // Ô loại dịch vụ RỖNG (không tick sẵn) + chữ xanh đậm — để đánh dấu tay khi ký.
+ const svcBoxesHtml=svcBoxesOrder.map(v=>`<span style="display:inline-block;margin-right:34px">
+    <span style="display:inline-block;width:14px;height:14px;border:1.6px solid #2E5B9C;vertical-align:middle"></span>
+    <span style="vertical-align:middle;color:#2E5B9C;font-weight:700"> ${esc(v)}</span></span>`).join('');
  const th2=(vi,en)=>`<th style="${thS}">${esc(vi)}<br><span style="font-weight:400;font-style:italic;font-size:9.5px">${esc(en)}</span></th>`;
  $('#ctpPrintArea').innerHTML=`
   <div style="padding:24px;${F}">
-   <img src="${CTP_LOGO_DATAURL}" style="height:52px;display:block;margin-bottom:10px">
-   <div style="text-align:center;margin-bottom:14px">
-    <div style="font-weight:700;font-size:17px">GIẤY ĐỀ NGHỊ THANH TOÁN CHI PHÍ CÔNG TÁC</div>
-    <div style="font-weight:700;font-style:italic;color:#1a56c4;font-size:13px">PAYMENT REQUEST FOR COST OF WORK</div>
+   <div style="position:relative;min-height:56px;margin-bottom:12px">
+    <img src="${CTP_LOGO_DATAURL}" style="height:50px;position:absolute;left:0;top:0">
+    <div style="text-align:center;padding-top:2px">
+     <div style="font-weight:700;font-size:17px;color:#1F3864">GIẤY ĐỀ NGHỊ THANH TOÁN CHI PHÍ CÔNG TÁC</div>
+     <div style="font-weight:700;font-style:italic;color:#2E5B9C;font-size:13px">PAYMENT REQUEST FOR COST OF WORK</div>
+    </div>
    </div>
    <p style="text-align:center">Ngày/ Date: …………${fmtDMYFull(first.requestDate)||''}…………………….………</p>
    <p style="font-weight:700">Kính gởi/ To: Ban Giám Đốc Cty Cổ Phần TMDV Sao Nam An (Soeco's Mgt Board)</p>
@@ -5558,10 +5565,10 @@ $('#btnCtpPrint').onclick=()=>{
      ${th2('Tên DA','PJ name')}${th2('Loại dịch vụ thực hiện','')}${th2('Ghi chú','Remark')}
     </tr></thead>
     <tbody>${rowsHtml}
-     <tr style="background:#ffe600"><td colspan="10" style="${tdS};background:#ffe600;text-align:right;font-weight:700">TỔNG CỘNG</td><td style="${tdS};background:#ffe600;text-align:right;font-weight:700">${total.toLocaleString('vi-VN')}</td><td colspan="4" style="${tdS};background:#ffe600"></td></tr>
+     <tr><td colspan="10" style="${tdS};background:#FFF200;text-align:right;font-weight:700;color:#C00000">TỔNG CỘNG</td><td style="${tdS};background:#FFF200;text-align:right;font-weight:700;color:#C00000">${total.toLocaleString('vi-VN')}</td><td colspan="4" style="${tdS};background:#FFF200"></td></tr>
     </tbody>
    </table>
-   <p style="margin-top:10px;font-style:italic">Bằng chữ : ${soThanhChu(total)}</p>
+   <p style="margin-top:0;font-style:italic;background:#D9D9D9;padding:5px 8px">Bằng chữ : ${soThanhChu(total)}</p>
    <table style="width:100%;margin-top:40px;border:none"><tr>
     <td style="border:none;text-align:center;font-weight:700;width:50%">Người đề nghị<br><br><br><br>${esc(allNamesForPrint)}</td>
     <td style="border:none;text-align:center;font-weight:700;width:50%">Phụ trách bộ phận</td>
