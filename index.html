@@ -1340,6 +1340,17 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 </div>
 
 <script>
+// Đăng ký bắt sự kiện 'beforeinstallprompt' NGAY, TRƯỚC khi bọc phần còn lại
+// vào DOMContentLoaded bên dưới — Chrome có thể bắn sự kiện này rất sớm
+// (trước cả DOMContentLoaded), nên nếu để trong phần bị hoãn tới
+// DOMContentLoaded thì có rủi ro lỡ mất sự kiện, khiến nút "Cài đặt ứng
+// dụng" không dùng được hộp thoại cài đặt thật (rơi xuống hướng dẫn cài tay
+// dù máy THỰC RA có hỗ trợ cài trực tiếp). deferredInstallPrompt khai báo ở
+// đây (ngoài function bên dưới) để phần code xử lý nút Cài đặt (bên trong
+// DOMContentLoaded) vẫn đọc được qua closure.
+var deferredInstallPrompt=null;
+window.addEventListener('beforeinstallprompt',(e)=>{ e.preventDefault(); deferredInstallPrompt=e; });
+
 // Bọc toàn bộ script chính trong DOMContentLoaded — vì 3 thư viện ngoài
 // (XLSX/Supabase/jsPDF) giờ tải kiểu "defer" (không chặn hiển thị trang),
 // nên phải đợi đúng lúc chúng đã sẵn sàng (ngay trước DOMContentLoaded)
@@ -3604,6 +3615,11 @@ let adminGatePendingResolve=null;
 function openAdminGate(group){
  group=group||'settings';
  return new Promise(resolve=>{
+   // Nếu đang có 1 lượt đăng nhập khác chưa xong (hiếm khi xảy ra vì modal
+   // che hết màn hình, nhưng phòng khi 2 nơi cùng gọi requireAdminThen gần
+   // như đồng thời) — huỷ lượt cũ (coi như bị hủy) thay vì để nó treo mãi
+   // mãi không bao giờ resolve.
+   if(adminGatePendingResolve){ const old=adminGatePendingResolve; old(false); }
    adminGatePendingResolve=resolve;
    $('#adminGateModal').dataset.group=group;
    $('#adminGateTitle').textContent = group==='settings' ? 'Khu vực quản trị' : `Đăng nhập ${PW_GROUP_LABEL[group]||group}`;
@@ -3646,13 +3662,14 @@ if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').ca
 const btnInstall=$('#btnInstallApp');
 const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
 const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
-let deferredInstallPrompt=null;
+// deferredInstallPrompt + bắt sự kiện 'beforeinstallprompt' đã khai báo/đăng
+// ký SỚM hơn, ngoài function DOMContentLoaded này (xem đầu file) — không
+// khai báo lại ở đây để khỏi che mất (shadow) biến ngoài đó.
 // Luôn hiện nút (trừ khi app đã đang chạy ở chế độ đã cài) — không chỉ đợi
 // sự kiện beforeinstallprompt, vì sự kiện này có thể tới trễ (Chrome cần vài
 // điều kiện mới bắn) hoặc không tới (Firefox/Safari desktop không hỗ trợ) —
 // bấm vào lúc đó vẫn có hướng dẫn tay thay vì không thấy nút đâu cả.
 if(!isStandalone()) btnInstall.style.display='grid';
-window.addEventListener('beforeinstallprompt',(e)=>{ e.preventDefault(); deferredInstallPrompt=e; });
 window.addEventListener('appinstalled',()=>{ btnInstall.style.display='none'; deferredInstallPrompt=null; });
 const installIconHTML=btnInstall.innerHTML;
 const installSpinnerHTML='<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
