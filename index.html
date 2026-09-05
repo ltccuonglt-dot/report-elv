@@ -4766,9 +4766,10 @@ async function ctpLoadAll(){
  if(!j.ok){ toast(j.error||'Lỗi tải công tác phí',true); return; }
  ctpAllLines=j.data||[];
  renderCtpDashboard();
+ await ctpLoadFuelRate(); // phải xong TRƯỚC khi render dòng — ctpRenderTripSelect() gọi xuống tới
+ // ctpRenderLines()->ctpBackfillFuelRate() ngay, cần ctpFuelRate đã có giá trị thật lúc đó.
  ctpRenderTripSelect();
  ctpPopulateEngFilter();
- ctpLoadFuelRate();
 }
 // Giá xăng cố định (đ/lít) — dòng xăng MỚI tạo tự lấy giá này làm Định mức.
 let ctpFuelRate=0;
@@ -4776,11 +4777,29 @@ async function ctpLoadFuelRate(){
  const j=await DB.getCtpFuelRate();
  if(j.ok){ ctpFuelRate=j.rate; $('#ctp_fuel_rate_input').value=ctpFuelRate||''; }
 }
+// Áp giá xăng đã lưu vào MỌI dòng xăng đang TRỐNG định mức (0/chưa nhập)
+// trong đợt đang mở — xử lý cả dòng xăng CŨ tạo từ trước khi có tính năng
+// này (định mức để trống, Thành tiền = 0) lẫn ngay sau khi đổi giá mới.
+async function ctpBackfillFuelRate(){
+ if(!ctpFuelRate) return;
+ let applied=0;
+ for(let i=0;i<ctpLocalRows.length;i++){
+   const row=ctpLocalRows[i];
+   if((row.expenseType||'').includes('xăng') && !Number(row.rate)){
+     row.rate=ctpFuelRate;
+     Object.assign(row,ctpCalcQtyAmount(row.expenseType,row.km,row.rate,row.multiplyByDays,row.lineFromDate,row.lineToDate));
+     if(!row.noteOther) row.note=ctpFuelNoteFor(row);
+     await ctpPersistRow(i);
+     applied++;
+   }
+ }
+ if(applied){ ctpRenderLinesFromLocal(); toast(`✅ Đã áp giá xăng đã lưu vào ${applied} dòng đang trống định mức`); }
+}
 $('#btnCtpSaveFuelRate').onclick=async()=>{
  const val=Number($('#ctp_fuel_rate_input').value);
  if(!val||val<=0){ toast('Nhập giá xăng hợp lệ',true); return; }
  const j=await DB.setCtpFuelRate(val,adminPassword.chamcong_ctp);
- if(j.ok){ ctpFuelRate=val; toast(`✅ Đã lưu giá xăng ${val.toLocaleString('vi-VN')}đ/lít cho tháng này`); }
+ if(j.ok){ ctpFuelRate=val; toast(`✅ Đã lưu giá xăng ${val.toLocaleString('vi-VN')}đ/lít cho tháng này`); await ctpBackfillFuelRate(); }
  else toast(j.error||'Lỗi lưu giá xăng',true);
 };
 
@@ -4919,6 +4938,7 @@ function ctpCurrentLines(){ return currentTripId ? ctpAllLines.filter(r=>r.tripI
 function ctpRenderLines(){
  ctpLocalRows=ctpCurrentLines().map(r=>Object.assign({},r));
  ctpRenderLinesFromLocal();
+ ctpBackfillFuelRate(); // dòng xăng cũ (tạo trước khi có tính năng giá cố định) tự được điền giá đã lưu
 }
 // Cột KHỚP ĐÚNG mẫu "Giấy đề nghị thanh toán chi phí công tác" thật của công
 // ty — chỗ nào NGƯỜI DÙNG tự nhập/sửa được thì để input/select (đúng các ô
