@@ -456,6 +456,11 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 .toast.err{background:var(--danger);color:#fff}
 
 .modal{position:fixed;inset:0;background:rgba(20,10,25,.55);z-index:50;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
+/* Cổng đăng nhập Administrator phải LUÔN nổi lên TRÊN mọi popup khác (vd bấm
+   Xoá trong lúc popup Chấm công/CTP đang mở) — trước đây cùng z-index và
+   đứng TRƯỚC trong HTML nên bị popup đang mở đè lên, ẩn mất/không bấm được,
+   tưởng như bấm Xoá không có phản ứng gì. */
+#adminGateModal{z-index:60}
 .modal.show{display:flex}
 /* .sheet trước đây không giới hạn chiều cao/không cuộn được — modal nào có
    nội dung dài hơn màn hình (vd Chấm công/CTP, Báo cáo AEON có Dashboard +
