@@ -956,6 +956,10 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
     <!-- ===== TAB CHẤM CÔNG ===== -->
     <div id="admtab-chamcong" class="admtab-panel active">
+      <div class="section-title" style="margin-bottom:8px">Dashboard — tháng đang xem</div>
+      <div class="stats" id="ccDashStats"></div>
+      <div class="card" id="ccDashDonut" style="margin-bottom:14px"></div>
+      <div class="divider"></div>
       <div id="ccMonthReminder" class="period-notice" style="display:none;margin-bottom:10px"></div>
       <div class="cc-filters">
         <select id="cc_employee" class="msel-select"></select>
@@ -1021,6 +1025,10 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
     <!-- ===== TAB CÔNG TÁC PHÍ ===== -->
     <div id="admtab-ctp" class="admtab-panel">
+      <div class="section-title" style="margin-bottom:8px">Dashboard — toàn bộ đợt công tác</div>
+      <div class="stats" id="ctpDashStats"></div>
+      <div class="card" id="ctpDashDonut" style="margin-bottom:14px"></div>
+      <div class="divider"></div>
       <div class="section-title" style="margin-bottom:8px">Đợt công tác</div>
       <select id="ctp_tripSelect" style="margin-bottom:10px"></select>
       <button type="button" class="btn-mini" id="btnCtpNewTrip">+ Tạo đợt công tác mới</button>
@@ -1154,14 +1162,15 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 <div class="modal" id="aeonReportModal">
   <div class="sheet" style="max-width:920px">
     <h2>Báo cáo AEON Huế / Thanh Khê</h2>
-    <p class="desc" style="margin-top:-6px">Dữ liệu lưu ở bảng riêng, tách khỏi phiếu kỹ thuật đang vận hành.</p>
+    <p class="desc" style="margin-top:-6px">Dữ liệu lưu ở bảng riêng, tách khỏi phiếu kỹ thuật đang vận hành. Mỗi cơ sở là 1 dự án riêng — chọn đúng cơ sở muốn xem, không gộp so sánh.</p>
+
     <div class="seg" id="aeon_site_filter" style="margin-bottom:14px">
-      <button type="button" data-v="all" class="on">Tất cả</button>
-      <button type="button" data-v="hue">AEON Huế</button>
+      <button type="button" data-v="hue" class="on">AEON Huế</button>
       <button type="button" data-v="tk">AEON Thanh Khê</button>
     </div>
-    <div id="aeonDonutWrap" class="donut-wrap"></div>
-    <div id="aeonReportSummary" class="aeon-compare-grid"></div>
+    <div class="section-title" style="margin-bottom:8px">Dashboard</div>
+    <div class="stats" id="aeonDashStats"></div>
+    <div class="card" id="aeonDonutWrap" style="margin-bottom:0"></div>
 
     <div class="divider"></div>
     <div class="section-title" style="margin-bottom:8px">Thêm / sửa 1 phiếu AEON</div>
@@ -2714,7 +2723,7 @@ function donutGradient(segments,total){
  });
  return stops.length?`conic-gradient(${stops.join(',')})`:'var(--surface-2)';
 }
-function donutBlock(title,segments){
+function donutBlock(title,segments,unitLabel,centerText){
  const total=segments.reduce((s,x)=>s+x.val,0);
  const bg=donutGradient(segments,total);
  const legend=segments.map(s=>{
@@ -2723,7 +2732,7 @@ function donutBlock(title,segments){
  }).join('');
  return `<div class="donut-block">
    <div class="donut-title">${esc(title)}</div>
-   <div class="donut" style="background:${bg}"><div class="donut-center"><div class="pct">${total}</div><div class="lbl">phiếu</div></div></div>
+   <div class="donut" style="background:${bg}"><div class="donut-center"><div class="pct">${centerText!=null?centerText:total}</div><div class="lbl">${esc(unitLabel||'phiếu')}</div></div></div>
    <div class="donut-legend">${legend}</div>
  </div>`;
 }
@@ -3525,41 +3534,30 @@ async function aeonLoadAndRender(){
 
 function renderAeonReport(){
  const {hue,tk}=aeonSplit();
- // Chọn site nào thì donut "Hình thức hỗ trợ"/"Mức ưu tiên" + bảng danh sách
- // chỉ hiện đúng site đó — không gộp chung 2 site thành 1 donut so sánh nữa.
+ // Mỗi cơ sở là 1 dự án riêng — KHÔNG so sánh 2 site với nhau. Dashboard +
+ // donut + bảng danh sách đều chỉ hiện đúng 1 site đang chọn, y hệt cấu trúc
+ // Dashboard chính của Report ELV (.stats 3 ô Tổng/Online/On-Site + donut).
  const site=segVal('aeon_site_filter');
- const filtered=site==='hue'?hue:site==='tk'?tk:aeonData;
+ const filtered=site==='tk'?tk:hue;
 
  const online=filtered.filter(r=>!(r.support||'').toLowerCase().includes('site')).length;
  const onsite=filtered.length-online;
  const pr={Low:0,Medium:0,High:0};
  filtered.forEach(r=>{const p=(r.priority||'').trim(); if(pr[p]!=null)pr[p]++;});
 
- $('#aeonDonutWrap').innerHTML=
+ $('#aeonDashStats').innerHTML=`
+   <div class="stat total"><div class="n">${filtered.length}</div><div class="l">Tổng phiếu</div></div>
+   <div class="stat online"><div class="n">${online}</div><div class="l">Online</div></div>
+   <div class="stat onsite"><div class="n">${onsite}</div><div class="l">On-Site</div></div>`;
+ $('#aeonDonutWrap').innerHTML=`<div class="donut-wrap">${
    donutBlock('Hình thức hỗ trợ',[
      {label:'Online',val:online,color:'var(--info)'},
      {label:'On-Site',val:onsite,color:'var(--brand)'}])+
    donutBlock('Mức ưu tiên',[
      {label:'Low',val:pr.Low,color:'var(--ok)'},
      {label:'Medium',val:pr.Medium,color:'var(--warn)'},
-     {label:'High',val:pr.High,color:'var(--danger)'}]);
-
- const cardStat=rows=>{
-   const on=rows.filter(r=>!(r.support||'').toLowerCase().includes('site')).length;
-   return {total:rows.length, online:on, onsite:rows.length-on};
- };
- const a=cardStat(hue), b=cardStat(tk);
- $('#aeonReportSummary').innerHTML=`
-   <div class="aeon-compare-card"><h3>AEON Huế</h3>
-     <div class="row"><span>Tổng phiếu</span><b>${a.total}</b></div>
-     <div class="row"><span>Online</span><b>${a.online}</b></div>
-     <div class="row"><span>On-Site</span><b>${a.onsite}</b></div>
-   </div>
-   <div class="aeon-compare-card"><h3>AEON Thanh Khê</h3>
-     <div class="row"><span>Tổng phiếu</span><b>${b.total}</b></div>
-     <div class="row"><span>Online</span><b>${b.online}</b></div>
-     <div class="row"><span>On-Site</span><b>${b.onsite}</b></div>
-   </div>`;
+     {label:'High',val:pr.High,color:'var(--danger)'}])
+ }</div>`;
 
  $('#aeonListCount').textContent=filtered.length;
  $('#aeonListBody').innerHTML=filtered.map(r=>`<tr>
@@ -3749,7 +3747,25 @@ async function ccLoadList(){
 }
 $('#btnCcLoad').onclick=ccLoadList;
 
+// Dashboard chấm công — cùng cấu trúc .stats + donut như Dashboard chính của
+// Report ELV, tính trên đúng dữ liệu đang xem (theo bộ lọc Tháng/Năm/Nhân
+// viên phía trên) — chọn 1 nhân viên thì donut chỉ còn 1 phần, đúng ý.
+function renderCcDashboard(){
+ const totalDays=ccCurrentList.reduce((s,r)=>s+(Number(r.workDays)||0),0);
+ const employees=new Set(ccCurrentList.map(r=>r.employee).filter(Boolean));
+ const daysWorked=new Set(ccCurrentList.map(r=>r.date).filter(Boolean));
+ $('#ccDashStats').innerHTML=`
+   <div class="stat total"><div class="n">${totalDays}</div><div class="l">Tổng số công</div></div>
+   <div class="stat online"><div class="n">${employees.size}</div><div class="l">Nhân viên</div></div>
+   <div class="stat onsite"><div class="n">${daysWorked.size}</div><div class="l">Ngày có chấm công</div></div>`;
+ const byEmp={};
+ ccCurrentList.forEach(r=>{ byEmp[r.employee]=(byEmp[r.employee]||0)+(Number(r.workDays)||0); });
+ const colors=['var(--brand)','var(--info)','var(--ok)','var(--warn)','var(--danger)','var(--brand-ink)'];
+ const segs=Object.entries(byEmp).sort((a,b)=>b[1]-a[1]).map(([name,val],i)=>({label:name,val,color:colors[i%colors.length]}));
+ $('#ccDashDonut').innerHTML=`<div class="donut-wrap">${donutBlock('Số công theo nhân viên',segs,'công')}</div>`;
+}
 function ccRenderList(){
+ renderCcDashboard();
  $('#ccListCount').textContent=ccCurrentList.length;
  $('#ccListBody').innerHTML=ccCurrentList.map(r=>`<tr>
    <td>${esc(fmtDMYFull(r.date))}</td><td>${esc(thuVN(r.date))}</td><td>${esc(r.employee)}</td>
@@ -4075,7 +4091,32 @@ async function ctpLoadAll(){
  const j=await DB.listExpenses(adminPassword.chamcong_ctp);
  if(!j.ok){ toast(j.error||'Lỗi tải công tác phí',true); return; }
  ctpAllLines=j.data||[];
+ renderCtpDashboard();
  ctpRenderTripSelect();
+}
+
+// Dashboard công tác phí — tính trên TOÀN BỘ đợt (không chỉ đợt đang chọn ở
+// dưới), cùng cấu trúc .stats + donut như Dashboard chính của Report ELV.
+function renderCtpDashboard(){
+ const total=ctpAllLines.reduce((s,r)=>s+(Number(r.amount)||0),0);
+ const trips=new Set(ctpAllLines.map(r=>r.tripId).filter(Boolean));
+ $('#ctpDashStats').innerHTML=`
+   <div class="stat total"><div class="n">${total.toLocaleString('vi-VN')}đ</div><div class="l">Tổng chi phí</div></div>
+   <div class="stat online"><div class="n">${trips.size}</div><div class="l">Đợt công tác</div></div>
+   <div class="stat onsite"><div class="n">${ctpAllLines.length}</div><div class="l">Dòng chi phí</div></div>`;
+ const colors=['var(--brand)','var(--info)','var(--ok)','var(--warn)','var(--danger)','var(--brand-ink)'];
+ const groupBy=(rows,keyFn)=>{
+   const map={};
+   rows.forEach(r=>{ const k=keyFn(r)||'(Chưa đặt tên)'; map[k]=(map[k]||0)+(Number(r.amount)||0); });
+   return Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([name,val],i)=>({label:name,val,color:colors[i%colors.length]}));
+ };
+ const byType=groupBy(ctpAllLines,r=>r.expenseType);
+ // Xem riêng theo TỪNG dự án, không gộp chung — mỗi dự án 1 phần donut.
+ const byProject=groupBy(ctpAllLines,r=>r.projectName);
+ $('#ctpDashDonut').innerHTML=`<div class="donut-wrap">${
+   donutBlock('Chi phí theo loại',byType,'đ',total.toLocaleString('vi-VN'))+
+   donutBlock('Chi phí theo dự án',byProject,'đ',total.toLocaleString('vi-VN'))
+ }</div>`;
 }
 
 function ctpRenderTripSelect(){
