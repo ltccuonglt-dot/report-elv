@@ -1025,7 +1025,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 /* ===== CẤU HÌNH — mở app, bấm ⚙️ để dán link, KHÔNG cần sửa file ===== */
 // Kết nối mặc định — để mở app trên BẤT KỲ điện thoại/trình duyệt nào cũng
 // tự kết nối sẵn, không cần vào ⚙️ cấu hình lại. Vào ⚙️ vẫn đổi được nếu cần.
-const DEFAULT_URL='https://script.google.com/macros/s/AKfycbxic9nR-RTc8lSeTr1ZhMisZJyEqVv8Yt1LVOVqanceQUwM475FCOu6xIvy4jUvFbOSwA/exec';
+const DEFAULT_URL='https://script.google.com/macros/s/AKfycbxI7LhPoN7XhNWoYvWiXQnMjF-97IHl3EL4pMSGSYLK1aPX83ogHzxdYTHJUDU4hBaO/exec';
 const DEFAULT_TOKEN='AEON-KT-2026';
 const DEFAULT_STORE='Report -ELV';
 // Mật khẩu quản trị KHÔNG còn hardcode ở đây nữa (đổi được qua app, lưu bên
@@ -1044,6 +1044,16 @@ async function verifyAdminPassword(pin){
 // Khớp EDIT_LIMIT bên Code.gs — người dùng thường chỉ sửa 1 phiếu tối đa
 // bấy nhiêu lần, sửa thêm phải nhập đúng mật khẩu quản trị ngay lúc đó.
 const EDIT_LIMIT=5;
+/* Backend Apps Script đã chuyển sang bản triển khai mới (project độc lập,
+   có thêm chức năng lưu ảnh sang Drive). Máy nào từng lưu URL CŨ trong ⚙️
+   Cài đặt sẽ tự được chuyển sang URL mới 1 lần, khỏi phải vào sửa tay. */
+(function(){
+ var OLD_URLS=['AKfycbxic9nR-RTc8lSeTr1ZhMisZJyEqVv8Yt1LVOVqanceQUwM475FCOu6xIvy4jUvFbOSwA'];
+ try{
+   var saved=localStorage.getItem('kt_url')||'';
+   if(saved && OLD_URLS.some(function(id){return saved.indexOf(id)>=0;})) localStorage.setItem('kt_url',DEFAULT_URL);
+ }catch(e){}
+})();
 const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get token(){return localStorage.getItem('kt_token')||DEFAULT_TOKEN},get store(){return localStorage.getItem('kt_store')||DEFAULT_STORE}};
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 
@@ -2364,24 +2374,34 @@ $('#btnArchiveOldPhotos').onclick=async()=>{
    });
    photos.forEach(p=>jobs.push({kind:'ticket_photo',id:p.id,url:p.url,name:p.name}));
    if(!jobs.length){ statusBox.textContent='Không có ảnh/PDF nào của phiếu quá 6 tháng cần chuyển.'; btn.disabled=false; return; }
-   let done=0, failed=0;
-   for(const job of jobs){
-     statusBox.textContent=`Đang chuyển ${done+1}/${jobs.length}...`;
-     const ar=await DB.archiveFileToDrive(job.url,job.name,adminPasswordRuntime);
-     if(!ar.ok){ failed++; continue; }
+   let done=0, failed=0; const errors=[];
+   for(let idx=0; idx<jobs.length; idx++){
+     const job=jobs[idx];
+     statusBox.textContent=`Đang chuyển ${idx+1}/${jobs.length}...`;
+     // Gọi Apps Script đôi khi lỗi tạm thời (khởi động nguội, nghẽn khoá) —
+     // thử lại tối đa 3 lần trước khi coi là thất bại, để chạy hàng loạt
+     // không bị bỏ sót file vì 1 trục trặc thoáng qua.
+     let ar=null;
+     for(let attempt=1; attempt<=3; attempt++){
+       ar=await DB.archiveFileToDrive(job.url,job.name,adminPasswordRuntime);
+       if(ar.ok) break;
+       if(attempt<3){ statusBox.textContent=`Đang chuyển ${idx+1}/${jobs.length} (thử lại lần ${attempt+1})...`; await new Promise(r=>setTimeout(r,2000)); }
+     }
+     if(!ar.ok){ failed++; errors.push(`${job.name||job.url}: ${ar.error||'lỗi'}`); continue; }
      // Cập nhật link mới (Drive) trong Supabase rồi mới xóa bản gốc — tránh
      // mất link giữa chừng nếu có lỗi ở bước nào đó.
      let updErr=null;
      if(job.kind==='ticket_attachment') ({error:updErr}=await sb.from('tickets').update({attachment_url:ar.driveUrl}).eq('id',job.id));
      else if(job.kind==='ticket_pdf') ({error:updErr}=await sb.from('tickets').update({bienban_pdf_url:ar.driveUrl}).eq('id',job.id));
      else ({error:updErr}=await sb.from('ticket_photos').update({url:ar.driveUrl}).eq('id',job.id));
-     if(updErr){ failed++; continue; }
+     if(updErr){ failed++; errors.push(`${job.name||job.url}: ${updErr.message||updErr}`); continue; }
      const path=storagePathFromUrl(job.url);
      if(path) await sb.storage.from('ticket-attachments').remove([path]);
      done++;
    }
    statusBox.className='period-notice'+(failed?' soon':'');
-   statusBox.textContent=`✅ Đã chuyển ${done}/${jobs.length} file sang Drive`+(failed?`, ${failed} file lỗi (thử lại sau)`:'')+'.';
+   statusBox.textContent=`✅ Đã chuyển ${done}/${jobs.length} file sang Drive`
+     +(failed?`, ${failed} file lỗi — bấm lại nút để thử tiếp. Chi tiết: ${errors.slice(0,3).join(' | ')}`:'')+'.';
    toast(`✅ Đã chuyển ${done} ảnh/PDF phiếu cũ sang Drive`);
    fetchFullMgrData(true);
  }catch(err){
