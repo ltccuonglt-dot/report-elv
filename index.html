@@ -4728,6 +4728,7 @@ function isPastDailyBackupTime(){
  return h>16 || (h===16 && m>=30);
 }
 async function maybeAutoBackupChamCongCtp(){
+ return; // ĐÃ TẮT auto-backup sang Google Sheet (bỏ hẳn Sheet backup 2026-09-06) — dữ liệu chính ở Supabase, không cần chép sang Sheet nữa. Nhờ vậy có thể XÓA file "Report ELV - Backup" mà không lỗi.
  if(!adminPassword.chamcong_ctp) return; // chưa mở khoá nhóm này trong phiên thì thôi
  const todayStr=ccCtpTodayStr();
  if(localStorage.getItem('kt_cc_ctp_backup_date')===todayStr) return; // đã kiểm tra/backup hôm nay rồi
