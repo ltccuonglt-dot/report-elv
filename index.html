@@ -5215,11 +5215,17 @@ function ccInjectLandscape(u8){
    const files=fflate.unzipSync(u8), dec=new TextDecoder(), enc=new TextEncoder();
    const key='xl/worksheets/sheet1.xml'; if(!files[key]) return u8;
    let xml=dec.decode(files[key]);
-   if(!/<sheetPr/.test(xml)) xml=xml.replace(/(<worksheet[^>]*>)/, '$1<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>');
-   if(!/<pageSetup/.test(xml)){
+   // sheetPr fitToPage (phải là con ĐẦU của worksheet)
+   if(!/<sheetPr[ />]/.test(xml)) xml=xml.replace(/(<worksheet[^>]*>)/, '$1<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>');
+   else if(!/<pageSetUpPr/.test(xml)) xml=xml.replace(/(<sheetPr[^>]*>)/, '$1<pageSetUpPr fitToPage="1"/>');
+   if(!/<pageSetup[ />]/.test(xml)){
      const ps='<pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/>';
+     const block='<pageMargins left="0.2" right="0.2" top="0.3" bottom="0.3" header="0.1" footer="0.1"/>'+ps;
+     // THỨ TỰ OOXML: pageMargins/pageSetup phải TRƯỚC ignoredErrors/drawing (Excel nghiêm, LibreOffice thì không).
      if(/<pageMargins[^>]*\/>/.test(xml)) xml=xml.replace(/(<pageMargins[^>]*\/>)/, '$1'+ps);
-     else xml=xml.replace('</worksheet>', '<pageMargins left="0.2" right="0.2" top="0.3" bottom="0.3" header="0.1" footer="0.1"/>'+ps+'</worksheet>');
+     else if(/<ignoredErrors[ />]/.test(xml)) xml=xml.replace('<ignoredErrors', block+'<ignoredErrors');
+     else if(/<drawing[ />]/.test(xml)) xml=xml.replace('<drawing', block+'<drawing');
+     else xml=xml.replace('</worksheet>', block+'</worksheet>');
    }
    files[key]=enc.encode(xml);
    return fflate.zipSync(files);
@@ -5940,10 +5946,22 @@ function ctpEmbedLogo(u8){
    const dec=new TextDecoder(), enc=new TextEncoder();
    const sheetName=Object.keys(files).find(k=>/^xl\/worksheets\/sheet1\.xml$/.test(k))||Object.keys(files).find(k=>/^xl\/worksheets\/.*\.xml$/.test(k));
    let sx=dec.decode(files[sheetName]);
-   if(!/<sheetPr/.test(sx)) sx=sx.replace(/(<worksheet[^>]*>)/,'$1<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>');
-   let tail=''; if(!/<pageMargins/.test(sx)) tail+='<pageMargins left="0.2" right="0.2" top="0.3" bottom="0.3" header="0.1" footer="0.1"/>';
-   tail+='<pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/><drawing r:id="rId1"/>';
-   files[sheetName]=enc.encode(sx.replace('</worksheet>',tail+'</worksheet>'));
+   // sheetPr fitToPage (con ĐẦU của worksheet)
+   if(!/<sheetPr[ />]/.test(sx)) sx=sx.replace(/(<worksheet[^>]*>)/,'$1<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>');
+   else if(!/<pageSetUpPr/.test(sx)) sx=sx.replace(/(<sheetPr[^>]*>)/,'$1<pageSetUpPr fitToPage="1"/>');
+   // pageMargins/pageSetup phải TRƯỚC ignoredErrors (THỨ TỰ OOXML — Excel nghiêm).
+   if(!/<pageSetup[ />]/.test(sx)){
+     const ps='<pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/>';
+     if(/<pageMargins[^>]*\/>/.test(sx)) sx=sx.replace(/(<pageMargins[^>]*\/>)/,'$1'+ps);
+     else {
+       const block='<pageMargins left="0.2" right="0.2" top="0.3" bottom="0.3" header="0.1" footer="0.1"/>'+ps;
+       if(/<ignoredErrors[ />]/.test(sx)) sx=sx.replace('<ignoredErrors', block+'<ignoredErrors');
+       else sx=sx.replace('</worksheet>', block+'</worksheet>');
+     }
+   }
+   // drawing PHẢI là phần tử CUỐI (sau ignoredErrors) — chèn ngay trước </worksheet>.
+   if(!/<drawing[ />]/.test(sx)) sx=sx.replace('</worksheet>', '<drawing r:id="rId1"/></worksheet>');
+   files[sheetName]=enc.encode(sx);
    const W=Math.round(369*9525*0.42), H=Math.round(137*9525*0.42);
    files['xl/drawings/drawing1.xml']=enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>36000</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>18000</xdr:rowOff></xdr:from><xdr:ext cx="'+W+'" cy="'+H+'"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="2" name="Logo SOECO"/><xdr:cNvPicPr/></xdr:nvPicPr><xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+W+'" cy="'+H+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>');
    files['xl/drawings/_rels/drawing1.xml.rels']=enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/></Relationships>');
