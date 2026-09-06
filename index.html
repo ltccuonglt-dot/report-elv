@@ -978,6 +978,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     <div class="divider"></div>
     <div class="section-title" style="margin-bottom:8px">Backup dự phòng (Supabase → Drive)</div>
     <p class="desc" style="margin-top:-4px">Tự động <b>đầu mỗi tháng</b> xuất TOÀN BỘ dữ liệu ra 1 file JSON, lưu vào Drive: <b>Report ELV → Backup Supabase</b> (mỗi tháng 1 file). Phòng khi mất Supabase vẫn khôi phục được. Bấm nút để backup ngay bất cứ lúc nào.</p>
+    <div id="sbDataSize" class="period-notice" style="margin-bottom:10px">📊 Đang tính dung lượng dữ liệu…</div>
     <div id="sbBackupStatus" class="period-notice" style="margin-bottom:10px;display:none"></div>
     <button type="button" class="btn" id="btnBackupSupabase" style="margin-bottom:16px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg><span>Backup ngay ra Drive</span>
@@ -1756,6 +1757,12 @@ const DB={
        body:JSON.stringify({token:CFG.token,action:'createAeonSiteSheet',group:'aeon',siteName,adminPassword})});
      return await res.json();
    }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
+ },
+ // Dung lượng data hiện tại (số bản ghi + bytes = đúng cỡ file backup) — hiện ở mục Backup.
+ async dataStats(adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('data_stats',{p_admin_password:adminPassword});
+   return error?{ok:false,error:error.message}:{ok:true,rows:data.rows,bytes:data.bytes};
  },
  // Backup dự phòng: Apps Script tự đọc toàn bộ data Supabase rồi ghi 1 file JSON vào Drive.
  async backupSupabaseToDrive(adminPassword){
@@ -3713,7 +3720,21 @@ $('#btnExport').onclick=()=>{
 const gate=$('#adminGateModal');
 function openSettingsModal(){$('#s_url').value=CFG.url;$('#s_token').value=CFG.token;$('#s_token').classList.add('masked');$('#s_store').value=CFG.store;
  $('#s_display').value=localStorage.getItem('kt_display_mode')||'auto';
- const cs=$('#connStatus');cs.className='status-dot'+(CFG.url?' live':'');cs.querySelector('span').textContent=CFG.url?'Đã kết nối':'Chưa kết nối';modal.classList.add('show');loadEngineers();loadAeonSiteManage();loadProjectCodes().then(renderPcManageList);maybeMonthlySupabaseBackup();}
+ const cs=$('#connStatus');cs.className='status-dot'+(CFG.url?' live':'');cs.querySelector('span').textContent=CFG.url?'Đã kết nối':'Chưa kết nối';modal.classList.add('show');loadEngineers();loadAeonSiteManage();loadProjectCodes().then(renderPcManageList);loadDataSizeInfo();maybeMonthlySupabaseBackup();}
+// Hiện dung lượng dữ liệu hiện tại (số bản ghi + KB = đúng cỡ file backup) — tự cập nhật mỗi lần mở Cài đặt.
+async function loadDataSizeInfo(){
+ const el=$('#sbDataSize'); if(!el) return;
+ if(!adminPassword.settings){ el.textContent='📊 Mở khoá Cài đặt để xem dung lượng dữ liệu.'; return; }
+ el.textContent='📊 Đang tính dung lượng dữ liệu…';
+ try{
+   const j=await DB.dataStats(adminPassword.settings);
+   if(j.ok){
+     const kb=(j.bytes/1024), sizeStr = kb>=1024 ? (kb/1024).toFixed(2)+' MB' : Math.round(kb)+' KB';
+     const pct=(j.bytes/(500*1024*1024)*100);
+     el.innerHTML=`📊 Dữ liệu hiện tại: <b>${(j.rows||0).toLocaleString('vi-VN')} bản ghi</b> · ~<b>${sizeStr}</b> <span class="hint" style="font-weight:400">(dùng ${pct<0.01?'&lt;0,01':pct.toFixed(2)}% giới hạn 500 MB)</span>`;
+   } else el.textContent='📊 Không lấy được dung lượng: '+(j.error||'');
+ }catch(err){ el.textContent='📊 Không lấy được dung lượng (kiểm tra mạng).'; }
+}
 /* Backup dự phòng Supabase -> Drive. Apps Script tự đọc Supabase + ghi 1 file JSON/tháng
    vào Drive "Report ELV → Backup Supabase". Tự động: mỗi tháng, LẦN ĐẦU admin mở Cài đặt
    trong tháng đó (mở Cài đặt luôn cần mở khoá admin nên đã có mật khẩu) → backup 1 lần rồi
