@@ -1379,8 +1379,24 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     <div id="aeonBackupStatus" class="period-notice" style="margin-top:10px;display:none"></div>
     <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
       <button type="button" class="btn btn-primary" id="btnAeonExportExcel"><span>⬇️ Xuất Excel</span></button>
+      <button type="button" class="btn" id="btnAeonSyncSheet" title="Đối chiếu 2 chiều với Sheet chung (nhiều người sửa) rồi đồng bộ có xác nhận"><span>🔁 Kiểm tra & Đồng bộ Sheet chung</span></button>
       <button type="button" class="btn" id="btnAeonSyncBackup" title="Chép toàn bộ phiếu AEON sang Google Sheet backup (thủ công, không tự động)"><span>🔄 Đồng bộ backup</span></button>
       <button type="button" class="btn btn-ghost" id="btnCloseAeonReport">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="aeonSyncModal">
+  <div class="sheet sheet-wide" style="display:flex;flex-direction:column;max-height:88vh">
+    <div style="display:flex;align-items:center;gap:8px">
+      <h2 style="flex:1;margin:0">🔁 Kiểm tra & Đồng bộ Sheet chung AEON</h2>
+      <a id="aeonSyncSheetLink" href="#" target="_blank" rel="noopener" class="btn-mini" style="text-decoration:none">Mở Sheet ↗</a>
+    </div>
+    <p class="desc" style="margin-top:2px">Đối chiếu Sheet chung (nhiều người cùng sửa) với dữ liệu trong tool. <b>Không bao giờ tự xoá</b> — bạn xem khác biệt, xử lý dòng lệch, rồi bấm Áp dụng.</p>
+    <div id="aeonSyncBody" style="overflow:auto;flex:1;margin-top:4px"></div>
+    <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+      <button type="button" class="btn btn-primary" id="btnAeonSyncApply" disabled><span>Áp dụng đồng bộ</span></button>
+      <button type="button" class="btn btn-ghost" id="btnAeonSyncClose">Đóng</button>
     </div>
   </div>
 </div>
@@ -1749,6 +1765,23 @@ const DB={
    try{
      const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
        body:JSON.stringify({token:CFG.token,action:'backupAeonTickets',rows,adminPassword})});
+     return await res.json();
+   }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
+ },
+ // Đồng bộ 2 chiều AEON: đọc Sheet chung + ghi lại (updates/appends/setIds) — mật khẩu 'aeon'.
+ async readAeonSharedSheet(adminPassword){
+   if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
+   try{
+     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+       body:JSON.stringify({token:CFG.token,action:'readAeonSharedSheet',group:'aeon',adminPassword})});
+     return await res.json();
+   }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
+ },
+ async writeAeonSharedSheet(ops,adminPassword){
+   if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
+   try{
+     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+       body:JSON.stringify({token:CFG.token,action:'writeAeonSharedSheet',group:'aeon',ops,adminPassword})});
      return await res.json();
    }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
  },
@@ -4501,6 +4534,139 @@ $('#btnAeonSyncBackup').onclick=async()=>{
  }
  btn.disabled=false;
 };
+/* ===== ĐỒNG BỘ 2 CHIỀU AEON với Sheet chung (nhiều người sửa) =====
+   Đối chiếu theo Id; KHÔNG bao giờ tự xoá; phiếu lệch để người chọn từng cái. */
+const AEON_SYNC_FIELDS=['date','customer','system','issue','priority','engineer','support','status','remark'];
+const AEON_FIELD_LABELS={date:'Ngày',customer:'Cơ sở',system:'Hệ thống',issue:'Sự cố',priority:'Ưu tiên',engineer:'Kỹ sư',support:'Hỗ trợ',status:'Trạng thái',remark:'Ghi chú'};
+let aeonSyncPlan=null;
+function aeonDateToIso(v){
+ if(!v) return ''; v=String(v).trim();
+ let m=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if(m) return `${m[3]}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;
+ m=v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+ return v;
+}
+function aeonIsoToDMY(iso){ const m=String(iso||'').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); return m?`${String(m[3]).padStart(2,'0')}/${String(m[2]).padStart(2,'0')}/${m[1]}`:String(iso||''); }
+function aeonNorm(v){ return (v==null?'':String(v)).trim(); }
+function aeonFieldEq(f,a,b){ return f==='date'?aeonDateToIso(a)===aeonDateToIso(b):aeonNorm(a)===aeonNorm(b); }
+function aeonPickFields(t,fromSheet){
+ return {date:fromSheet?aeonDateToIso(t.date):aeonNorm(t.date), customer:aeonNorm(t.customer), system:aeonNorm(t.system),
+   issue:aeonNorm(t.issue), priority:aeonNorm(t.priority), engineer:aeonNorm(t.engineer), support:aeonNorm(t.support),
+   status:aeonNorm(t.status), remark:aeonNorm(t.remark)};
+}
+function aeonFieldsForSheet(f){ return {date:aeonIsoToDMY(f.date), customer:f.customer, system:f.system, issue:f.issue, priority:f.priority, engineer:f.engineer, support:f.support, status:f.status, remark:f.remark}; }
+function buildAeonSyncPlan(supaRows,sheetRows,sheetUrl){
+ const supaById={}; supaRows.forEach(r=>{ supaById[String(r.no)]=r; });
+ const sheetIds=new Set(); const inserts=[], conflicts=[], stale=[];
+ (sheetRows||[]).forEach(sr=>{
+   const id=aeonNorm(sr.id);
+   if(!id){
+     if(!aeonNorm(sr.customer)&&!aeonNorm(sr.issue)&&!aeonNorm(sr.system)) return; // dòng trống
+     inserts.push({tab:sr.tab, row:sr.row, fields:aeonPickFields(sr,true)}); return;
+   }
+   sheetIds.add(id);
+   const supa=supaById[id];
+   if(!supa){ stale.push({id,tab:sr.tab,row:sr.row,sheet:aeonPickFields(sr,true)}); return; }
+   const s=aeonPickFields(sr,true), p=aeonPickFields(supa,false);
+   const diffs=AEON_SYNC_FIELDS.filter(f=>!aeonFieldEq(f,s[f],p[f]));
+   if(diffs.length) conflicts.push({id,tab:sr.tab,row:sr.row,sheet:s,supa:p,diffs,choice:null});
+ });
+ const supaOnly=supaRows.filter(r=>!sheetIds.has(String(r.no))).map(r=>({id:String(r.no),fields:aeonPickFields(r,false)}));
+ return {inserts,conflicts,supaOnly,stale,sheetUrl};
+}
+async function openAeonSyncModal(){
+ if(!adminPassword.aeon){ toast('Mở khoá AEON trước rồi thử lại',true); return; }
+ const body=$('#aeonSyncBody'); body.innerHTML='<p class="hint">Đang đọc Sheet chung & dữ liệu tool…</p>';
+ $('#btnAeonSyncApply').disabled=true; $('#aeonSyncModal').classList.add('show');
+ const [supaRes,sheetRes]=await Promise.all([DB.listAeonTickets(), DB.readAeonSharedSheet(adminPassword.aeon)]);
+ if(!supaRes.ok){ body.innerHTML=`<p class="period-notice overdue">Lỗi đọc Supabase: ${esc(supaRes.error||'')}</p>`; return; }
+ if(!sheetRes.ok){ body.innerHTML=`<p class="period-notice overdue">Lỗi đọc Sheet: ${esc(sheetRes.error||'')}</p>`; return; }
+ if(sheetRes.sheetUrl) $('#aeonSyncSheetLink').href=sheetRes.sheetUrl;
+ aeonSyncPlan=buildAeonSyncPlan(supaRes.data||[], sheetRes.rows||[], sheetRes.sheetUrl);
+ renderAeonSyncPlan();
+}
+function aeonSyncChip(label,n){ return `<span style="border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12.5px;background:${n?'var(--surface-2,#f3f4f6)':'transparent'}"><b>${n}</b> ${esc(label)}</span>`; }
+function aeonSyncMiniRow(f,id){
+ return `<div style="border:1px solid var(--line);border-radius:8px;padding:6px 9px;margin-bottom:5px;font-size:13px">
+   <b>${esc(aeonIsoToDMY(f.date))} · ${esc(f.customer||'—')}</b>${id?` <span class="hint">#${esc(id)}</span>`:''}
+   <div class="hint" style="font-weight:400;white-space:normal">${esc([f.system,f.issue,f.status,f.engineer].filter(Boolean).join(' · '))}</div>
+ </div>`;
+}
+function aeonConflictHtml(c,i){
+ const cell=(f,v)=>esc((f==='date'?aeonIsoToDMY(v):v))||'<span class="hint">(trống)</span>';
+ const rowsHtml=c.diffs.map(f=>`<tr><td style="padding:2px 8px;color:var(--muted)">${esc(AEON_FIELD_LABELS[f])}</td>
+   <td style="padding:2px 8px">${cell(f,c.sheet[f])}</td><td style="padding:2px 8px">${cell(f,c.supa[f])}</td></tr>`).join('');
+ return `<div style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px">
+   <div style="font-weight:700;margin-bottom:4px">#${esc(c.id)} · ${esc(aeonIsoToDMY(c.supa.date))} · ${esc(c.supa.customer||c.sheet.customer)}</div>
+   <div style="overflow:auto"><table style="border-collapse:collapse;font-size:12.5px;min-width:420px">
+     <tr style="color:var(--muted)"><th style="text-align:left;padding:2px 8px">Trường</th><th style="text-align:left;padding:2px 8px">📄 Bản Sheet</th><th style="text-align:left;padding:2px 8px">🛠️ Bản tool</th></tr>
+     ${rowsHtml}</table></div>
+   <div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">
+     <label style="display:flex;gap:5px;align-items:center"><input type="radio" class="aeon-conf-choice" name="aeonconf${i}" data-i="${i}" value="sheet"> Giữ bản <b>Sheet</b> (ghi đè tool)</label>
+     <label style="display:flex;gap:5px;align-items:center"><input type="radio" class="aeon-conf-choice" name="aeonconf${i}" data-i="${i}" value="tool"> Giữ bản <b>tool</b> (ghi đè Sheet)</label>
+   </div>
+ </div>`;
+}
+function renderAeonSyncPlan(){
+ const p=aeonSyncPlan, body=$('#aeonSyncBody'); if(!p){ body.innerHTML=''; return; }
+ const nothing=!p.inserts.length&&!p.conflicts.length&&!p.supaOnly.length&&!p.stale.length;
+ let html=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+   ${aeonSyncChip('🟢 Mới ở Sheet → thêm vào tool',p.inserts.length)}
+   ${aeonSyncChip('🔵 Mới ở tool → thêm lên Sheet',p.supaOnly.length)}
+   ${aeonSyncChip('🟡 Lệch (chọn bên giữ)',p.conflicts.length)}
+   ${aeonSyncChip('⚪ Sheet có, tool đã xoá',p.stale.length)}</div>`;
+ if(nothing) html+='<p class="period-notice">✅ Hai bên đã khớp — không có gì cần đồng bộ.</p>';
+ if(p.conflicts.length){ html+='<div class="section-title" style="margin:6px 0">🟡 Phiếu lệch — chọn giữ bên nào</div>'+p.conflicts.map((c,i)=>aeonConflictHtml(c,i)).join(''); }
+ if(p.inserts.length){ html+='<div class="section-title" style="margin:12px 0 6px">🟢 Mới ở Sheet (sẽ thêm vào tool)</div>'+p.inserts.map(x=>aeonSyncMiniRow(x.fields)).join(''); }
+ if(p.supaOnly.length){ html+='<div class="section-title" style="margin:12px 0 6px">🔵 Mới ở tool (sẽ thêm lên Sheet)</div>'+p.supaOnly.map(x=>aeonSyncMiniRow(x.fields,x.id)).join(''); }
+ if(p.stale.length){ html+='<div class="section-title" style="margin:12px 0 6px">⚪ Sheet có nhưng tool đã xoá — KHÔNG tự xử (tự xoá khỏi Sheet, hoặc nhập lại vào tool)</div>'+p.stale.map(x=>aeonSyncMiniRow(x.sheet,x.id)).join(''); }
+ body.innerHTML=html;
+ $$('#aeonSyncBody .aeon-conf-choice').forEach(r=>r.onchange=()=>{ aeonSyncPlan.conflicts[Number(r.dataset.i)].choice=r.value; refreshAeonSyncApply(); });
+ refreshAeonSyncApply();
+}
+function refreshAeonSyncApply(){
+ const p=aeonSyncPlan; if(!p) return;
+ const unresolved=p.conflicts.filter(c=>!c.choice).length;
+ const hasWork=p.inserts.length||p.supaOnly.length||p.conflicts.length;
+ const btn=$('#btnAeonSyncApply'); btn.disabled=!hasWork||unresolved>0;
+ btn.querySelector('span').textContent=unresolved>0?`Còn ${unresolved} phiếu lệch chưa chọn`:'Áp dụng đồng bộ';
+}
+async function applyAeonSync(){
+ const p=aeonSyncPlan; if(!p) return;
+ const btn=$('#btnAeonSyncApply'); btn.disabled=true;
+ const body=$('#aeonSyncBody'); const status=document.createElement('p'); status.className='period-notice'; status.style.marginTop='8px'; body.prepend(status);
+ let insErr=0,updErr=0; const setIds=[], updateRows=[], appendRows=[];
+ try{
+   for(let i=0;i<p.inserts.length;i++){
+     status.textContent=`Đang thêm phiếu mới từ Sheet vào tool ${i+1}/${p.inserts.length}…`;
+     const j=await DB.addAeonTicket(p.inserts[i].fields,adminPassword.aeon);
+     if(j.ok&&j.data){ setIds.push({tab:p.inserts[i].tab,row:p.inserts[i].row,id:String(j.data.no)}); } else insErr++;
+   }
+   for(let i=0;i<p.conflicts.length;i++){
+     const c=p.conflicts[i];
+     if(c.choice==='sheet'){ status.textContent=`Đang cập nhật tool theo Sheet (${i+1}/${p.conflicts.length})…`;
+       const j=await DB.updateAeonTicket(c.id,c.sheet,adminPassword.aeon); if(!j.ok) updErr++; }
+     else if(c.choice==='tool'){ updateRows.push({tab:c.tab, row:c.row, fields:Object.assign({id:c.id},aeonFieldsForSheet(c.supa))}); }
+   }
+   p.supaOnly.forEach(x=>appendRows.push(Object.assign({id:x.id},aeonFieldsForSheet(x.fields))));
+   if(setIds.length||updateRows.length||appendRows.length){
+     status.textContent='Đang ghi lại vào Sheet chung…';
+     const w=await DB.writeAeonSharedSheet({setIds,updateRows,appendRows},adminPassword.aeon);
+     if(!w.ok) throw new Error(w.error||'Lỗi ghi Sheet');
+   }
+   toast('✅ Đã đồng bộ AEON 2 chiều');
+   await aeonLoadAndRender();
+   await openAeonSyncModal();
+   if(insErr||updErr) toast(`⚠️ Có lỗi: thêm ${insErr}, sửa ${updErr} — thử lại`,true);
+ }catch(err){
+   status.className='period-notice overdue'; status.textContent='Lỗi: '+err.message;
+   toast('⚠️ Đồng bộ lỗi',true); btn.disabled=false;
+ }
+}
+$('#btnAeonSyncSheet').onclick=openAeonSyncModal;
+$('#btnAeonSyncApply').onclick=applyAeonSync;
+$('#btnAeonSyncClose').onclick=()=>$('#aeonSyncModal').classList.remove('show');
+$('#aeonSyncModal').onclick=e=>{ if(e.target===$('#aeonSyncModal')) $('#aeonSyncModal').classList.remove('show'); };
+
 $('#btnCloseAeonReport').onclick=()=>$('#aeonReportModal').classList.remove('show');
 $('#aeonReportModal').onclick=e=>{if(e.target===$('#aeonReportModal'))$('#aeonReportModal').classList.remove('show')};
 registerAdminAction('chamcong-ctp',()=>{
