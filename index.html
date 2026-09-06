@@ -973,8 +973,15 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       🗄️ <b>Supabase = nơi lưu CHÍNH</b> (nguồn thật): tất cả phiếu kỹ thuật, Báo cáo AEON, Chấm công, Công tác phí. App luôn đọc/ghi thẳng vào đây.<br>
       🖼️ <b>Google Drive = backup ẢNH/PDF</b>: ảnh Biên bản &amp; file đính kèm được chuyển sang Drive cho nhẹ Supabase (mục dưới) — ảnh vẫn xem bình thường.<br>
       📄 <b>Báo cáo AEON</b>: mỗi cơ sở 1 file Google Sheet riêng (share cho đội cơ sở đó), đồng bộ 2 chiều với Supabase ngay trong popup Báo cáo AEON.<br>
-      <span class="hint" style="font-weight:400">Không cần sao lưu/xoá dữ liệu định kỳ nữa — Supabase giữ toàn bộ, nhẹ và nhanh.</span>
+      <span class="hint" style="font-weight:400">Supabase giữ toàn bộ, nhẹ và nhanh — chỉ cần 1 bản backup dự phòng hàng tháng (bên dưới).</span>
     </div>
+    <div class="divider"></div>
+    <div class="section-title" style="margin-bottom:8px">Backup dự phòng (Supabase → Drive)</div>
+    <p class="desc" style="margin-top:-4px">Tự động <b>đầu mỗi tháng</b> xuất TOÀN BỘ dữ liệu ra 1 file JSON, lưu vào Drive: <b>Report ELV → Backup Supabase</b> (mỗi tháng 1 file). Phòng khi mất Supabase vẫn khôi phục được. Bấm nút để backup ngay bất cứ lúc nào.</p>
+    <div id="sbBackupStatus" class="period-notice" style="margin-bottom:10px;display:none"></div>
+    <button type="button" class="btn" id="btnBackupSupabase" style="margin-bottom:16px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg><span>Backup ngay ra Drive</span>
+    </button>
     <div class="divider"></div>
     <div class="section-title" style="margin-bottom:8px">Ảnh đính kèm phiếu cũ</div>
     <p class="desc" style="margin-top:-4px">Ảnh/PDF đính kèm của phiếu quá 6 tháng sẽ được CHUYỂN sang Google Drive (thư mục "Report ELV - Ảnh Phiếu Lưu Trữ") rồi xóa khỏi Supabase để giải phóng dung lượng lưu trữ — phiếu vẫn xem được ảnh bình thường (chỉ đổi nơi lưu, link tự cập nhật). Bấm thủ công khi cần, có thể mất vài phút nếu nhiều ảnh.</p>
@@ -1747,6 +1754,15 @@ const DB={
    try{
      const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
        body:JSON.stringify({token:CFG.token,action:'createAeonSiteSheet',group:'aeon',siteName,adminPassword})});
+     return await res.json();
+   }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
+ },
+ // Backup dự phòng: Apps Script tự đọc toàn bộ data Supabase rồi ghi 1 file JSON vào Drive.
+ async backupSupabaseToDrive(adminPassword){
+   if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
+   try{
+     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+       body:JSON.stringify({token:CFG.token,action:'backupSupabaseToDrive',adminPassword})});
      return await res.json();
    }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
  },
@@ -3697,7 +3713,36 @@ $('#btnExport').onclick=()=>{
 const gate=$('#adminGateModal');
 function openSettingsModal(){$('#s_url').value=CFG.url;$('#s_token').value=CFG.token;$('#s_token').classList.add('masked');$('#s_store').value=CFG.store;
  $('#s_display').value=localStorage.getItem('kt_display_mode')||'auto';
- const cs=$('#connStatus');cs.className='status-dot'+(CFG.url?' live':'');cs.querySelector('span').textContent=CFG.url?'Đã kết nối':'Chưa kết nối';modal.classList.add('show');loadEngineers();loadAeonSiteManage();loadPeriodInfo();loadProjectCodes().then(renderPcManageList);}
+ const cs=$('#connStatus');cs.className='status-dot'+(CFG.url?' live':'');cs.querySelector('span').textContent=CFG.url?'Đã kết nối':'Chưa kết nối';modal.classList.add('show');loadEngineers();loadAeonSiteManage();loadProjectCodes().then(renderPcManageList);maybeMonthlySupabaseBackup();}
+/* Backup dự phòng Supabase -> Drive. Apps Script tự đọc Supabase + ghi 1 file JSON/tháng
+   vào Drive "Report ELV → Backup Supabase". Tự động: mỗi tháng, LẦN ĐẦU admin mở Cài đặt
+   trong tháng đó (mở Cài đặt luôn cần mở khoá admin nên đã có mật khẩu) → backup 1 lần rồi
+   đánh dấu, không backup lại trong tháng. Có nút bấm tay bên dưới. */
+function sbBackupMonthStr(){ return new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Ho_Chi_Minh'}).slice(0,7); } // 'YYYY-MM'
+async function runSupabaseBackup(silent){
+ if(!adminPassword.settings){ if(!silent) toast('Cần mở khoá Cài đặt trước',true); return; }
+ const box=$('#sbBackupStatus'); const btn=$('#btnBackupSupabase');
+ if(btn) btn.disabled=true;
+ if(box){ box.style.display='block'; box.className='period-notice'; box.textContent='Đang sao lưu toàn bộ dữ liệu ra Drive…'; }
+ try{
+   const j=await DB.backupSupabaseToDrive(adminPassword.settings);
+   if(j.ok){
+     localStorage.setItem('kt_sb_backup_month', sbBackupMonthStr());
+     if(box){ box.className='period-notice'; box.innerHTML=`✅ Đã backup: <b>${esc(j.file||'')}</b> (${Math.round((j.bytes||0)/1024)} KB) vào Drive Report ELV → Backup Supabase.`; }
+     if(!silent) toast('✅ Đã backup dữ liệu ra Drive');
+   } else {
+     if(box){ box.className='period-notice overdue'; box.textContent='Lỗi backup: '+(j.error||''); }
+     if(!silent) toast(j.error||'Lỗi backup',true);
+   }
+ }catch(err){ if(box){ box.className='period-notice overdue'; box.textContent='Không kết nối được. Kiểm tra mạng.'; } }
+ if(btn) btn.disabled=false;
+}
+function maybeMonthlySupabaseBackup(){
+ if(!adminPassword.settings) return;
+ if(localStorage.getItem('kt_sb_backup_month')===sbBackupMonthStr()) return; // đã backup tháng này
+ runSupabaseBackup(true); // chạy ngầm, không toast ồn
+}
+if($('#btnBackupSupabase')) $('#btnBackupSupabase').onclick=()=>runSupabaseBackup(false);
 // Áp dụng ngay từ lúc tải trang (không cần mở Cài đặt trước) — nhớ lựa chọn
 // qua các lần mở app sau bằng localStorage.
 function applyDisplayMode(mode){
