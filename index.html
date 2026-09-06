@@ -1247,8 +1247,12 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
       <div class="divider"></div>
       <div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột — dùng nút +/− ở trên để phóng to/thu nhỏ bảng</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+        <button type="button" class="btn btn-mini" id="btnCtpDeleteSelected" disabled title="Xoá cùng lúc các dòng đã tích chọn (cần mật khẩu Quản trị)"><span>🗑️ Xoá dòng đã chọn</span></button>
+        <span class="hint" id="ctpSelCount"></span>
+      </div>
       <div class="rpt-wrap" id="ctpLineWrap"><table class="rpt ctp-grid" id="ctpLineTable"><thead><tr>
-        <th>STT</th><th>Tên NV</th><th>Bộ phận</th><th>Nội dung</th><th>Diễn giải</th><th>Từ ngày</th><th>Đến ngày</th><th>Km</th><th>SL</th><th>Định mức</th><th>Thành tiền</th><th>Mã vụ việc</th><th>Tên DA</th><th>Loại dịch vụ</th><th>Ghi chú</th><th>Xoá</th>
+        <th style="width:30px"><input type="checkbox" id="ctpSelectAll" title="Chọn/bỏ chọn tất cả"></th><th>STT</th><th>Tên NV</th><th>Bộ phận</th><th>Nội dung</th><th>Diễn giải</th><th>Từ ngày</th><th>Đến ngày</th><th>Km</th><th>SL</th><th>Định mức</th><th>Thành tiền</th><th>Mã vụ việc</th><th>Tên DA</th><th>Loại dịch vụ</th><th>Ghi chú</th><th>Xoá</th>
       </tr></thead><tbody id="ctpLineBody"></tbody></table></div>
       <div style="text-align:right;font-weight:800;margin:10px 0" id="ctpTotalBox">Tổng cộng: 0 đ</div>
 
@@ -1379,7 +1383,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     <div id="aeonBackupStatus" class="period-notice" style="margin-top:10px;display:none"></div>
     <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
       <button type="button" class="btn btn-primary" id="btnAeonExportExcel"><span>⬇️ Xuất Excel</span></button>
-      <button type="button" class="btn" id="btnAeonSyncSheet" title="Đối chiếu 2 chiều với Sheet chung (nhiều người sửa) rồi đồng bộ có xác nhận"><span>🔁 Kiểm tra & Đồng bộ Sheet chung</span></button>
+      <button type="button" class="btn" id="btnAeonSyncSheet" title="Đối chiếu 2 chiều với file Sheet của TỪNG cơ sở (mỗi site 1 file) rồi đồng bộ có xác nhận"><span>🔁 Kiểm tra & Đồng bộ Sheet (theo cơ sở)</span></button>
       <button type="button" class="btn" id="btnAeonSyncBackup" title="Chép toàn bộ phiếu AEON sang Google Sheet backup (thủ công, không tự động)"><span>🔄 Đồng bộ backup</span></button>
       <button type="button" class="btn btn-ghost" id="btnCloseAeonReport">Đóng</button>
     </div>
@@ -1389,10 +1393,10 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 <div class="modal" id="aeonSyncModal">
   <div class="sheet sheet-wide" style="display:flex;flex-direction:column;max-height:88vh">
     <div style="display:flex;align-items:center;gap:8px">
-      <h2 style="flex:1;margin:0">🔁 Kiểm tra & Đồng bộ Sheet chung AEON</h2>
+      <h2 style="flex:1;margin:0">🔁 Kiểm tra & Đồng bộ Sheet AEON (mỗi cơ sở 1 file)</h2>
       <a id="aeonSyncSheetLink" href="#" target="_blank" rel="noopener" class="btn-mini" style="text-decoration:none">Mở Sheet ↗</a>
     </div>
-    <p class="desc" style="margin-top:2px">Đối chiếu Sheet chung (nhiều người cùng sửa) với dữ liệu trong tool. <b>Không bao giờ tự xoá</b> — bạn xem khác biệt, xử lý dòng lệch, rồi bấm Áp dụng.</p>
+    <p class="desc" style="margin-top:2px">Mỗi cơ sở 1 file riêng (share cho đúng đội của cơ sở đó). Đối chiếu file từng cơ sở với dữ liệu tool. <b>Không bao giờ tự xoá</b> — bạn xem khác biệt, xử lý dòng lệch, rồi bấm Áp dụng.</p>
     <div id="aeonSyncBody" style="overflow:auto;flex:1;margin-top:4px"></div>
     <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
       <button type="button" class="btn btn-primary" id="btnAeonSyncApply" disabled><span>Áp dụng đồng bộ</span></button>
@@ -1768,20 +1772,38 @@ const DB={
      return await res.json();
    }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
  },
- // Đồng bộ 2 chiều AEON: đọc Sheet chung + ghi lại (updates/appends/setIds) — mật khẩu 'aeon'.
- async readAeonSharedSheet(adminPassword){
+ // Đồng bộ 2 chiều AEON — MỖI SITE 1 FILE riêng (truyền sheetId của site) — mật khẩu 'aeon'.
+ async listAeonSitesWithSheets(){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.from('aeon_sites').select('name,sheet_id').order('name');
+   return error?{ok:false,error:error.message}:{ok:true,data:data||[]};
+ },
+ async setAeonSiteSheet(name,sheetId,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {error}=await sb.rpc('set_aeon_site_sheet',{p_name:name,p_sheet_id:sheetId||'',p_admin_password:adminPassword});
+   return error?{ok:false,error:error.message}:{ok:true};
+ },
+ async createAeonSiteSheet(siteName,adminPassword){
    if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
    try{
      const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-       body:JSON.stringify({token:CFG.token,action:'readAeonSharedSheet',group:'aeon',adminPassword})});
+       body:JSON.stringify({token:CFG.token,action:'createAeonSiteSheet',group:'aeon',siteName,adminPassword})});
      return await res.json();
    }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
  },
- async writeAeonSharedSheet(ops,adminPassword){
+ async readAeonSharedSheet(sheetId,adminPassword){
    if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
    try{
      const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-       body:JSON.stringify({token:CFG.token,action:'writeAeonSharedSheet',group:'aeon',ops,adminPassword})});
+       body:JSON.stringify({token:CFG.token,action:'readAeonSharedSheet',group:'aeon',sheetId,adminPassword})});
+     return await res.json();
+   }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
+ },
+ async writeAeonSharedSheet(sheetId,ops,adminPassword){
+   if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
+   try{
+     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+       body:JSON.stringify({token:CFG.token,action:'writeAeonSharedSheet',group:'aeon',sheetId,ops,adminPassword})});
      return await res.json();
    }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
  },
@@ -4554,34 +4576,63 @@ function aeonPickFields(t,fromSheet){
    status:aeonNorm(t.status), remark:aeonNorm(t.remark)};
 }
 function aeonFieldsForSheet(f){ return {date:aeonIsoToDMY(f.date), customer:f.customer, system:f.system, issue:f.issue, priority:f.priority, engineer:f.engineer, support:f.support, status:f.status, remark:f.remark}; }
-function buildAeonSyncPlan(supaRows,sheetRows,sheetUrl){
+// Đối chiếu DỮ LIỆU 1 SITE (supaForSite) với file riêng của site đó (sheetId).
+// Trong file 1 site, cột Cơ sở luôn = tên site (ép cứng) nên không bao giờ lệch site.
+function buildAeonSyncPlan(supaRows,sheetRows,sheetId,siteName){
  const supaById={}; supaRows.forEach(r=>{ supaById[String(r.no)]=r; });
  const sheetIds=new Set(); const inserts=[], conflicts=[], stale=[];
  (sheetRows||[]).forEach(sr=>{
    const id=aeonNorm(sr.id);
+   const f=aeonPickFields(sr,true); f.customer=siteName;
    if(!id){
-     if(!aeonNorm(sr.customer)&&!aeonNorm(sr.issue)&&!aeonNorm(sr.system)) return; // dòng trống
-     inserts.push({tab:sr.tab, row:sr.row, fields:aeonPickFields(sr,true)}); return;
+     if(!aeonNorm(sr.issue)&&!aeonNorm(sr.system)&&!aeonNorm(sr.status)) return; // dòng trống
+     inserts.push({sheetId, site:siteName, row:sr.row, fields:f}); return;
    }
    sheetIds.add(id);
    const supa=supaById[id];
-   if(!supa){ stale.push({id,tab:sr.tab,row:sr.row,sheet:aeonPickFields(sr,true)}); return; }
-   const s=aeonPickFields(sr,true), p=aeonPickFields(supa,false);
-   const diffs=AEON_SYNC_FIELDS.filter(f=>!aeonFieldEq(f,s[f],p[f]));
-   if(diffs.length) conflicts.push({id,tab:sr.tab,row:sr.row,sheet:s,supa:p,diffs,choice:null});
+   if(!supa){ stale.push({sheetId, site:siteName, id, row:sr.row, sheet:f}); return; }
+   const p=aeonPickFields(supa,false); p.customer=siteName;
+   const diffs=AEON_SYNC_FIELDS.filter(x=>!aeonFieldEq(x,f[x],p[x]));
+   if(diffs.length) conflicts.push({sheetId, site:siteName, id, row:sr.row, sheet:f, supa:p, diffs, choice:null});
  });
- const supaOnly=supaRows.filter(r=>!sheetIds.has(String(r.no))).map(r=>({id:String(r.no),fields:aeonPickFields(r,false)}));
- return {inserts,conflicts,supaOnly,stale,sheetUrl};
+ const supaOnly=supaRows.filter(r=>!sheetIds.has(String(r.no))).map(r=>{ const pf=aeonPickFields(r,false); pf.customer=siteName; return {sheetId, site:siteName, id:String(r.no), fields:pf}; });
+ return {inserts,conflicts,supaOnly,stale};
 }
 async function openAeonSyncModal(){
  if(!adminPassword.aeon){ toast('Mở khoá AEON trước rồi thử lại',true); return; }
- const body=$('#aeonSyncBody'); body.innerHTML='<p class="hint">Đang đọc Sheet chung & dữ liệu tool…</p>';
+ const body=$('#aeonSyncBody'); body.innerHTML='<p class="hint">Đang đọc file từng cơ sở & dữ liệu tool…</p>';
  $('#btnAeonSyncApply').disabled=true; $('#aeonSyncModal').classList.add('show');
- const [supaRes,sheetRes]=await Promise.all([DB.listAeonTickets(), DB.readAeonSharedSheet(adminPassword.aeon)]);
+ const link=$('#aeonSyncSheetLink'); if(link) link.style.display='none'; // đã có link riêng từng site trong nội dung
+ const [supaRes,sitesRes]=await Promise.all([DB.listAeonTickets(), DB.listAeonSitesWithSheets()]);
  if(!supaRes.ok){ body.innerHTML=`<p class="period-notice overdue">Lỗi đọc Supabase: ${esc(supaRes.error||'')}</p>`; return; }
- if(!sheetRes.ok){ body.innerHTML=`<p class="period-notice overdue">Lỗi đọc Sheet: ${esc(sheetRes.error||'')}</p>`; return; }
- if(sheetRes.sheetUrl) $('#aeonSyncSheetLink').href=sheetRes.sheetUrl;
- aeonSyncPlan=buildAeonSyncPlan(supaRes.data||[], sheetRes.rows||[], sheetRes.sheetUrl);
+ if(!sitesRes.ok){ body.innerHTML=`<p class="period-notice overdue">Lỗi đọc danh mục cơ sở: ${esc(sitesRes.error||'')}</p>`; return; }
+ const supa=supaRes.data||[];
+ // Danh sách site = hợp nhất danh mục aeon_sites + các cơ sở đang có trong phiếu.
+ const siteMap={}; (sitesRes.data||[]).forEach(s=>{ siteMap[s.name]={name:s.name, sheet_id:s.sheet_id||''}; });
+ supa.forEach(t=>{ const c=(t.customer||'').trim(); if(c && !siteMap[c]) siteMap[c]={name:c, sheet_id:''}; });
+ const sites=Object.values(siteMap);
+ // Site nào chưa có file riêng -> tạo file (Apps Script) rồi lưu id vào aeon_sites.
+ for(const s of sites){
+   if(!s.sheet_id){
+     body.innerHTML=`<p class="hint">Đang tạo file dữ liệu cho cơ sở "${esc(s.name)}"…</p>`;
+     const c=await DB.createAeonSiteSheet(s.name,adminPassword.aeon);
+     if(c.ok&&c.sheetId){ s.sheet_id=c.sheetId; await DB.setAeonSiteSheet(s.name,c.sheetId,adminPassword.aeon); }
+   }
+ }
+ const plan={inserts:[],conflicts:[],supaOnly:[],stale:[],sites:[]};
+ for(const s of sites){
+   if(!s.sheet_id){ plan.sites.push({name:s.name,error:'chưa tạo được file'}); continue; }
+   body.innerHTML=`<p class="hint">Đang đọc cơ sở "${esc(s.name)}"…</p>`;
+   const sheetRes=await DB.readAeonSharedSheet(s.sheet_id,adminPassword.aeon);
+   if(!sheetRes.ok){ plan.sites.push({name:s.name,error:sheetRes.error||'lỗi đọc file'}); continue; }
+   const supaForSite=supa.filter(t=>(t.customer||'').trim()===s.name);
+   const sub=buildAeonSyncPlan(supaForSite, sheetRes.rows||[], s.sheet_id, s.name);
+   plan.inserts.push(...sub.inserts); plan.conflicts.push(...sub.conflicts);
+   plan.supaOnly.push(...sub.supaOnly); plan.stale.push(...sub.stale);
+   plan.sites.push({name:s.name, sheetUrl:sheetRes.sheetUrl, sheet_id:s.sheet_id,
+     counts:{i:sub.inserts.length,c:sub.conflicts.length,o:sub.supaOnly.length,s:sub.stale.length}});
+ }
+ aeonSyncPlan=plan;
  renderAeonSyncPlan();
 }
 function aeonSyncChip(label,n){ return `<span style="border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12.5px;background:${n?'var(--surface-2,#f3f4f6)':'transparent'}"><b>${n}</b> ${esc(label)}</span>`; }
@@ -4614,7 +4665,12 @@ function renderAeonSyncPlan(){
    ${aeonSyncChip('🔵 Mới ở tool → thêm lên Sheet',p.supaOnly.length)}
    ${aeonSyncChip('🟡 Lệch (chọn bên giữ)',p.conflicts.length)}
    ${aeonSyncChip('⚪ Sheet có, tool đã xoá',p.stale.length)}</div>`;
- if(nothing) html+='<p class="period-notice">✅ Hai bên đã khớp — không có gì cần đồng bộ.</p>';
+ if(p.sites&&p.sites.length){
+   html+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">'+p.sites.map(s=>
+     s.error?`<span class="hint" style="color:#c0392b">⚠️ ${esc(s.name)}: ${esc(s.error)}</span>`
+     :`<a href="${esc(s.sheetUrl||'#')}" target="_blank" rel="noopener" class="btn-mini" style="text-decoration:none" title="Mở file dữ liệu của cơ sở này">📄 ${esc(s.name)} ↗</a>`).join('')+'</div>';
+ }
+ if(nothing) html+='<p class="period-notice">✅ Tất cả cơ sở đã khớp — không có gì cần đồng bộ.</p>';
  if(p.conflicts.length){ html+='<div class="section-title" style="margin:6px 0">🟡 Phiếu lệch — chọn giữ bên nào</div>'+p.conflicts.map((c,i)=>aeonConflictHtml(c,i)).join(''); }
  if(p.inserts.length){ html+='<div class="section-title" style="margin:12px 0 6px">🟢 Mới ở Sheet (sẽ thêm vào tool)</div>'+p.inserts.map(x=>aeonSyncMiniRow(x.fields)).join(''); }
  if(p.supaOnly.length){ html+='<div class="section-title" style="margin:12px 0 6px">🔵 Mới ở tool (sẽ thêm lên Sheet)</div>'+p.supaOnly.map(x=>aeonSyncMiniRow(x.fields,x.id)).join(''); }
@@ -4634,24 +4690,31 @@ async function applyAeonSync(){
  const p=aeonSyncPlan; if(!p) return;
  const btn=$('#btnAeonSyncApply'); btn.disabled=true;
  const body=$('#aeonSyncBody'); const status=document.createElement('p'); status.className='period-notice'; status.style.marginTop='8px'; body.prepend(status);
- let insErr=0,updErr=0; const setIds=[], updateRows=[], appendRows=[];
+ let insErr=0,updErr=0;
+ const opsBySheet={}; // sheetId -> {setIds,updateRows,appendRows}
+ const ensure=sid=>opsBySheet[sid]||(opsBySheet[sid]={setIds:[],updateRows:[],appendRows:[]});
  try{
    for(let i=0;i<p.inserts.length;i++){
      status.textContent=`Đang thêm phiếu mới từ Sheet vào tool ${i+1}/${p.inserts.length}…`;
-     const j=await DB.addAeonTicket(p.inserts[i].fields,adminPassword.aeon);
-     if(j.ok&&j.data){ setIds.push({tab:p.inserts[i].tab,row:p.inserts[i].row,id:String(j.data.no)}); } else insErr++;
+     const it=p.inserts[i];
+     const j=await DB.addAeonTicket(it.fields,adminPassword.aeon);
+     if(j.ok&&j.data){ ensure(it.sheetId).setIds.push({row:it.row,id:String(j.data.no)}); } else insErr++;
    }
    for(let i=0;i<p.conflicts.length;i++){
      const c=p.conflicts[i];
      if(c.choice==='sheet'){ status.textContent=`Đang cập nhật tool theo Sheet (${i+1}/${p.conflicts.length})…`;
        const j=await DB.updateAeonTicket(c.id,c.sheet,adminPassword.aeon); if(!j.ok) updErr++; }
-     else if(c.choice==='tool'){ updateRows.push({tab:c.tab, row:c.row, fields:Object.assign({id:c.id},aeonFieldsForSheet(c.supa))}); }
+     else if(c.choice==='tool'){ ensure(c.sheetId).updateRows.push({row:c.row, fields:Object.assign({id:c.id},aeonFieldsForSheet(c.supa))}); }
    }
-   p.supaOnly.forEach(x=>appendRows.push(Object.assign({id:x.id},aeonFieldsForSheet(x.fields))));
-   if(setIds.length||updateRows.length||appendRows.length){
-     status.textContent='Đang ghi lại vào Sheet chung…';
-     const w=await DB.writeAeonSharedSheet({setIds,updateRows,appendRows},adminPassword.aeon);
-     if(!w.ok) throw new Error(w.error||'Lỗi ghi Sheet');
+   p.supaOnly.forEach(x=>ensure(x.sheetId).appendRows.push(Object.assign({id:x.id},aeonFieldsForSheet(x.fields))));
+   const sids=Object.keys(opsBySheet);
+   for(let i=0;i<sids.length;i++){
+     const o=opsBySheet[sids[i]];
+     if(o.setIds.length||o.updateRows.length||o.appendRows.length){
+       status.textContent=`Đang ghi lại file cơ sở (${i+1}/${sids.length})…`;
+       const w=await DB.writeAeonSharedSheet(sids[i],o,adminPassword.aeon);
+       if(!w.ok) throw new Error(w.error||'Lỗi ghi Sheet');
+     }
    }
    toast('✅ Đã đồng bộ AEON 2 chiều');
    await aeonLoadAndRender();
@@ -5559,6 +5622,7 @@ function ctpRowHtml(r,i){
  const autoNote=ctpAutoNoteFor(r);
  if(autoNote!=null && r.noteOther==null) r.noteOther = r.note!==autoNote; // suy đoán 1 lần cho dòng cũ (xăng/Công tác phí)
  return `<tr data-i="${i}">
+   <td data-label="Chọn" style="text-align:center"><input type="checkbox" class="ctp-row-check" data-i="${i}" ${r.no?'':'disabled title="Dòng chưa lưu"'}></td>
    <td class="num" data-label="STT">${i+1}</td>
    <td data-label="Tên NV"><select class="ctp-cell" data-f="requesterName">${engineerList.map(n=>`<option value="${esc(n)}" ${n===r.requesterName?'selected':''}>${esc(n)}</option>`).join('')}</select></td>
    <td data-label="Bộ phận">TEC</td>
@@ -5595,9 +5659,40 @@ function ctpRenderLinesFromLocal(){
    el.addEventListener(evt,()=>ctpCellChanged(Number(el.closest('tr').dataset.i),el.dataset.f,el));
  });
  $$('#ctpLineBody .btn-row-delete').forEach(b=>b.onclick=()=>ctpDeleteLocalRow(Number(b.dataset.i)));
+ $$('#ctpLineBody .ctp-row-check').forEach(cb=>cb.onchange=ctpUpdateSelUI);
+ const sa=$('#ctpSelectAll'); if(sa) sa.checked=false;
+ ctpUpdateSelUI();
  const total=ctpLocalRows.reduce((s,r)=>s+(Number(r.amount)||0),0);
  $('#ctpTotalBox').innerHTML=`Tổng cộng: ${total.toLocaleString('vi-VN')} đ<div style="font-weight:400;font-size:12.5px;color:var(--muted);margin-top:2px">Bằng chữ: ${esc(soThanhChu(total))}</div>`;
 }
+// Chọn nhiều dòng CTP để xoá 1 lần (chỉ dòng đã lưu, có .no). Xoá là thao tác
+// nhạy cảm nên vẫn gate mật khẩu Quản trị (settings) y như xoá từng dòng.
+function ctpSelectedIdxs(){ return $$('#ctpLineBody .ctp-row-check:checked').map(cb=>Number(cb.dataset.i)); }
+function ctpUpdateSelUI(){
+ const n=ctpSelectedIdxs().length;
+ const btn=$('#btnCtpDeleteSelected'); if(btn){ btn.disabled=n===0; btn.querySelector('span').textContent=n?`🗑️ Xoá ${n} dòng đã chọn`:'🗑️ Xoá dòng đã chọn'; }
+ const cnt=$('#ctpSelCount'); if(cnt) cnt.textContent=n?`Đã chọn ${n} dòng`:'';
+}
+async function ctpDeleteSelected(){
+ const idxs=ctpSelectedIdxs(); if(!idxs.length) return;
+ const rows=idxs.map(i=>ctpLocalRows[i]).filter(r=>r&&r.no);
+ if(!rows.length){ toast('Các dòng đã chọn chưa lưu, không cần xoá',true); return; }
+ if(!confirm(`Xoá ${rows.length} dòng chi phí đã chọn? (không thể hoàn tác)`)) return;
+ requireAdminThen('settings',async()=>{
+   let ok=0,fail=0;
+   const btn=$('#btnCtpDeleteSelected'); if(btn) btn.disabled=true;
+   for(const row of rows){
+     const j=await DB.deleteExpenseLine(row.no,adminPassword.settings);
+     if(j.ok){ ok++; ctpAllLines=ctpAllLines.filter(x=>x.no!==row.no); const li=ctpLocalRows.indexOf(row); if(li>=0) ctpLocalRows.splice(li,1); }
+     else fail++;
+   }
+   toast(fail?`⚠️ Đã xoá ${ok} dòng, lỗi ${fail}`:`✅ Đã xoá ${ok} dòng`, !!fail);
+   renderCtpDashboard();
+   ctpRenderLinesFromLocal();
+ });
+}
+if($('#ctpSelectAll')) $('#ctpSelectAll').onchange=()=>{ const on=$('#ctpSelectAll').checked; $$('#ctpLineBody .ctp-row-check:not(:disabled)').forEach(cb=>cb.checked=on); ctpUpdateSelUI(); };
+if($('#btnCtpDeleteSelected')) $('#btnCtpDeleteSelected').onclick=ctpDeleteSelected;
 async function ctpCellChanged(i,field,el){
  const row=ctpLocalRows[i]; if(!row) return;
  // Diễn giải: chọn "Khác…" chỉ MỞ ô gõ tay ra (chưa đổi description ngay,
