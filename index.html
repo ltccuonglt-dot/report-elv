@@ -1133,14 +1133,14 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <div class="cc-add-grid">
         <label class="field"><span class="lab">Ngày</span><input type="date" id="cc_f_date"></label>
         <label class="field"><span class="lab">Nhân viên</span><select id="cc_f_employee"></select></label>
-        <label class="field"><span class="lab">Dự án / Nội dung</span>
+        <label class="field"><span class="lab">Dự án / Nội dung <button type="button" class="btn-mini" id="btnPcPickCcName" title="Tìm / chọn dự án theo mã">🔎 Tìm</button></span>
           <select id="cc_f_project">
             <option>Làm việc tại văn phòng</option>
             <option value="__other">Khác…</option>
           </select>
         </label>
         <label class="field" id="wrap_cc_project_other" style="display:none"><span class="lab">Nhập dự án/nội dung</span><input type="text" id="cc_f_project_other" placeholder="VD: Tên dự án/khách hàng"></label>
-        <label class="field"><span class="lab">Mã dự án</span><input type="text" id="cc_f_code" list="projectCodesList" placeholder="Không bắt buộc"><span class="hint" style="font-weight:400">Gõ mã đã dùng → tự điền tên dự án + sale</span></label>
+        <label class="field"><span class="lab">Mã dự án <button type="button" class="btn-mini" id="btnPcPickCcCode" title="Tìm mã theo nơi/khách hàng trong 1.215 mã">🔎 Tìm</button></span><input type="text" id="cc_f_code" list="projectCodesList" placeholder="Không bắt buộc"><span class="hint" style="font-weight:400">Gõ mã đã dùng → tự điền tên + sale; hoặc 🔎 tra theo nơi</span></label>
         <label class="field"><span class="lab">Địa chỉ làm việc</span><select id="cc_f_addr"></select></label>
         <label class="field" id="wrap_cc_addr_other" style="display:none"><span class="lab">Nhập địa chỉ</span><input type="text" id="cc_f_addr_other" placeholder="VD: Quận 1, TP.HCM"></label>
         <label class="field"><span class="lab">Giờ vào</span><input type="text" inputmode="numeric" pattern="[0-2][0-9]:[0-5][0-9]" placeholder="08:00" id="cc_f_in" value="08:00"></label>
@@ -1210,8 +1210,8 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
           <label class="field" id="wrap_ctp_place_other" style="display:none"><span class="lab">Nhập địa điểm</span><input type="text" id="ctp_f_place_other" placeholder="VD: Quận 1, TP.HCM"></label>
           <label class="field"><span class="lab">Từ ngày</span><input type="date" id="ctp_f_fromdate"></label>
           <label class="field"><span class="lab">Đến ngày</span><input type="date" id="ctp_f_todate"></label>
-          <label class="field"><span class="lab">Mã vụ việc (chung)</span><input type="text" id="ctp_f_pjcode" list="projectCodesList"><span class="hint" style="font-weight:400">Gõ mã đã dùng → tự điền tên dự án</span></label>
-          <label class="field"><span class="lab">Tên dự án (chung)</span><input type="text" id="ctp_f_pjname"></label>
+          <label class="field"><span class="lab">Mã vụ việc (chung) <button type="button" class="btn-mini" id="btnPcPickCtpCode" title="Tìm mã theo nơi/khách hàng trong 1.215 mã">🔎 Tìm</button></span><input type="text" id="ctp_f_pjcode" list="projectCodesList"><span class="hint" style="font-weight:400">Gõ mã đã dùng → tự điền tên; hoặc bấm 🔎 tra theo nơi</span></label>
+          <label class="field"><span class="lab">Tên dự án (chung) <button type="button" class="btn-mini" id="btnPcPickCtpName" title="Tìm / chọn dự án">🔎 Tìm</button></span><input type="text" id="ctp_f_pjname"></label>
           <datalist id="projectCodesList"></datalist>
           <label class="field" style="grid-column:1/-1"><span class="lab">Loại dịch vụ (áp dụng cho cả đợt, đúng như mẫu — tick 1 lần)</span>
             <div class="seg" id="ctp_f_tripservice">
@@ -1699,7 +1699,19 @@ const DB={
  // Đọc công khai; học (upsert) KHÔNG cần mật khẩu; thêm/sửa/xoá ở Cài đặt cần Administrator.
  async listProjectCodes(){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
-   const {data,error}=await sb.from('project_codes').select('code,name,sale').order('code');
+   const {data,error}=await sb.from('project_codes').select('code,name,sale,descr,customer').order('code');
+   return error?{ok:false,error:error.message}:{ok:true,data:data||[]};
+ },
+ // Chỉ mã ĐÃ HỌC (có tên/sale) — nạp lúc mở app cho tự điền, nhẹ (không kéo cả 1215).
+ async listLearnedProjectCodes(){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('list_learned_project_codes');
+   return error?{ok:false,error:error.message}:{ok:true,data:data||[]};
+ },
+ // Tìm mã theo nơi/khách/mô tả/tên (không dấu, nhiều từ = AND) — phía server.
+ async searchProjectCodes(q,limit){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('search_project_codes',{p_q:q||'',p_limit:limit||30});
    return error?{ok:false,error:error.message}:{ok:true,data:data||[]};
  },
  async learnProjectCode(code,name,sale){
@@ -2240,7 +2252,8 @@ function rebuildProjectCodesIndex(){
 }
 async function loadProjectCodes(){
  if(!sb) return;
- try{ const j=await DB.listProjectCodes(); if(j.ok){ projectCodesCatalog=j.data||[]; rebuildProjectCodesIndex(); } }catch(err){}
+ // Chỉ nạp mã ĐÃ HỌC (nhẹ) cho tự điền + datalist. 1215 mã master chỉ tra qua nút 🔎 (tìm phía server).
+ try{ const j=await DB.listLearnedProjectCodes(); if(j.ok){ projectCodesCatalog=j.data||[]; rebuildProjectCodesIndex(); } }catch(err){}
 }
 // Học 1 mã (fire-and-forget). Cập nhật cache ngay để lần gõ kế trong phiên có luôn.
 async function learnProjectCode(code,name,sale){
@@ -2541,6 +2554,59 @@ async function deleteProjectCodeSettings(code){
 }
 $('#btnPcAdd').onclick=addProjectCodeSettings;
 $('#pcSearch').addEventListener('input',renderPcManageList);
+
+/* ===== 🔎 Tìm mã/dự án (CTP & Chấm công) — tra trong 1215 mã master phía server =====
+   1 nơi nhiều mã, đi đâu cũng tra ra đúng mã. Chọn 1 dòng -> điền Mã (+ Tên/Sale nếu đã học). */
+let pcPickerTarget='ctp', pcPickerTimer=null, pcPickerRows=[];
+function openPcPicker(target){
+ pcPickerTarget=target;
+ const m=$('#pcPickerModal'); if(!m) return;
+ m.style.display='flex';
+ const s=$('#pcPickerSearch'); s.value=''; $('#pcPickerResults').innerHTML='';
+ $('#pcPickerHint').textContent='Gõ để tìm trong 1.215 mã. Không dấu cũng được. Bấm 1 dòng để chọn.';
+ // Gợi ý sẵn theo mã/tên đang có trên form để bấm 🔎 là thấy liên quan luôn.
+ const seed = target==='ctp' ? ($('#ctp_f_pjname').value.trim()||$('#ctp_f_pjcode').value.trim())
+                             : ($('#cc_f_project_other').value.trim()||$('#cc_f_code').value.trim());
+ if(seed){ s.value=seed; pcRunSearch(); }
+ setTimeout(()=>s.focus(),30);
+}
+function closePcPicker(){ const m=$('#pcPickerModal'); if(m) m.style.display='none'; }
+async function pcRunSearch(){
+ const q=$('#pcPickerSearch').value.trim();
+ const box=$('#pcPickerResults');
+ const j=await DB.searchProjectCodes(q,40);
+ if(!j.ok){ box.innerHTML=`<div class="hint" style="padding:8px">Lỗi tìm: ${esc(j.error||'')}</div>`; return; }
+ pcPickerRows=j.data||[];
+ $('#pcPickerHint').textContent=q?`${pcPickerRows.length} kết quả${pcPickerRows.length>=40?'+ (gõ rõ hơn để lọc)':''}`:'Gõ để tìm trong 1.215 mã. Không dấu cũng được.';
+ if(!pcPickerRows.length){ box.innerHTML='<div class="hint" style="padding:8px">Không tìm thấy mã nào khớp.</div>'; return; }
+ box.innerHTML=pcPickerRows.map((r,i)=>`<button type="button" class="pc-pick-item" data-i="${i}" style="text-align:left;border:1px solid var(--line,#ddd);border-radius:8px;padding:8px 10px;background:var(--surface,#fff);color:inherit;cursor:pointer;display:block;width:100%">
+   <div style="font-weight:700">${esc(r.code)}${r.name?` · <span style="color:var(--accent,#1a56c4)">${esc(r.name)}</span>`:''}</div>
+   ${r.descr?`<div class="hint" style="font-weight:400;white-space:normal">${esc(r.descr)}</div>`:''}
+   ${r.customer?`<div class="hint" style="font-weight:400;white-space:normal">🏢 ${esc(r.customer)}</div>`:''}
+ </button>`).join('');
+ $$('#pcPickerResults .pc-pick-item').forEach(b=>b.onclick=()=>pcPickResult(pcPickerRows[Number(b.dataset.i)]));
+}
+function pcPickResult(r){
+ if(!r) return;
+ if(pcPickerTarget==='ctp'){
+   $('#ctp_f_pjcode').value=r.code||'';
+   if(r.name) $('#ctp_f_pjname').value=r.name;
+ } else {
+   $('#cc_f_code').value=r.code||'';
+   if(r.name){ $('#cc_f_project').value='__other'; $('#wrap_cc_project_other').style.display=''; $('#cc_f_project_other').value=r.name; }
+   if(r.sale) $('#cc_f_sale').value=r.sale;
+ }
+ closePcPicker();
+ toast('✅ Đã chọn mã '+(r.code||'')+(r.name?'':' — nhập Tên dự án ngắn để in (app sẽ nhớ)'));
+}
+['btnPcPickCtpCode','btnPcPickCtpName'].forEach(id=>{ const b=$('#'+id); if(b) b.onclick=()=>openPcPicker('ctp'); });
+['btnPcPickCcCode','btnPcPickCcName'].forEach(id=>{ const b=$('#'+id); if(b) b.onclick=()=>openPcPicker('cc'); });
+if($('#btnPcPickerClose')) $('#btnPcPickerClose').onclick=closePcPicker;
+if($('#pcPickerModal')) $('#pcPickerModal').addEventListener('click',e=>{ if(e.target===$('#pcPickerModal')) closePcPicker(); });
+if($('#pcPickerSearch')){
+ $('#pcPickerSearch').addEventListener('input',()=>{ clearTimeout(pcPickerTimer); pcPickerTimer=setTimeout(pcRunSearch,220); });
+ $('#pcPickerSearch').addEventListener('keydown',e=>{ if(e.key==='Escape') closePcPicker(); });
+}
 
 /* nhớ lựa chọn gần nhất */
 if(localStorage.getItem('kt_cus'))$('#f_customer').value=localStorage.getItem('kt_cus');
@@ -5758,5 +5824,18 @@ if($('#ctp_f_pjcode')) $('#ctp_f_pjcode').addEventListener('change',ctpCodeAutof
 loadManager();
 });
 </script>
+<div id="pcPickerModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);align-items:flex-start;justify-content:center;padding:24px 12px">
+  <div style="background:var(--surface,#fff);color:var(--ink,#111);width:min(640px,96vw);max-height:82vh;display:flex;flex-direction:column;border-radius:12px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.35)">
+    <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line,#ddd)">
+      <b style="flex:1">🔎 Tìm mã vụ việc / dự án</b>
+      <button type="button" class="btn-mini" id="btnPcPickerClose">Đóng ✕</button>
+    </div>
+    <div style="padding:10px 14px 6px">
+      <input type="text" id="pcPickerSearch" placeholder="Gõ nơi/khách/mã: vd Lavie, Vinamilk Đà Lạt…" style="width:100%" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="hint" id="pcPickerHint" style="margin-top:4px">Gõ để tìm trong 1.215 mã. Không dấu cũng được. Bấm 1 dòng để chọn.</div>
+    </div>
+    <div id="pcPickerResults" style="overflow:auto;padding:6px 12px 12px;display:flex;flex-direction:column;gap:6px"></div>
+  </div>
+</div>
 </body>
 </html>
