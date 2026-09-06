@@ -740,11 +740,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
     <!-- ===== LỊCH SỬ ===== -->
     <section id="view-history" class="view">
-      <div class="seg sm" id="histSource" style="margin-bottom:10px">
-        <button type="button" data-v="live" class="on">📋 DATA Mới</button>
-        <button type="button" data-v="archived">🗄 DATA Cũ</button>
-      </div>
-      <p class="hint" id="histSourceHint" style="margin:-4px 0 10px">Đang xem DATA Mới (dữ liệu hiện hành trên Supabase). Chuyển sang "DATA Cũ" để tra cứu phiếu đã sao lưu sang Google Sheet (ảnh mở từ Google Drive) — kể cả phiếu đã xoá khỏi Supabase.</p>
+      <p class="hint" id="histSourceHint" style="margin:0 0 10px">📋 Toàn bộ phiếu lấy trực tiếp từ <b>Supabase</b> (nơi lưu chính). Dùng bộ lọc ngày bên dưới để tra cứu.</p>
       <div class="cc-add-grid" style="margin-bottom:8px">
         <label class="field" style="margin-bottom:0"><span class="lab">Từ ngày</span><input type="date" id="histFromDate"></label>
         <label class="field" style="margin-bottom:0"><span class="lab">Đến ngày</span><input type="date" id="histToDate"></label>
@@ -972,41 +968,13 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       </select>
     </label>
     <div class="divider"></div>
-    <div class="section-title" style="margin-bottom:8px">Sao lưu dữ liệu sang Google Sheet</div>
-    <p class="desc" style="margin-top:-4px">Dữ liệu phiếu hiện lưu chính ở Supabase; Google Sheet đóng vai trò <b>bản sao lưu</b>. Bấm nút này để chép toàn bộ phiếu (kèm link ảnh Biên bản, PDF và ảnh khác — kể cả ảnh đã chuyển sang Drive) sang file Sheet backup, tab <b>"Tickets"</b>. Phiếu đã có sẽ được cập nhật lại, không tạo dòng trùng — bấm bao nhiêu lần cũng an toàn. Sau khi sao lưu, mục <b>Lịch sử</b> có thể tra cứu lại dữ liệu này kể cả khi đã xoá khỏi Supabase.</p>
-    <div id="syncBackupStatus" class="period-notice" style="margin-bottom:10px;display:none"></div>
-    <button type="button" class="btn" id="btnSyncBackup" style="margin-bottom:16px">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span>Đồng bộ Supabase → Google Sheet</span>
-    </button>
-    <p class="desc" style="margin-top:-4px">Chấm công &amp; Công tác phí cũng đã chuyển sang Supabase làm chính — 2 nút dưới đây chép sang 2 tab riêng <b>"AttendanceBackup"</b>/<b>"ExpenseBackup"</b> trong cùng file Sheet backup, cùng cơ chế cập nhật-hoặc-thêm.</p>
-    <div id="syncCcCtpStatus" class="period-notice" style="margin-bottom:10px;display:none"></div>
-    <button type="button" class="btn" id="btnSyncBackupCc" style="margin-bottom:10px">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span>Đồng bộ backup Chấm công</span>
-    </button>
-    <button type="button" class="btn" id="btnSyncBackupCtp" style="margin-bottom:16px">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span>Đồng bộ backup Công tác phí</span>
-    </button>
-    <p class="desc" style="margin-top:-4px">Dọn bớt backup nếu đã lưu trữ quá lâu (vd hơn 2 năm) — xóa các phiếu có ngày nằm trong khoảng chọn dưới đây, CHỈ xóa trong backup, không đụng Sheet chính.</p>
-    <div style="display:flex;gap:8px;margin-bottom:8px">
-      <label class="field" style="margin-bottom:0;flex:1">
-        <span class="lab">Từ ngày</span>
-        <input type="date" id="s_bkFrom" />
-      </label>
-      <label class="field" style="margin-bottom:0;flex:1">
-        <span class="lab">Đến ngày</span>
-        <input type="date" id="s_bkTo" />
-      </label>
+    <div class="section-title" style="margin-bottom:8px">Dữ liệu lưu ở đâu?</div>
+    <div class="period-notice" style="margin-bottom:16px;line-height:1.55">
+      🗄️ <b>Supabase = nơi lưu CHÍNH</b> (nguồn thật): tất cả phiếu kỹ thuật, Báo cáo AEON, Chấm công, Công tác phí. App luôn đọc/ghi thẳng vào đây.<br>
+      🖼️ <b>Google Drive = backup ẢNH/PDF</b>: ảnh Biên bản &amp; file đính kèm được chuyển sang Drive cho nhẹ Supabase (mục dưới) — ảnh vẫn xem bình thường.<br>
+      📄 <b>Báo cáo AEON</b>: mỗi cơ sở 1 file Google Sheet riêng (share cho đội cơ sở đó), đồng bộ 2 chiều với Supabase ngay trong popup Báo cáo AEON.<br>
+      <span class="hint" style="font-weight:400">Không cần sao lưu/xoá dữ liệu định kỳ nữa — Supabase giữ toàn bộ, nhẹ và nhanh.</span>
     </div>
-    <button type="button" class="btn" id="btnClearBackupRange" style="margin-bottom:16px">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Xóa dữ liệu Backup trong khoảng ngày</span>
-    </button>
-    <div class="divider"></div>
-    <div class="section-title" style="margin-bottom:8px;color:var(--danger)">Kỳ dữ liệu (6 tháng)</div>
-    <div id="periodInfoBox" class="period-notice" style="margin-bottom:10px">Đang kiểm tra…</div>
-    <p class="desc" style="margin-top:-4px">Cứ 6 tháng nên xóa hết phiếu cũ để Sheet luôn gọn, app luôn nhanh. Toàn bộ phiếu sẽ được LƯU LẠI vào backup (nối thêm, không mất) trước khi xóa Sheet chính — nên sau 1 năm (2 lần xóa), 2 năm (4 lần)... backup vẫn còn đủ. Việc xóa Sheet chính KHÔNG THỂ HOÀN TÁC — chỉ bấm khi chắc chắn.</p>
-    <button type="button" class="btn btn-danger" id="btnClearAllData" style="margin-bottom:16px">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Xóa toàn bộ dữ liệu</span>
-    </button>
     <div class="divider"></div>
     <div class="section-title" style="margin-bottom:8px">Ảnh đính kèm phiếu cũ</div>
     <p class="desc" style="margin-top:-4px">Ảnh/PDF đính kèm của phiếu quá 6 tháng sẽ được CHUYỂN sang Google Drive (thư mục "Report ELV - Ảnh Phiếu Lưu Trữ") rồi xóa khỏi Supabase để giải phóng dung lượng lưu trữ — phiếu vẫn xem được ảnh bình thường (chỉ đổi nơi lưu, link tự cập nhật). Bấm thủ công khi cần, có thể mất vài phút nếu nhiều ảnh.</p>
@@ -1384,7 +1352,6 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
       <button type="button" class="btn btn-primary" id="btnAeonExportExcel"><span>⬇️ Xuất Excel</span></button>
       <button type="button" class="btn" id="btnAeonSyncSheet" title="Đối chiếu 2 chiều với file Sheet của TỪNG cơ sở (mỗi site 1 file) rồi đồng bộ có xác nhận"><span>🔁 Kiểm tra & Đồng bộ Sheet (theo cơ sở)</span></button>
-      <button type="button" class="btn" id="btnAeonSyncBackup" title="Chép toàn bộ phiếu AEON sang Google Sheet backup (thủ công, không tự động)"><span>🔄 Đồng bộ backup</span></button>
       <button type="button" class="btn btn-ghost" id="btnCloseAeonReport">Đóng</button>
     </div>
   </div>
@@ -3773,7 +3740,7 @@ async function loadPeriodInfo(){
 /* Sao lưu Supabase → Google Sheet: đọc hết phiếu + ảnh từ Supabase rồi gửi
    sang Apps Script ghi vào tab "Tickets" của file backup. Chia lô 50 phiếu
    mỗi lần để không vượt giới hạn kích thước request của Apps Script. */
-$('#btnSyncBackup').onclick=async()=>{
+const _rmBtnSyncBackup=$('#btnSyncBackup'); if(_rmBtnSyncBackup) _rmBtnSyncBackup.onclick=async()=>{
  if(!sb){ toast('Chưa kết nối Supabase',true); return; }
  if(!CFG.url){ toast('Chưa cấu hình Apps Script URL',true); return; }
  const btn=$('#btnSyncBackup'); btn.disabled=true;
@@ -3819,7 +3786,7 @@ $('#btnSyncBackup').onclick=async()=>{
 };
 // Đồng bộ backup Chấm công/Công tác phí — cùng khuôn với btnSyncBackup ở
 // trên, chỉ đổi nguồn đọc (DB.listAttendance/listExpenses) và action đích.
-$('#btnSyncBackupCc').onclick=async()=>{
+const _rmBtnSyncCc=$('#btnSyncBackupCc'); if(_rmBtnSyncCc) _rmBtnSyncCc.onclick=async()=>{
  if(!CFG.url){ toast('Chưa cấu hình Apps Script URL',true); return; }
  const btn=$('#btnSyncBackupCc'); btn.disabled=true;
  const box=$('#syncCcCtpStatus'); box.style.display='block'; box.className='period-notice';
@@ -3845,7 +3812,7 @@ $('#btnSyncBackupCc').onclick=async()=>{
  }
  btn.disabled=false;
 };
-$('#btnSyncBackupCtp').onclick=async()=>{
+const _rmBtnSyncCtp=$('#btnSyncBackupCtp'); if(_rmBtnSyncCtp) _rmBtnSyncCtp.onclick=async()=>{
  if(!CFG.url){ toast('Chưa cấu hình Apps Script URL',true); return; }
  const btn=$('#btnSyncBackupCtp'); btn.disabled=true;
  const box=$('#syncCcCtpStatus'); box.style.display='block'; box.className='period-notice';
@@ -3871,7 +3838,7 @@ $('#btnSyncBackupCtp').onclick=async()=>{
  }
  btn.disabled=false;
 };
-$('#btnClearBackupRange').onclick=async()=>{
+const _rmBtnClearBk=$('#btnClearBackupRange'); if(_rmBtnClearBk) _rmBtnClearBk.onclick=async()=>{
  if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
  const from=$('#s_bkFrom').value, to=$('#s_bkTo').value;
  if(!from||!to){ toast('Chọn đủ Từ ngày và Đến ngày',true); return; }
@@ -3955,7 +3922,7 @@ $$('[data-pw-group]').forEach(btn=>{
    btn.disabled=false;
  };
 });
-$('#btnClearAllData').onclick=async()=>{
+const _rmBtnClearAll=$('#btnClearAllData'); if(_rmBtnClearAll) _rmBtnClearAll.onclick=async()=>{
  if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
  if(!confirm('XÓA TOÀN BỘ phiếu ở Sheet chính (đã tự lưu vào backup trước khi xóa)?\n\nSheet chính KHÔNG THỂ HOÀN TÁC sau khi xóa. Bạn chắc chắn chứ?')) return;
  if(!confirm('Xác nhận LẦN 2: thật sự muốn xóa HẾT toàn bộ dữ liệu ở Sheet chính?')) return;
@@ -4534,7 +4501,7 @@ $('#btnAeonExportExcel').onclick=()=>{
 };
 // Backup AEON — THỦ CÔNG (khác Chấm công/CTP tự động), bấm khi cần ngay
 // trong popup này, dùng luôn mật khẩu 'aeon' đã mở khoá, không cần Cài đặt.
-$('#btnAeonSyncBackup').onclick=async()=>{
+const _rmBtnAeonBk=$('#btnAeonSyncBackup'); if(_rmBtnAeonBk) _rmBtnAeonBk.onclick=async()=>{
  const btn=$('#btnAeonSyncBackup'); btn.disabled=true;
  const box=$('#aeonBackupStatus'); box.style.display='block'; box.className='period-notice';
  box.textContent='Đang đọc dữ liệu AEON từ Supabase...';
