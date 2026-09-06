@@ -138,7 +138,7 @@ body{background:var(--ground);color:var(--ink);font-family:var(--font);font-size
      cục của CẢ ứng dụng (rất dài, nhiều form/bảng), khiến trình in tính ra
      hàng chục trang trống trước khi tới #ctpPrintArea. display:none xoá hẳn
      khỏi luồng bố cục nên chỉ còn đúng số trang cần cho nội dung thật. */
-  @page{size:A4 landscape;margin:10mm}
+  @page{size:297mm 210mm;margin:10mm}
   .app, .modal{display:none!important}
   #ctpPrintArea{display:block!important}
   #ctpPrintArea table{width:100%!important;table-layout:fixed;font-size:9px}
@@ -950,6 +950,17 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <button type="button" class="btn btn-primary" id="btnAddAeonSite" style="width:auto;padding:12px 18px;margin:0;flex:none">Thêm</button>
     </div>
     <div class="divider"></div>
+    <div class="section-title" style="margin-bottom:8px">Danh mục Mã vụ việc / dự án (tự học)</div>
+    <p class="desc" style="margin-top:-4px">Mỗi <b>mã vụ việc</b> gắn <b>1 tên dự án + 1 sale</b>. App <b>tự học</b> khi bạn nhập tay ở Chấm công / CTP: gõ lại mã đã dùng sẽ tự điền tên dự án (và sale ở Chấm công). Sửa ở đây khi học nhầm. Cần mở khoá Cài đặt (Administrator).</p>
+    <input type="text" id="pcSearch" placeholder="🔎 Tìm mã, tên dự án hoặc sale…" style="width:100%;margin-bottom:8px" autocomplete="off" autocorrect="off" spellcheck="false" />
+    <div id="pcManageList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;max-height:320px;overflow:auto"></div>
+    <div style="display:grid;grid-template-columns:1fr 1.6fr 1.2fr auto;gap:8px;margin-bottom:16px">
+      <input type="text" id="pcNewCode" placeholder="Mã vụ việc" autocomplete="off" spellcheck="false" />
+      <input type="text" id="pcNewName" placeholder="Tên dự án" autocomplete="off" spellcheck="false" />
+      <input type="text" id="pcNewSale" placeholder="Sale (nếu có)" autocomplete="off" spellcheck="false" />
+      <button type="button" class="btn btn-primary" id="btnPcAdd" style="width:auto;padding:12px 18px;margin:0;flex:none">Thêm</button>
+    </div>
+    <div class="divider"></div>
     <div class="section-title" style="margin-bottom:8px">Chế độ hiển thị (popup Báo cáo AEON / Chấm công-CTP)</div>
     <p class="desc" style="margin-top:-4px">Mặc định popup tự co giãn theo đúng cửa sổ trình duyệt. Chọn cố định 1 độ phân giải bên dưới nếu muốn popup luôn hiện đúng khổ quen thuộc, không tự co giãn nữa.</p>
     <label class="field">
@@ -1129,7 +1140,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
           </select>
         </label>
         <label class="field" id="wrap_cc_project_other" style="display:none"><span class="lab">Nhập dự án/nội dung</span><input type="text" id="cc_f_project_other" placeholder="VD: Tên dự án/khách hàng"></label>
-        <label class="field"><span class="lab">Mã dự án</span><input type="text" id="cc_f_code" placeholder="Không bắt buộc"></label>
+        <label class="field"><span class="lab">Mã dự án</span><input type="text" id="cc_f_code" list="projectCodesList" placeholder="Không bắt buộc"><span class="hint" style="font-weight:400">Gõ mã đã dùng → tự điền tên dự án + sale</span></label>
         <label class="field"><span class="lab">Địa chỉ làm việc</span><select id="cc_f_addr"></select></label>
         <label class="field" id="wrap_cc_addr_other" style="display:none"><span class="lab">Nhập địa chỉ</span><input type="text" id="cc_f_addr_other" placeholder="VD: Quận 1, TP.HCM"></label>
         <label class="field"><span class="lab">Giờ vào</span><input type="text" inputmode="numeric" pattern="[0-2][0-9]:[0-5][0-9]" placeholder="08:00" id="cc_f_in" value="08:00"></label>
@@ -1199,8 +1210,9 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
           <label class="field" id="wrap_ctp_place_other" style="display:none"><span class="lab">Nhập địa điểm</span><input type="text" id="ctp_f_place_other" placeholder="VD: Quận 1, TP.HCM"></label>
           <label class="field"><span class="lab">Từ ngày</span><input type="date" id="ctp_f_fromdate"></label>
           <label class="field"><span class="lab">Đến ngày</span><input type="date" id="ctp_f_todate"></label>
-          <label class="field"><span class="lab">Mã vụ việc (chung)</span><input type="text" id="ctp_f_pjcode"></label>
+          <label class="field"><span class="lab">Mã vụ việc (chung)</span><input type="text" id="ctp_f_pjcode" list="projectCodesList"><span class="hint" style="font-weight:400">Gõ mã đã dùng → tự điền tên dự án</span></label>
           <label class="field"><span class="lab">Tên dự án (chung)</span><input type="text" id="ctp_f_pjname"></label>
+          <datalist id="projectCodesList"></datalist>
           <label class="field" style="grid-column:1/-1"><span class="lab">Loại dịch vụ (áp dụng cho cả đợt, đúng như mẫu — tick 1 lần)</span>
             <div class="seg" id="ctp_f_tripservice">
               <button type="button" data-v="Bảo trì" class="on">Bảo trì</button>
@@ -1682,6 +1694,33 @@ const DB={
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
    const {data,error}=await sb.rpc('delete_aeon_site',{p_name:name,p_admin_password:adminPassword});
    return error?{ok:false,error:error.message}:{ok:true,data:data.map(r=>r.name)};
+ },
+ // Danh mục Mã vụ việc/dự án dùng chung CTP + Chấm công (tự học mã -> tên DA + sale).
+ // Đọc công khai; học (upsert) KHÔNG cần mật khẩu; thêm/sửa/xoá ở Cài đặt cần Administrator.
+ async listProjectCodes(){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.from('project_codes').select('code,name,sale').order('code');
+   return error?{ok:false,error:error.message}:{ok:true,data:data||[]};
+ },
+ async learnProjectCode(code,name,sale){
+   if(!sb||!code) return {ok:false};
+   const {error}=await sb.rpc('upsert_project_code',{p_code:code,p_name:name||'',p_sale:sale||''});
+   return error?{ok:false,error:error.message}:{ok:true};
+ },
+ async addProjectCode(code,name,sale,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('add_project_code',{p_code:code,p_name:name||'',p_sale:sale||'',p_admin_password:adminPassword});
+   return error?{ok:false,error:error.message}:{ok:true,data:data||[]};
+ },
+ async updateProjectCode(code,name,sale,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('update_project_code',{p_code:code,p_name:name||'',p_sale:sale||'',p_admin_password:adminPassword});
+   return error?{ok:false,error:error.message}:{ok:true,data:data||[]};
+ },
+ async deleteProjectCode(code,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('delete_project_code',{p_code:code,p_admin_password:adminPassword});
+   return error?{ok:false,error:error.message}:{ok:true,data:data||[]};
  },
  // Đẩy toàn bộ phiếu từ Supabase sang Google Sheet backup (kèm link ảnh,
  // kể cả ảnh đã chuyển sang Drive) — gọi qua Apps Script, chia lô cho nhẹ.
@@ -2183,6 +2222,53 @@ function setEngineerValue(str){
    Admin thêm/xóa qua ⚙️ Cài đặt; checklist ở form Tạo phiếu và bộ lọc kỹ sư
    ở Quản lý đều vẽ lại từ đây mỗi khi danh sách đổi. */
 const FALLBACK_ENGINEERS=['Nguyễn Thái Bảo','Võ Quỳnh Bảo Châu','Lê Minh Anh','Phạm Nguyễn Gia Huy','Nguyễn Trung Hiếu','Lê Tấn Cường'];
+
+/* ===== Danh mục Mã vụ việc/dự án dùng chung (CTP + Chấm công) — TỰ HỌC =====
+   1 mã vụ việc -> 1 tên dự án + 1 sale phụ trách. Vì 1 dự án có nhiều mã dễ nhầm,
+   nên khoá theo MÃ: gõ mã ĐÃ HỌC thì tự điền tên DA + sale (khi ô đang trống).
+   Mỗi lần người dùng NHẬP TAY rồi lưu -> học lại (mã mới thì thêm, mã cũ thì ghi
+   đè tên/sale mới nhất). Học im lặng, lỗi mạng không chặn thao tác. */
+let projectCodesCatalog=[];   // [{code,name,sale}]
+let projectCodesMap={};       // UPPER(code) -> {code,name,sale}
+function pcKey(c){ return (c||'').trim().toUpperCase(); }
+function pcLookup(code){ return projectCodesMap[pcKey(code)]||null; }
+function rebuildProjectCodesIndex(){
+ projectCodesMap={};
+ projectCodesCatalog.forEach(r=>{ if(r&&r.code) projectCodesMap[pcKey(r.code)]=r; });
+ const dl=$('#projectCodesList');
+ if(dl) dl.innerHTML=projectCodesCatalog.map(r=>`<option value="${esc(r.code)}">${esc([r.name,r.sale].filter(Boolean).join(' — '))}</option>`).join('');
+}
+async function loadProjectCodes(){
+ if(!sb) return;
+ try{ const j=await DB.listProjectCodes(); if(j.ok){ projectCodesCatalog=j.data||[]; rebuildProjectCodesIndex(); } }catch(err){}
+}
+// Học 1 mã (fire-and-forget). Cập nhật cache ngay để lần gõ kế trong phiên có luôn.
+async function learnProjectCode(code,name,sale){
+ code=(code||'').trim(); if(!code) return;
+ name=(name||'').trim(); sale=(sale||'').trim();
+ if(!name && !sale) return; // mã trơ không có tên/sale thì chưa có gì để học
+ const cur=pcLookup(code);
+ if(cur && (!name||cur.name===name) && (!sale||cur.sale===sale)) return; // không có gì mới
+ if(cur){ if(name) cur.name=name; if(sale) cur.sale=sale; }
+ else projectCodesCatalog.push({code, name, sale});
+ rebuildProjectCodesIndex();
+ try{ await DB.learnProjectCode(code,name,sale); }catch(err){}
+}
+// Tự điền khi gõ mã ở form CHẤM CÔNG (tên DA + sale, chỉ khi ô đang trống).
+function ccCodeAutofill(){
+ const hit=pcLookup($('#cc_f_code').value); if(!hit) return;
+ if(hit.sale && !$('#cc_f_sale').value.trim()) $('#cc_f_sale').value=hit.sale;
+ if(hit.name && !$('#cc_f_project_other').value.trim()){
+   $('#cc_f_project').value='__other';
+   $('#wrap_cc_project_other').style.display='';
+   $('#cc_f_project_other').value=hit.name;
+ }
+}
+// Tự điền khi gõ mã ở form CTP (chỉ tên DA — CTP không có ô sale).
+function ctpCodeAutofill(){
+ const hit=pcLookup($('#ctp_f_pjcode').value); if(!hit) return;
+ if(hit.name && !$('#ctp_f_pjname').value.trim()) $('#ctp_f_pjname').value=hit.name;
+}
 let engineerList=[];
 async function loadEngineers(){
  if(sb){
@@ -2403,6 +2489,59 @@ async function deleteAeonSiteSettings(name){
 $('#btnAddAeonSite').onclick=addAeonSiteSettings;
 $('#aeonSiteNewName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addAeonSiteSettings();}});
 
+/* ===== Quản lý danh mục Mã vụ việc/dự án (Cài đặt) — xem/sửa/xoá mã đã học ===== */
+function renderPcManageList(){
+ const wrap=$('#pcManageList'); if(!wrap) return;
+ const q=($('#pcSearch').value||'').trim().toLowerCase();
+ const total=projectCodesCatalog.length;
+ if(!total){ wrap.innerHTML='<span class="hint">Chưa học mã nào. Nhập mã ở Chấm công/CTP sẽ tự học, hoặc thêm tay bên dưới.</span>'; return; }
+ let rows=projectCodesCatalog.slice().sort((a,b)=>(a.code||'').localeCompare(b.code||'','vi'));
+ if(q) rows=rows.filter(r=>((r.code||'')+' '+(r.name||'')+' '+(r.sale||'')).toLowerCase().includes(q));
+ const shown=rows.slice(0,300);
+ wrap.innerHTML=`<div class="hint" style="margin-bottom:2px">${q?`${rows.length} kết quả`:`${total} mã đã học`}${shown.length<rows.length?` (hiện 300 đầu — gõ tìm để lọc)`:''}</div>`
+  + shown.map(r=>`<div style="display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:6px 8px">
+    <div style="flex:none;min-width:78px;font-weight:700;word-break:break-all">${esc(r.code)}</div>
+    <div style="flex:1;min-width:0"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.name||'—')}</div>${r.sale?`<div class="hint" style="font-weight:400">Sale: ${esc(r.sale)}</div>`:''}</div>
+    <button type="button" class="btn-mini pc-edit" data-code="${esc(r.code)}">Sửa</button>
+    <button type="button" class="btn-mini pc-del" data-code="${esc(r.code)}">Xoá</button>
+  </div>`).join('');
+ $$('#pcManageList .pc-edit').forEach(b=>b.onclick=()=>editProjectCodeSettings(b.dataset.code));
+ $$('#pcManageList .pc-del').forEach(b=>b.onclick=()=>deleteProjectCodeSettings(b.dataset.code));
+}
+async function addProjectCodeSettings(){
+ const code=$('#pcNewCode').value.trim(), name=$('#pcNewName').value.trim(), sale=$('#pcNewSale').value.trim();
+ if(!code){ toast('Nhập mã vụ việc',true); return; }
+ if(!adminPassword.settings){ toast('Cần mở khoá Cài đặt (Administrator) trước',true); return; }
+ try{
+   const j=await DB.addProjectCode(code,name,sale,adminPassword.settings);
+   if(j.ok){ projectCodesCatalog=j.data||projectCodesCatalog; rebuildProjectCodesIndex();
+     $('#pcNewCode').value=''; $('#pcNewName').value=''; $('#pcNewSale').value=''; renderPcManageList(); toast('✅ Đã thêm/cập nhật mã'); }
+   else toast(j.error||'Lỗi thêm mã',true);
+ }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
+}
+async function editProjectCodeSettings(code){
+ if(!adminPassword.settings){ toast('Cần mở khoá Cài đặt (Administrator) trước',true); return; }
+ const cur=pcLookup(code)||{name:'',sale:''};
+ const name=prompt(`Tên dự án cho mã "${code}":`, cur.name||''); if(name===null) return;
+ const sale=prompt(`Sale phụ trách cho mã "${code}" (để trống nếu không có):`, cur.sale||''); if(sale===null) return;
+ try{
+   const j=await DB.updateProjectCode(code,name.trim(),sale.trim(),adminPassword.settings);
+   if(j.ok){ projectCodesCatalog=j.data||projectCodesCatalog; rebuildProjectCodesIndex(); renderPcManageList(); toast('✅ Đã cập nhật mã'); }
+   else toast(j.error||'Lỗi cập nhật',true);
+ }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
+}
+async function deleteProjectCodeSettings(code){
+ if(!confirm(`Xoá mã "${code}" khỏi danh mục?`)) return;
+ if(!adminPassword.settings){ toast('Cần mở khoá Cài đặt (Administrator) trước',true); return; }
+ try{
+   const j=await DB.deleteProjectCode(code,adminPassword.settings);
+   if(j.ok){ projectCodesCatalog=j.data||projectCodesCatalog; rebuildProjectCodesIndex(); renderPcManageList(); toast('✅ Đã xoá mã'); }
+   else toast(j.error||'Lỗi xoá',true);
+ }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
+}
+$('#btnPcAdd').onclick=addProjectCodeSettings;
+$('#pcSearch').addEventListener('input',renderPcManageList);
+
 /* nhớ lựa chọn gần nhất */
 if(localStorage.getItem('kt_cus'))$('#f_customer').value=localStorage.getItem('kt_cus');
 (function(){
@@ -2474,12 +2613,13 @@ async function handleOtherFiles(files){
 }
 $('#btnBbImgCamera').onclick=()=>$('#f_bbimg_camera').click();
 $('#btnBbImgFile').onclick=()=>$('#f_bbimg_file').click();
-$('#f_bbimg_camera').onchange=e=>{openScanEditor(e.target.files[0],blob=>handleBbSide(blob,bbFront,v=>bbFront=v,renderBbFrontPreview,'bbImgUploading')); e.target.value='';};
-$('#f_bbimg_file').onchange=e=>{openScanEditor(e.target.files[0],blob=>handleBbSide(blob,bbFront,v=>bbFront=v,renderBbFrontPreview,'bbImgUploading')); e.target.value='';};
+// Ảnh BBLV: chụp/chọn thẳng, KHÔNG qua bước "Chỉnh khung quét" nữa (theo yêu cầu).
+$('#f_bbimg_camera').onchange=e=>{if(e.target.files[0])handleBbSide(e.target.files[0],bbFront,v=>bbFront=v,renderBbFrontPreview,'bbImgUploading'); e.target.value='';};
+$('#f_bbimg_file').onchange=e=>{if(e.target.files[0])handleBbSide(e.target.files[0],bbFront,v=>bbFront=v,renderBbFrontPreview,'bbImgUploading'); e.target.value='';};
 $('#btnBbBackCamera').onclick=()=>$('#f_bbback_camera').click();
 $('#btnBbBackFile').onclick=()=>$('#f_bbback_file').click();
-$('#f_bbback_camera').onchange=e=>{openScanEditor(e.target.files[0],blob=>handleBbSide(blob,bbBack,v=>bbBack=v,renderBbBackPreview,'bbBackUploading')); e.target.value='';};
-$('#f_bbback_file').onchange=e=>{openScanEditor(e.target.files[0],blob=>handleBbSide(blob,bbBack,v=>bbBack=v,renderBbBackPreview,'bbBackUploading')); e.target.value='';};
+$('#f_bbback_camera').onchange=e=>{if(e.target.files[0])handleBbSide(e.target.files[0],bbBack,v=>bbBack=v,renderBbBackPreview,'bbBackUploading'); e.target.value='';};
+$('#f_bbback_file').onchange=e=>{if(e.target.files[0])handleBbSide(e.target.files[0],bbBack,v=>bbBack=v,renderBbBackPreview,'bbBackUploading'); e.target.value='';};
 
 /* Ngay sau khi phiếu (và ảnh khác, nếu có) đã lưu xong ở Supabase, âm thầm
    chuyển từng file vừa upload sang Google Drive — Drive giờ là nơi lưu CHÍNH
@@ -3477,7 +3617,7 @@ $('#btnExport').onclick=()=>{
 const gate=$('#adminGateModal');
 function openSettingsModal(){$('#s_url').value=CFG.url;$('#s_token').value=CFG.token;$('#s_token').classList.add('masked');$('#s_store').value=CFG.store;
  $('#s_display').value=localStorage.getItem('kt_display_mode')||'auto';
- const cs=$('#connStatus');cs.className='status-dot'+(CFG.url?' live':'');cs.querySelector('span').textContent=CFG.url?'Đã kết nối':'Chưa kết nối';modal.classList.add('show');loadEngineers();loadAeonSiteManage();loadPeriodInfo();}
+ const cs=$('#connStatus');cs.className='status-dot'+(CFG.url?' live':'');cs.querySelector('span').textContent=CFG.url?'Đã kết nối':'Chưa kết nối';modal.classList.add('show');loadEngineers();loadAeonSiteManage();loadPeriodInfo();loadProjectCodes().then(renderPcManageList);}
 // Áp dụng ngay từ lúc tải trang (không cần mở Cài đặt trước) — nhớ lựa chọn
 // qua các lần mở app sau bằng localStorage.
 function applyDisplayMode(mode){
@@ -4562,6 +4702,7 @@ $('#btnCcAddRow').onclick=async()=>{
    ? await DB.updateAttendance(ccEditingNo,payload,adminPassword.chamcong_ctp)
    : await DB.addAttendance(payload,adminPassword.chamcong_ctp);
  if(j.ok){
+   learnProjectCode(payload.projectCode,payload.projectContent,payload.salePhuTrach); // tự học mã -> tên DA + sale
    toast(isEdit?'✅ Đã lưu sửa dòng chấm công':'✅ Đã thêm dòng chấm công');
    ccResetAddForm();
    ccLoadList();
@@ -4606,7 +4747,7 @@ function ccRenderDraft(){
  $('#ccDraftBody').innerHTML=ccDraft.map((r,i)=>`<tr>
    <td>${esc(fmtDMYFull(r.date))}</td><td>${esc(thuVN(r.date))}</td><td>${esc(r.employee)}</td>
    <td><input type="text" data-i="${i}" data-f="projectContent" value="${esc(r.projectContent)}" style="width:130px"></td>
-   <td><input type="text" data-i="${i}" data-f="projectCode" value="${esc(r.projectCode)}" style="width:80px"></td>
+   <td><input type="text" data-i="${i}" data-f="projectCode" list="projectCodesList" value="${esc(r.projectCode)}" style="width:80px"></td>
    <td><input type="text" data-i="${i}" data-f="workAddress" value="${esc(r.workAddress)}" style="width:100px"></td>
    <td><input type="text" inputmode="numeric" placeholder="08:00" data-i="${i}" data-f="timeIn" value="${esc(r.timeIn)}" style="width:82px"></td>
    <td><input type="text" inputmode="numeric" placeholder="17:00" data-i="${i}" data-f="timeOut" value="${esc(r.timeOut)}" style="width:82px"></td>
@@ -4618,6 +4759,16 @@ function ccRenderDraft(){
  $$('#ccDraftBody input').forEach(inp=>inp.oninput=()=>{
    const i=Number(inp.dataset.i), f=inp.dataset.f;
    ccDraft[i][f]=(f==='workDays')?(inp.value===''?null:(Number(inp.value)||0)):inp.value;
+   // Gõ/chọn mã đã học -> tự điền Tên dự án + Sale của dòng nháp này (chỉ khi trống).
+   if(f==='projectCode'){
+     const hit=pcLookup(inp.value);
+     if(hit){
+       const tr=inp.closest('tr');
+       const pc=tr.querySelector('input[data-f="projectContent"]'), sa=tr.querySelector('input[data-f="salePhuTrach"]');
+       if(hit.name && pc && !pc.value.trim()){ pc.value=hit.name; ccDraft[i].projectContent=hit.name; }
+       if(hit.sale && sa && !sa.value.trim()){ sa.value=hit.sale; ccDraft[i].salePhuTrach=hit.sale; }
+     }
+   }
  });
 }
 
@@ -4634,7 +4785,7 @@ $('#btnCcSaveDraft').onclick=async()=>{
    for(let i=0;i<ccDraft.length;i++){
      btn.textContent=`Đang lưu ${i+1}/${ccDraft.length}...`;
      const j=await DB.addAttendance(ccDraft[i],adminPassword.chamcong_ctp);
-     if(j.ok) ok++; else fail++;
+     if(j.ok){ ok++; learnProjectCode(ccDraft[i].projectCode,ccDraft[i].projectContent,ccDraft[i].salePhuTrach); } else fail++;
    }
    toast(fail?`⚠️ Đã lưu ${ok} dòng, lỗi ${fail} dòng`:`✅ Đã lưu ${ok} dòng`, !!fail);
    ccDraft=[]; $('#ccDraftBox').style.display='none';
@@ -5198,7 +5349,7 @@ function ctpRowHtml(r,i){
      ? `${fixedRate.toLocaleString('vi-VN')}<span class="hint" style="display:block;font-weight:400">(cố định)</span>`
      : `<input class="ctp-cell" data-f="rate" type="number" step="1000" value="${r.rate||''}">`}</td>
    <td class="num" data-label="Thành tiền">${(r.amount||0).toLocaleString('vi-VN')}</td>
-   <td data-label="Mã vụ việc"><input class="ctp-cell" data-f="projectCode" type="text" value="${esc(r.projectCode||'')}"></td>
+   <td data-label="Mã vụ việc"><input class="ctp-cell" data-f="projectCode" list="projectCodesList" type="text" value="${esc(r.projectCode||'')}"></td>
    <td data-label="Tên DA"><input class="ctp-cell" data-f="projectName" type="text" value="${esc(r.projectName||'')}"></td>
    <td data-label="Loại dịch vụ"><select class="ctp-cell" data-f="serviceType">${['Bảo trì','Bảo hành','Lắp mới','Khảo sát'].map(v=>`<option value="${esc(v)}" ${v===r.serviceType?'selected':''}>${esc(v)}</option>`).join('')}</select></td>
    <td data-label="Ghi chú"><input class="ctp-cell" data-f="note" type="text" value="${esc(r.note||'')}"></td>
@@ -5227,6 +5378,11 @@ async function ctpCellChanged(i,field,el){
    return;
  }
  row[field]=el.type==='checkbox'?el.checked:(el.type==='number'?(Number(el.value)||0):el.value);
+ // Gõ/chọn mã vụ việc đã học -> tự điền Tên DA của dòng này (chỉ khi đang trống).
+ if(field==='projectCode'){
+   const hit=pcLookup(row.projectCode);
+   if(hit && hit.name && !(row.projectName||'').trim()) row.projectName=hit.name;
+ }
  if(field==='description') row.descOther=true; // gõ tay trong ô "Khác" -> chắc chắn đang ở chế độ tự gõ
  if(field==='note' && ctpAutoNoteFor(row)!=null) row.noteOther=true; // gõ tay đè công thức tự sinh (xăng/Công tác phí)
  const RECALC_FIELDS=['expenseType','km','rate','lineFromDate','lineToDate','multiplyByDays'];
@@ -5276,6 +5432,7 @@ async function ctpPersistRow(i){
  const merged=Object.assign({},row,{tripId:currentTripId});
  const idx=ctpAllLines.findIndex(x=>x.no===row.no);
  if(idx>=0) ctpAllLines[idx]=merged; else ctpAllLines.push(merged);
+ learnProjectCode(payload.projectCode,payload.projectName,''); // tự học mã -> tên DA (CTP không có sale)
  renderCtpDashboard();
 }
 // Xoá dòng chi phí CHỈ Administrator được làm — giống chấm công, độc lập
@@ -5327,6 +5484,7 @@ $('#btnCtpSaveTrip').onclick=async()=>{
    const r=await DB.updateExpenseLine(line.no,lineShared,adminPassword.chamcong_ctp);
    if(r.ok) ok++; else fail++;
  }
+ learnProjectCode(lineShared.projectCode,lineShared.projectName,''); // tự học mã chung -> tên DA
  toast(fail?`⚠️ Cập nhật ${ok} dòng, lỗi ${fail}`:`✅ Đã cập nhật thông tin đợt công tác (${ok} dòng)`, !!fail);
  await ctpLoadAll(); $('#ctp_tripSelect').value=currentTripId; ctpLoadTripIntoForm();
 };
@@ -5428,7 +5586,8 @@ $('#btnCtpExportExcel').onclick=()=>{
  if(!lines.length){ toast('Chưa có dòng chi phí nào để xuất',true); return; }
  const total=lines.reduce((s,r)=>s+(Number(r.amount)||0),0);
  const first=lines[0]||{};
- const names=[...new Set(lines.map(l=>l.requesterName).filter(Boolean))].join(' - ');
+ // Người đề nghị = người LÀM PHIẾU = người đầu tiên (KHÔNG gộp nhiều tên).
+ const names=first.requesterName||'';
  const svc=['Lắp mới','Khảo sát','Bảo trì','Bảo hành'];
  const NC=15, mk=()=>new Array(NC).fill('');
  const dmy=d=>d?fmtDMYFull(d):'';
@@ -5450,7 +5609,7 @@ $('#btnCtpExportExcel').onclick=()=>{
    rowInfo(checkboxCell),
    mk(),
    HEAD,
-   ...lines.map((r,i)=>[i+1, r.requesterName||'', r.dept||'TEC', r.expenseType||'', r.description||'',
+   ...lines.map((r,i)=>[i+1, r.requesterName||'', 'TECH', r.expenseType||'', r.description||'',
      dmy(r.lineFromDate), dmy(r.lineToDate), (r.km||r.km===0)&&Number(r.km)?Number(r.km):'', Number(r.quantity)||'',
      Number(r.rate)||0, Number(r.amount)||0, r.projectCode||'', r.projectName||'', r.serviceType||'', r.note||'']),
    (()=>{ const r=mk(); r[0]='TỔNG CỘNG'; r[10]=total; return r; })(),
@@ -5513,7 +5672,7 @@ $('#btnCtpPrint').onclick=()=>{
  const rowsHtml=lines.map((r,i)=>`<tr>
    <td style="${tdS};text-align:center">${i+1}</td>
    <td style="${tdS}">${esc(r.requesterName)}</td>
-   <td style="${tdS};text-align:center">${esc(r.dept||'')}</td>
+   <td style="${tdS};text-align:center">${esc(r.dept||'TECH')}</td>
    <td style="${tdS}">${esc(r.expenseType)}</td>
    <td style="${tdS}">${esc(r.description)}</td>
    <td style="${tdS};text-align:center">${r.lineFromDate?fmtDMYFull(r.lineFromDate):''}</td>
@@ -5531,7 +5690,8 @@ $('#btnCtpPrint').onclick=()=>{
  const first=lines[0]||{};
  // Dòng đầu phiếu "Họ tên người đề nghị" gộp TẤT CẢ người có mặt trong đợt
  // (mỗi người 1 dòng riêng trong bảng) — không chỉ lấy tên ở dòng đầu tiên.
- const allNamesForPrint=[...new Set(lines.map(l=>l.requesterName).filter(Boolean))].join(' - ');
+ // Người đề nghị = người LÀM PHIẾU = dòng đầu (KHÔNG gộp nhiều tên); bảng chi tiết vẫn nhiều người.
+ const allNamesForPrint=(lines[0]&&lines[0].requesterName)||'';
  // 4 ô vuông loại dịch vụ đầu phiếu — đúng mẫu thật, tick đúng ô khớp
  // serviceType của cả đợt (mọi dòng trong 1 đợt luôn cùng 1 loại dịch vụ).
  const svcBoxesOrder=['Lắp mới','Khảo sát','Bảo trì','Bảo hành'];
@@ -5573,7 +5733,7 @@ $('#btnCtpPrint').onclick=()=>{
     <td style="border:none;text-align:center;font-weight:700;width:50%">Người đề nghị<br><br><br><br>${esc(allNamesForPrint)}</td>
     <td style="border:none;text-align:center;font-weight:700;width:50%">Phụ trách bộ phận</td>
    </tr></table>
-   ${mapSrc?`<div style="page-break-before:always;padding-top:20px"><h3>Bản đồ khoảng cách di chuyển</h3><img src="${mapSrc}" style="max-width:100%"></div>`:''}
+   ${mapSrc?`<div style="page-break-before:always;padding-top:10px"><h3>Bản đồ khoảng cách di chuyển</h3><img src="${mapSrc}" style="max-width:100%;max-height:180mm;display:block;margin:0 auto"></div>`:''}
   </div>`;
  // Đổ cùng nội dung vào cả vùng in thật (#ctpPrintArea, chỉ hiện khi in) lẫn
  // khung xem trước trên màn hình — xem đúng những gì sắp in trước khi bấm in.
@@ -5587,6 +5747,10 @@ $('#ctpPreviewModal').onclick=e=>{if(e.target===$('#ctpPreviewModal'))$('#ctpPre
 refreshBanner();
 renderOtherPhotosList(); // hiện sẵn lưu ý "Đã có 0/4 ảnh" ngay từ lúc mở form, không đợi bấm mới thấy
 loadEngineers();
+loadProjectCodes(); // tải danh mục mã vụ việc/dự án đã học để tự điền
+// Gõ/chọn mã đã học ở form chính -> tự điền tên DA (+ sale ở chấm công) khi ô đang trống.
+if($('#cc_f_code')) $('#cc_f_code').addEventListener('change',ccCodeAutofill);
+if($('#ctp_f_pjcode')) $('#ctp_f_pjcode').addEventListener('change',ctpCodeAutofill);
 // Tải sẵn danh sách phiếu ngay khi mở app (dù đang đứng ở màn "Tạo phiếu",
 // không đợi bấm qua Quản lý/Lịch sử/Dashboard mới tải) — để tính năng chống
 // tạo trùng phiếu (so sánh mgrData khi gửi phiếu) luôn có dữ liệu mà so
