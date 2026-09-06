@@ -3702,7 +3702,7 @@ $('#btnExport').onclick=()=>{
  const fnamePart=[fYear,fMonth,fDay,fWeek?'tuan'+fWeek:''].filter(Boolean).join('-')||'tatca';
  const fnameParts=[fnamePart];
  if(mgrEngineerFilter) fnameParts.push(mgrEngineerFilter.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,''));
- XLSX.writeFile(wb,`report-elv-${fnameParts.join('-')}-${vnTodayIso()}.xlsx`);
+ XLSX.writeFile(wb,`report-elv-${fnameParts.join('-')}-${vnTodayIso()}.xlsx`,{bookSST:true});
  const filterDesc=[];
  if(fYear) filterDesc.push(`năm ${fYear}`); if(fMonth) filterDesc.push(`tháng ${Number(fMonth)}`); if(fDay) filterDesc.push(`ngày ${Number(fDay)}`); if(fWeek) filterDesc.push(`tuần ${fWeek}`);
  if(mgrEngineerFilter) filterDesc.push(`kỹ sư ${mgrEngineerFilter}`);
@@ -4547,7 +4547,7 @@ $('#btnAeonExportExcel').onclick=()=>{
  const wb=XLSX.utils.book_new();
  XLSX.utils.book_append_sheet(wb,aeonSiteStyledSheet(rows),'Report');
  const safeName=site.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'');
- XLSX.writeFile(wb,`Service_Support_Ticket_Report_${safeName}_${vnTodayIso()}.xlsx`);
+ XLSX.writeFile(wb,`Service_Support_Ticket_Report_${safeName}_${vnTodayIso()}.xlsx`,{bookSST:true});
  toast(`✅ Đã xuất báo cáo ${site} — ${rows.length} phiếu`);
 };
 // Backup AEON — THỦ CÔNG (khác Chấm công/CTP tự động), bấm khi cần ngay
@@ -5199,7 +5199,7 @@ $('#btnCcDoExport').onclick=()=>{
  XLSX.utils.book_append_sheet(wb,ws,'Tech');
  const empPart=$('#cc_employee').value?('-'+$('#cc_employee').value.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'')):'';
  // Chèn khổ NGANG + fit-to-width (xlsx-js-style không set được pageSetup) rồi tải bằng Blob.
- const u8=new Uint8Array(XLSX.write(wb,{type:'array',bookType:'xlsx'}));
+ const u8=new Uint8Array(XLSX.write(wb,{type:'array',bookType:'xlsx',bookSST:true}));
  const out=ccInjectLandscape(u8);
  const blob=new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
@@ -6047,7 +6047,7 @@ $('#btnCtpExportExcel').onclick=()=>{
  ws['!rows']=[]; ws['!rows'][0]={hpt:46}; ws['!rows'][headRow]={hpt:34};
  for(let r=dataStart;r<=dataEnd;r++) ws['!rows'][r]={hpt:30}; // các hàng dữ liệu BẰNG NHAU
  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Chi tiết');
- const raw=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+ const raw=XLSX.write(wb,{type:'array',bookType:'xlsx',bookSST:true});
  const out=ctpEmbedLogo(new Uint8Array(raw));
  const safe=names.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'').slice(0,40)||'CTP';
  const blob=new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
