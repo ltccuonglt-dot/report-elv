@@ -1070,14 +1070,6 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         <button type="button" class="btn-mini" id="btnCcLoad">Xem</button>
       </div>
 
-      <div class="divider"></div>
-      <div class="section-title" style="margin-bottom:8px">Đồng bộ Google Sheet riêng — mỗi kỹ sư 1 sheet</div>
-      <div class="cc-filters">
-        <select id="cc_sync_employee" style="flex:2"></select>
-        <button type="button" class="btn-mini" id="btnCcSyncEngineer">🔄 Đồng bộ từ Supabase sang Sheet</button>
-      </div>
-      <p class="hint" style="margin-bottom:10px">Chọn tên kỹ sư rồi bấm nút — app lấy TOÀN BỘ chấm công của người đó từ Supabase (nguồn thật) ghi đè lại đúng tab riêng của người đó trong file "Report Chấm Công" (mỗi kỹ sư 1 tab).</p>
-      <div id="ccSyncStatus" class="period-notice" style="margin-bottom:10px;display:none"></div>
 
       <button type="button" class="btn" id="btnCcAutoFill" style="margin:10px 0">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
@@ -4802,8 +4794,8 @@ function ccPopulateSelects(){
  // chiều với #cc_employee (đổi bên nào cũng ra cùng 1 kết quả).
  const listEmpSel=$('#cc_list_employee'); const curListE=listEmpSel.value||curE;
  listEmpSel.innerHTML='<option value="">— Tất cả nhân viên —</option>'+engineerList.map(n=>`<option value="${esc(n)}" ${n===curListE?'selected':''}>${esc(n)}</option>`).join('');
- const syncSel=$('#cc_sync_employee'); const curSync=syncSel.value;
- syncSel.innerHTML=engineerList.map(n=>`<option value="${esc(n)}" ${n===curSync?'selected':''}>${esc(n)}</option>`).join('');
+ const syncSel=$('#cc_sync_employee'); // đã gỡ tính năng đồng bộ chấm công theo kỹ sư sang Sheet
+ if(syncSel){ const curSync=syncSel.value; syncSel.innerHTML=engineerList.map(n=>`<option value="${esc(n)}" ${n===curSync?'selected':''}>${esc(n)}</option>`).join(''); }
  if(!$('#cc_f_addr').dataset.built){ buildWorkAddressOptions('cc_f_addr'); $('#cc_f_addr').dataset.built='1'; ccResetAddForm(); }
  if(!$('#ctp_f_place').dataset.built){ buildWorkAddressOptions('ctp_f_place'); $('#ctp_f_place').dataset.built='1'; }
  const now=vnNow();
@@ -5175,7 +5167,7 @@ $('#cc_clr_employee').onchange=renderCcMonthAudit;
 // đủ để nút KHÔNG BAO GIỜ bị kẹt ở "Đang đồng bộ…" kể cả khi lỗi mạng/lỗi
 // bất ngờ (trước đây thiếu catch, lỗi ném ra là nút kẹt mãi, trông như đứng
 // im không phản hồi).
-$('#btnCcSyncEngineer').onclick=async()=>{
+const _rmBtnCcSyncEng=$('#btnCcSyncEngineer'); if(_rmBtnCcSyncEng) _rmBtnCcSyncEng.onclick=async()=>{
  const eng=$('#cc_sync_employee').value;
  if(!eng){ toast('Chọn tên kỹ sư cần đồng bộ',true); return; }
  if(!CFG.url){ toast('Chưa cấu hình Apps Script URL',true); return; }
