@@ -1095,6 +1095,10 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <div class="cc-add-grid">
         <label class="field"><span class="lab">Ngày</span><input type="date" id="cc_f_date"></label>
         <label class="field"><span class="lab">Nhân viên</span><select id="cc_f_employee"></select></label>
+        <div id="cc_f_employee_extra_wrap" class="field" style="grid-column:1/-1">
+          <span class="lab">Thêm cho người khác cùng lúc (tuỳ chọn — tick thêm để ghi cùng 1 dòng chấm công cho nhiều người) <button type="button" class="btn-mini" id="btnCcAddOtherEng">+ Kỹ sư khác team</button></span>
+          <div id="cc_f_employee_extra" class="ctp-checklist"></div>
+        </div>
         <label class="field"><span class="lab">Dự án / Nội dung <button type="button" class="btn-mini" id="btnPcPickCcName" title="Tìm / chọn dự án theo mã">🔎 Tìm</button></span>
           <select id="cc_f_project">
             <option>Làm việc tại văn phòng</option>
@@ -1165,7 +1169,8 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <div id="ctpTripForm" style="margin-top:12px">
         <div class="cc-add-grid">
           <label class="field"><span class="lab">Ngày đề nghị</span><input type="date" id="ctp_f_reqdate"></label>
-          <label class="field" style="grid-column:1/-1"><span class="lab">Người đề nghị (chọn được nhiều người cùng đi)</span>
+          <label class="field"><span class="lab">Người đề nghị (làm phiếu — 1 kỹ sư ELV, đứng tên ký)</span><select id="ctp_f_requester_single"></select></label>
+          <label class="field" style="grid-column:1/-1"><span class="lab">Kỹ sư tham gia đợt này (chọn nhiều người, dùng để thêm dòng) <button type="button" class="btn-mini" id="btnCtpAddOtherEng">+ Kỹ sư khác team</button></span>
             <div id="ctp_f_requester_list" class="ctp-checklist"></div>
           </label>
           <label class="field"><span class="lab">Địa điểm công tác</span><select id="ctp_f_place"></select></label>
@@ -1477,7 +1482,7 @@ function mapExpenseLine(row){
    expenseType:row.expense_type, description:row.description, lineFromDate:row.line_from_date, lineToDate:row.line_to_date,
    km:row.km, quantity:row.quantity, rate:row.rate, amount:row.amount, serviceType:row.service_type,
    projectCode:row.project_code, projectName:row.project_name, note:row.note, mapImage:row.map_image,
-   multiplyByDays:row.multiply_by_days, updatedAt:row.updated_at};
+   multiplyByDays:row.multiply_by_days, updatedAt:row.updated_at, engineerName:row.engineer_name};
 }
 const DB={
  async verifyAdmin(pass){
@@ -1938,7 +1943,7 @@ const DB={
      expenseType:payload.expenseType, description:payload.description, lineFromDate:payload.lineFromDate,
      lineToDate:payload.lineToDate, km:payload.km, quantity:payload.quantity, rate:payload.rate, amount:payload.amount,
      serviceType:payload.serviceType, projectCode:payload.projectCode, projectName:payload.projectName,
-     note:payload.note, mapImage:payload.mapImage
+     note:payload.note, mapImage:payload.mapImage, multiplyByDays:payload.multiplyByDays, engineerName:payload.engineerName
    }});
    return error?{ok:false,error:error.message}:{ok:true,tripId:data[0].trip_id,lineId:data[0].line_id};
  },
@@ -1948,7 +1953,7 @@ const DB={
      expenseType:payload.expenseType, description:payload.description, lineFromDate:payload.lineFromDate,
      lineToDate:payload.lineToDate, km:payload.km, quantity:payload.quantity, rate:payload.rate, amount:payload.amount,
      serviceType:payload.serviceType, projectCode:payload.projectCode, projectName:payload.projectName,
-     note:payload.note, mapImage:payload.mapImage
+     note:payload.note, mapImage:payload.mapImage, multiplyByDays:payload.multiplyByDays, engineerName:payload.engineerName
    }});
    return error?{ok:false,error:error.message}:{ok:true,data};
  },
@@ -4848,10 +4853,35 @@ function buildWorkAddressOptions(selectId){
  $('#'+selectId).innerHTML=html;
 }
 
+// "Thêm cho người khác cùng lúc" — bên cạnh nhân viên chính (#cc_f_employee),
+// tick thêm người khác (kể cả khác team, ad-hoc) để ghi CÙNG 1 dòng chấm công
+// (giống hệt các trường khác) cho MỖI người đã tick, khi bấm "+ Thêm dòng".
+// CHỈ dùng lúc THÊM MỚI — ẩn đi khi đang SỬA 1 dòng có sẵn (sửa = 1 người).
+let ccExtraEmployees=[];
+function ccRenderExtraEmployeeChecklist(){
+ const wrap=$('#cc_f_employee_extra'); if(!wrap) return;
+ const primary=$('#cc_f_employee').value;
+ const checkedSet=new Set([...wrap.querySelectorAll('input:checked')].map(c=>c.value));
+ const names=[...engineerList.filter(n=>n!==primary), ...ccExtraEmployees.filter(n=>n!==primary && !engineerList.includes(n))];
+ wrap.innerHTML=names.map(n=>`<label><input type="checkbox" value="${esc(n)}" ${checkedSet.has(n)?'checked':''}><span>${esc(n)}${ccExtraEmployees.includes(n)&&!engineerList.includes(n)?' <i class="hint" style="font-style:normal">(khác team)</i>':''}</span></label>`).join('');
+}
+function ccExtraChecked(){ return $$('#cc_f_employee_extra input:checked').map(c=>c.value); }
+if($('#cc_f_employee')) $('#cc_f_employee').addEventListener('change',ccRenderExtraEmployeeChecklist);
+if($('#btnCcAddOtherEng')) $('#btnCcAddOtherEng').onclick=()=>{
+ const name=prompt('Tên nhân viên/kỹ sư khác team (không có trong danh mục ELV):');
+ if(name==null) return;
+ const nm=name.trim(); if(!nm) return;
+ if(!ccExtraEmployees.includes(nm) && !engineerList.includes(nm)) ccExtraEmployees.push(nm);
+ ccRenderExtraEmployeeChecklist();
+ const wrap=$('#cc_f_employee_extra');
+ const cb=[...wrap.querySelectorAll('input')].find(c=>c.value===nm);
+ if(cb) cb.checked=true;
+};
 function ccPopulateSelects(){
  const empSel=$('#cc_employee'); const curE=empSel.value;
  empSel.innerHTML='<option value="">— Chọn nhân viên để tạo nháp/xem riêng —</option>'+engineerList.map(n=>`<option value="${esc(n)}" ${n===curE?'selected':''}>${esc(n)}</option>`).join('');
  $('#cc_f_employee').innerHTML=engineerList.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+ ccRenderExtraEmployeeChecklist();
  // Bộ lọc kỹ sư đặt NGAY cạnh "Danh sách tháng đang xem" — tiện xem/đổi
  // nhanh mà không phải cuộn lên bộ lọc chính ở đầu tab, luôn đồng bộ 2
  // chiều với #cc_employee (đổi bên nào cũng ra cùng 1 kết quả).
@@ -4975,6 +5005,9 @@ function ccEditRow(no){
  $('#cc_f_sale').value=r.salePhuTrach||''; $('#cc_f_note').value=r.note||'';
  $('#btnCcAddRow span').textContent='💾 Lưu sửa dòng #'+no;
  $('#btnCcCancelEdit').style.display='inline-block';
+ // Sửa 1 dòng có sẵn = đúng 1 người — ẩn checklist "thêm cho người khác" để
+ // khỏi hiểu nhầm là sẽ nhân bản dòng đang sửa cho nhiều người.
+ if($('#cc_f_employee_extra_wrap')) $('#cc_f_employee_extra_wrap').style.display='none';
  $('#cc_f_date').scrollIntoView({behavior:'smooth',block:'center'});
 }
 function ccResetAddForm(){
@@ -4990,6 +5023,9 @@ function ccResetAddForm(){
  $('#cc_f_sale').value=''; $('#cc_f_note').value='';
  $('#btnCcAddRow span').textContent='+ Thêm dòng';
  $('#btnCcCancelEdit').style.display='none';
+ if($('#cc_f_employee_extra_wrap')) $('#cc_f_employee_extra_wrap').style.display='';
+ ccRenderExtraEmployeeChecklist();
+ $$('#cc_f_employee_extra input').forEach(c=>c.checked=false); // bỏ tick sau mỗi lần thêm xong
 }
 $('#btnCcCancelEdit').onclick=ccResetAddForm;
 
@@ -5011,20 +5047,34 @@ $('#btnCcAddRow').onclick=async()=>{
  let projectContent=$('#cc_f_project').value; if(projectContent==='__other') projectContent=$('#cc_f_project_other').value.trim();
  let workAddress=$('#cc_f_addr').value; if(workAddress==='__other') workAddress=$('#cc_f_addr_other').value.trim();
  let workContent=$('#cc_f_work').value; if(workContent==='__other') workContent=$('#cc_f_work_other').value.trim();
- const payload={date, employee:$('#cc_f_employee').value, projectContent,
+ const basePayload={date, projectContent,
    projectCode:$('#cc_f_code').value.trim(), workAddress,
    timeIn:$('#cc_f_in').value, timeOut:$('#cc_f_out').value,
    workDays:$('#cc_f_days').value===''?null:(Number($('#cc_f_days').value)||0),
    workContent, salePhuTrach:$('#cc_f_sale').value.trim(), note:$('#cc_f_note').value.trim()};
- const j=isEdit
-   ? await DB.updateAttendance(ccEditingNo,payload,adminPassword.chamcong_ctp)
-   : await DB.addAttendance(payload,adminPassword.chamcong_ctp);
- if(j.ok){
-   learnProjectCode(payload.projectCode,payload.projectContent,payload.salePhuTrach); // tự học mã -> tên DA + sale
-   toast(isEdit?'✅ Đã lưu sửa dòng chấm công':'✅ Đã thêm dòng chấm công');
-   ccResetAddForm();
-   ccLoadList();
- } else toast(j.error||(isEdit?'Lỗi lưu sửa':'Lỗi thêm dòng'),true);
+ if(isEdit){
+   const payload=Object.assign({employee:$('#cc_f_employee').value},basePayload);
+   const j=await DB.updateAttendance(ccEditingNo,payload,adminPassword.chamcong_ctp);
+   if(j.ok){
+     learnProjectCode(payload.projectCode,payload.projectContent,payload.salePhuTrach);
+     toast('✅ Đã lưu sửa dòng chấm công'); ccResetAddForm(); ccLoadList();
+   } else toast(j.error||'Lỗi lưu sửa',true);
+   return;
+ }
+ // Thêm mới: nhân viên chính (#cc_f_employee) + ai được tick thêm ở checklist
+ // "Thêm cho người khác cùng lúc" (kể cả tên khác team) — mỗi người 1 dòng
+ // giống hệt nhau (cùng ngày/dự án/địa chỉ/giờ/nội dung...).
+ const employees=[$('#cc_f_employee').value, ...ccExtraChecked()].filter((v,i,a)=>v && a.indexOf(v)===i);
+ if(!employees.length){ toast('Chọn nhân viên',true); return; }
+ let ok=0, fail=0;
+ for(const emp of employees){
+   const payload=Object.assign({employee:emp},basePayload);
+   const j=await DB.addAttendance(payload,adminPassword.chamcong_ctp);
+   if(j.ok){ ok++; learnProjectCode(payload.projectCode,payload.projectContent,payload.salePhuTrach); } else fail++;
+ }
+ toast(fail?`⚠️ Đã thêm ${ok} dòng, lỗi ${fail}`:(employees.length>1?`✅ Đã thêm ${ok} dòng chấm công (${employees.length} người)`:'✅ Đã thêm dòng chấm công'), !!fail);
+ ccResetAddForm();
+ ccLoadList();
 };
 
 /* Tạo nháp cả tháng cho 1 nhân viên: ngày nào có phiếu On-Site (trong report
@@ -5329,11 +5379,33 @@ let ctpAllLines=[];
 let currentTripId=null;
 let ctpUploadedMapDataUrl=null;
 
+// "Kỹ sư tham gia đợt này" — chọn NHIỀU người (khác với "Người đề nghị" chỉ 1
+// người/1 kỹ sư ELV để đứng tên ký giấy tờ). Có thể thêm người KHÁC TEAM (ad-hoc,
+// không nằm trong danh mục kỹ sư ELV chung — chỉ áp dụng cho đợt công tác này).
+let ctpAdHocEngineers=[];
 function ctpRenderRequesterChecklist(selectedNames){
  const sel=new Set(String(selectedNames||'').split(' - ').map(s=>s.trim()).filter(Boolean));
- $('#ctp_f_requester_list').innerHTML=engineerList.map(n=>`<label><input type="checkbox" value="${esc(n)}" ${sel.has(n)?'checked':''}><span>${esc(n)}</span></label>`).join('');
+ // Đảm bảo tên khác-team đã lưu trong dữ liệu cũ (nhưng chưa có trong danh sách
+ // ad-hoc phiên này) vẫn hiện ra để không mất tick — không chỉ dựa vào click nút.
+ sel.forEach(n=>{ if(n && !engineerList.includes(n) && !ctpAdHocEngineers.includes(n)) ctpAdHocEngineers.push(n); });
+ const names=[...engineerList, ...ctpAdHocEngineers];
+ $('#ctp_f_requester_list').innerHTML=names.map(n=>`<label><input type="checkbox" value="${esc(n)}" ${sel.has(n)?'checked':''}><span>${esc(n)}${ctpAdHocEngineers.includes(n)?' <i class="hint" style="font-style:normal">(khác team)</i>':''}</span></label>`).join('');
 }
 function ctpRequesterValue(){ return $$('#ctp_f_requester_list input:checked').map(c=>c.value).join(' - '); }
+// Danh sách kỹ sư ĐÃ TICK trong checklist "tham gia đợt" — dùng khi thêm dòng
+// hàng loạt (mỗi người 1 dòng). Không ai tick thì fallback về Người đề nghị.
+function ctpParticipantNames(){
+ const checked=$$('#ctp_f_requester_list input:checked').map(c=>c.value);
+ return checked.length?checked:[$('#ctp_f_requester_single').value||engineerList[0]||''].filter(Boolean);
+}
+if($('#btnCtpAddOtherEng')) $('#btnCtpAddOtherEng').onclick=()=>{
+ const name=prompt('Tên kỹ sư/nhân viên khác team (không có trong danh mục kỹ sư ELV):');
+ if(name==null) return;
+ const nm=name.trim(); if(!nm) return;
+ if(!ctpAdHocEngineers.includes(nm) && !engineerList.includes(nm)) ctpAdHocEngineers.push(nm);
+ const curChecked=ctpRequesterValue();
+ ctpRenderRequesterChecklist(curChecked?curChecked+' - '+nm:nm);
+};
 
 /* Map = ảnh cố định trong ./maps/ (đặt sẵn trong code, tên file) HOẶC map
    admin tự thêm mới qua nút "Thêm map mới vào danh sách" (ảnh tải lên
@@ -5523,14 +5595,20 @@ function ctpPopulateEngFilter(){
  const cur=$('#ctp_f_engfilter').value;
  $('#ctp_f_engfilter').innerHTML='<option value="">— Chọn kỹ sư —</option>'+engineerList.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
  if(cur) $('#ctp_f_engfilter').value=cur;
+ // "Người đề nghị" (đứng tên ký) CHỈ chọn trong danh mục kỹ sư ELV — không có
+ // tuỳ chọn khác-team ở đây (khác với checklist "tham gia đợt" bên dưới).
+ const rs=$('#ctp_f_requester_single');
+ if(rs){ const curR=rs.value; rs.innerHTML=engineerList.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join(''); if(curR && engineerList.includes(curR)) rs.value=curR; }
 }
 function ctpOpenEngineerFile(eng){
  if(!eng) return;
  const byTrip={};
  ctpAllLines.forEach(r=>{ (byTrip[r.tripId]=byTrip[r.tripId]||[]).push(r); });
  let bestId=null, bestDate='';
+ // Khớp theo engineerName (ai THỰC SỰ có dòng chi phí trong đợt) HOẶC
+ // requesterName (người đứng tên đề nghị) — 1 đợt giờ có thể nhiều người.
  Object.entries(byTrip).forEach(([id,rows])=>{
-   if(!rows.some(r=>r.requesterName===eng)) return;
+   if(!rows.some(r=>r.engineerName===eng || r.requesterName===eng)) return;
    const d=rows[0].requestDate||'';
    if(!bestId || d>=bestDate){ bestDate=d; bestId=id; }
  });
@@ -5597,7 +5675,9 @@ function ctpRenderTripSelect(){
  const trips={}, namesByTrip={};
  ctpAllLines.forEach(r=>{
    if(!trips[r.tripId]) trips[r.tripId]=r;
-   (namesByTrip[r.tripId]=namesByTrip[r.tripId]||new Set()).add(r.requesterName);
+   // Hiện TẤT CẢ người THỰC SỰ có dòng trong đợt (engineerName, có thể nhiều
+   // người) — không chỉ người đứng tên đề nghị (requesterName, luôn 1 giá trị).
+   (namesByTrip[r.tripId]=namesByTrip[r.tripId]||new Set()).add(r.engineerName||r.requesterName);
  });
  const ids=Object.keys(trips);
  const sel=$('#ctp_tripSelect');
@@ -5611,6 +5691,7 @@ $('#ctp_tripSelect').onchange=()=>{ currentTripId=$('#ctp_tripSelect').value||nu
 function ctpNewTrip(){
  currentTripId=null;
  $('#ctp_f_reqdate').value=vnTodayIso();
+ if($('#ctp_f_requester_single').options.length) $('#ctp_f_requester_single').selectedIndex=0;
  ctpRenderRequesterChecklist('');
  $('#ctp_f_place').value=''; $('#wrap_ctp_place_other').style.display='none'; $('#ctp_f_place_other').value='';
  $('#ctp_f_fromdate').value=''; $('#ctp_f_todate').value='';
@@ -5627,10 +5708,15 @@ function ctpLoadTripIntoForm(){
  const first=lines[0];
  if(!first){ ctpNewTrip(); return; }
  $('#ctp_f_reqdate').value=first.requestDate||'';
+ // "Người đề nghị" (đứng tên ký) = 1 người, lấy từ trips.requester_name (nguồn
+ // thật của đợt) — chỉ set được nếu người đó còn trong danh mục kỹ sư ELV.
+ if(first.requesterName && engineerList.includes(first.requesterName)) $('#ctp_f_requester_single').value=first.requesterName;
+ else if($('#ctp_f_requester_single').options.length) $('#ctp_f_requester_single').selectedIndex=0;
  // Gộp TẤT CẢ tên riêng lẻ đã xuất hiện trên các dòng của đợt này (mỗi
  // người 1 dòng, xem btnCtpAddLine) để tick sẵn đúng những ai đang đi đợt
- // này — không phải chỉ lấy tên ở dòng đầu tiên.
- const allNames=[...new Set(lines.map(l=>l.requesterName).filter(Boolean))].join(' - ');
+ // này — không phải chỉ lấy tên ở dòng đầu tiên. Dùng engineerName (lưu
+ // riêng từng dòng), KHÔNG dùng requesterName (giờ là field của trip).
+ const allNames=[...new Set(lines.map(l=>l.engineerName).filter(Boolean))].join(' - ');
  ctpRenderRequesterChecklist(allNames);
  setFieldOrOther('ctp_f_place','wrap_ctp_place_other','ctp_f_place_other',first.workingPlace||'');
  $('#ctp_f_fromdate').value=first.fromDate||first.tripFromDate||''; $('#ctp_f_todate').value=first.toDate||first.tripToDate||'';
@@ -5685,7 +5771,7 @@ function ctpRowHtml(r,i){
  return `<tr data-i="${i}">
    <td data-label="Chọn" style="text-align:center"><input type="checkbox" class="ctp-row-check" data-i="${i}" ${r.no?'':'disabled title="Dòng chưa lưu"'}></td>
    <td class="num" data-label="STT">${i+1}</td>
-   <td data-label="Tên NV"><select class="ctp-cell" data-f="requesterName">${engineerList.map(n=>`<option value="${esc(n)}" ${n===r.requesterName?'selected':''}>${esc(n)}</option>`).join('')}</select></td>
+   <td data-label="Tên NV"><select class="ctp-cell" data-f="engineerName">${[...new Set([...engineerList,...ctpAdHocEngineers,r.engineerName].filter(Boolean))].map(n=>`<option value="${esc(n)}" ${n===r.engineerName?'selected':''}>${esc(n)}</option>`).join('')}</select></td>
    <td data-label="Bộ phận">TEC</td>
    <td data-label="Nội dung"><select class="ctp-cell" data-f="expenseType">${CTP_TYPES.map(t=>`<option value="${esc(t.v)}" ${t.v===r.expenseType?'selected':''}>${esc(t.desc)}</option>`).join('')}</select></td>
    <td class="issue-cell" data-label="Diễn giải">
@@ -5798,16 +5884,21 @@ async function ctpCellChanged(i,field,el){
 }
 async function ctpPersistRow(i){
  const row=ctpLocalRows[i]; if(!row) return;
+ const hdr=ctpTripHeader();
  const payload={
-   tripId:currentTripId||'', requestDate:$('#ctp_f_reqdate').value||vnTodayIso(),
-   requesterName:row.requesterName||engineerList[0]||'', dept:'TECH', workingPlace:ctpPlaceValue(),
-   fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value,
+   tripId:currentTripId||'', requestDate:hdr.requestDate||vnTodayIso(),
+   // requesterName ở đây CHỈ dùng để tạo trips.requester_name khi TẠO MỚI đợt
+   // (dòng đầu tiên) — là "Người đề nghị" 1 người/1 kỹ sư ELV, KHÔNG phải người
+   // của riêng dòng này. engineerName mới là "Tên NV" thật của dòng chi phí.
+   requesterName:hdr.requesterName||engineerList[0]||'', dept:'TECH', workingPlace:hdr.workingPlace,
+   fromDate:hdr.fromDate, toDate:hdr.toDate,
    expenseType:row.expenseType||'Công tác phí', description:row.description||'',
-   lineFromDate:row.lineFromDate||$('#ctp_f_fromdate').value, lineToDate:row.lineToDate||$('#ctp_f_todate').value,
+   lineFromDate:row.lineFromDate||hdr.fromDate, lineToDate:row.lineToDate||hdr.toDate,
    km:Number(row.km)||0, quantity:Number(row.quantity)||0, rate:Number(row.rate)||0, amount:Number(row.amount)||0,
    serviceType:row.serviceType||segVal('ctp_f_tripservice'),
    projectCode:(row.projectCode||'').trim()||$('#ctp_f_pjcode').value.trim(), projectName:(row.projectName||'').trim()||$('#ctp_f_pjname').value.trim(),
-   note:row.note||'', mapImage:ctpMapValueForSave(), multiplyByDays:!!row.multiplyByDays
+   note:row.note||'', mapImage:ctpMapValueForSave(), multiplyByDays:!!row.multiplyByDays,
+   engineerName:row.engineerName||hdr.requesterName||engineerList[0]||''
  };
  if(row.no){
    const j=await DB.updateExpenseLine(row.no,payload,adminPassword.chamcong_ctp);
@@ -5850,21 +5941,21 @@ function ctpPlaceValue(){
 // workingPlace/from-to) → nếu đọc lines[0] sẽ bị TRỐNG Ngày/Địa điểm.
 function ctpTripHeader(){
  return { requestDate:$('#ctp_f_reqdate').value, workingPlace:ctpPlaceValue(),
-   fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value, dept:'TECH' };
+   fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value, dept:'TECH',
+   requesterName:$('#ctp_f_requester_single').value||'' };
 }
 
 $('#btnCtpSaveTrip').onclick=async()=>{
- // KHÔNG đụng tới requesterName ở đây — mỗi dòng chi phí đã gắn đúng tên
- // người của dòng đó lúc thêm (xem btnCtpAddLine), sửa thông tin chung
- // (ngày, địa điểm, mã DA...) không được ghi đè mất tên người trên từng dòng.
- // Trong schema Supabase, request_date/working_place/from-to date thuộc bảng
- // trips (sửa 1 lệnh duy nhất) — còn mã DA/tên DA/loại dịch vụ/map thuộc
- // expense_lines (mỗi dòng chi phí 1 bản riêng) nên vẫn cần cập nhật từng
- // dòng, nhưng ít trường hơn hẳn so với trước (chỉ 4 trường dùng chung).
- const tripHeader={
-   requestDate:$('#ctp_f_reqdate').value, dept:'TECH',
-   workingPlace:ctpPlaceValue(), fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value
- };
+ // requesterName giờ CÓ đụng tới — là "Người đề nghị" (1 kỹ sư ELV, ô chọn
+ // riêng), lưu vào trips.requester_name. Tên NV từng dòng (engineerName) là
+ // cột RIÊNG của expense_lines nên KHÔNG bị ảnh hưởng khi lưu thông tin chung
+ // ở đây (xem btnCtpAddLine/ctpPersistRow — mỗi dòng gắn đúng tên người của
+ // dòng đó, độc lập với Người đề nghị của cả đợt).
+ // Trong schema Supabase, request_date/working_place/from-to date/requester_name
+ // thuộc bảng trips (sửa 1 lệnh duy nhất) — còn mã DA/tên DA/loại dịch vụ/map
+ // thuộc expense_lines (mỗi dòng chi phí 1 bản riêng) nên vẫn cần cập nhật
+ // từng dòng, nhưng ít trường hơn hẳn so với trước (chỉ 4 trường dùng chung).
+ const tripHeader=ctpTripHeader();
  const lineShared={
    projectCode:$('#ctp_f_pjcode').value.trim(), projectName:$('#ctp_f_pjname').value.trim(),
    mapImage:ctpMapValueForSave(), serviceType:segVal('ctp_f_tripservice')
@@ -5892,7 +5983,7 @@ $('#btnCtpSaveTrip').onclick=async()=>{
 // dòng đó khác với phần còn lại của đợt công tác.
 function ctpBuildBlankRow(expenseTypeVal,engineerName){
  const fixedRate=ctpFixedRateFor(expenseTypeVal);
- const row={no:null, requesterName:engineerName, expenseType:expenseTypeVal, km:0, note:'', multiplyByDays:false,
+ const row={no:null, engineerName:engineerName, expenseType:expenseTypeVal, km:0, note:'', multiplyByDays:false,
    lineFromDate:$('#ctp_f_fromdate').value, lineToDate:$('#ctp_f_todate').value,
    projectCode:$('#ctp_f_pjcode').value.trim(), projectName:$('#ctp_f_pjname').value.trim(),
    serviceType:segVal('ctp_f_tripservice')};
@@ -5902,26 +5993,31 @@ function ctpBuildBlankRow(expenseTypeVal,engineerName){
  row.note=ctpAutoNoteFor(row)||'';
  return row;
 }
+// Thêm dòng cho TẤT CẢ kỹ sư đã tick ở checklist "Kỹ sư tham gia đợt này" (mỗi
+// người 1 dòng riêng) — không tick ai thì fallback về Người đề nghị.
 $('#btnCtpAddLine').onclick=async()=>{
  if(!$('#ctp_f_reqdate').value){ toast('Chọn ngày đề nghị ở phần đợt công tác trước',true); return; }
- const defaultEng=ctpRequesterValue().split(' - ')[0]||engineerList[0]||'';
- ctpLocalRows.push(ctpBuildBlankRow(CTP_TYPES[0].v,defaultEng));
- await ctpPersistRow(ctpLocalRows.length-1);
+ const names=ctpParticipantNames();
+ for(const eng of names){ ctpLocalRows.push(ctpBuildBlankRow(CTP_TYPES[0].v,eng)); await ctpPersistRow(ctpLocalRows.length-1); }
  ctpRenderLinesFromLocal();
+ if(names.length>1) toast(`✅ Đã thêm ${names.length} dòng cho ${names.length} người`);
 };
 // Đi xe máy = luôn cần 2 dòng cùng lúc cho 1 người (Công tác phí + Xăng) —
 // tạo sẵn cả 2 trong 1 lần bấm thay vì phải bấm "+ Thêm dòng" 2 lần rồi tự
-// đổi loại từng dòng, đỡ mất công cho việc lặp lại mỗi ngày đi làm.
+// đổi loại từng dòng, đỡ mất công cho việc lặp lại mỗi ngày đi làm. Tick
+// nhiều người ở checklist thì tạo đủ cặp (CTP+Xăng) cho TỪNG người.
 $('#btnCtpAddLineMoto').onclick=async()=>{
  if(!$('#ctp_f_reqdate').value){ toast('Chọn ngày đề nghị ở phần đợt công tác trước',true); return; }
- const defaultEng=ctpRequesterValue().split(' - ')[0]||engineerList[0]||'';
+ const names=ctpParticipantNames();
  const fuelType=CTP_TYPES.find(t=>t.v.includes('xăng')).v;
- ctpLocalRows.push(ctpBuildBlankRow('Công tác phí',defaultEng));
- await ctpPersistRow(ctpLocalRows.length-1);
- ctpLocalRows.push(ctpBuildBlankRow(fuelType,defaultEng));
- await ctpPersistRow(ctpLocalRows.length-1);
+ for(const eng of names){
+   ctpLocalRows.push(ctpBuildBlankRow('Công tác phí',eng));
+   await ctpPersistRow(ctpLocalRows.length-1);
+   ctpLocalRows.push(ctpBuildBlankRow(fuelType,eng));
+   await ctpPersistRow(ctpLocalRows.length-1);
+ }
  ctpRenderLinesFromLocal();
- toast('✅ Đã thêm 2 dòng: Công tác phí + Xăng — nhớ điền Km cho dòng xăng');
+ toast(names.length>1?`✅ Đã thêm ${names.length*2} dòng (Công tác phí + Xăng) cho ${names.length} người — nhớ điền Km`:'✅ Đã thêm 2 dòng: Công tác phí + Xăng — nhớ điền Km cho dòng xăng');
 };
 
 $('#btnCtpDeleteTrip').onclick=()=>{
@@ -5993,9 +6089,9 @@ $('#btnCtpExportExcel').onclick=()=>{
  if(!lines.length){ toast('Chưa có dòng chi phí nào để xuất',true); return; }
  const total=lines.reduce((s,r)=>s+(Number(r.amount)||0),0);
  const first=lines[0]||{};
- const hdr=ctpTripHeader(); // Ngày/Địa điểm/Từ-đến lấy từ FORM (tránh trống)
- // Người đề nghị = người LÀM PHIẾU = người đầu tiên (KHÔNG gộp nhiều tên).
- const names=first.requesterName||'';
+ const hdr=ctpTripHeader(); // Ngày/Địa điểm/Từ-đến/Người đề nghị lấy từ FORM (tránh trống/lệch cache)
+ // Người đề nghị = 1 kỹ sư ELV được CHỌN Ở Ô "Người đề nghị" (KHÔNG gộp nhiều tên).
+ const names=hdr.requesterName||first.requesterName||'';
  const svc=['Lắp mới','Khảo sát','Bảo trì','Bảo hành'];
  const NC=15, mk=()=>new Array(NC).fill('');
  const dmy=d=>d?fmtDMYFull(d):'';
@@ -6017,7 +6113,7 @@ $('#btnCtpExportExcel').onclick=()=>{
    rowInfo(checkboxCell),
    mk(),
    HEAD,
-   ...lines.map((r,i)=>[i+1, r.requesterName||'', 'TECH', r.expenseType||'', r.description||'',
+   ...lines.map((r,i)=>[i+1, r.engineerName||r.requesterName||'', 'TECH', r.expenseType||'', r.description||'',
      dmy(r.lineFromDate), dmy(r.lineToDate), (r.km||r.km===0)&&Number(r.km)?Number(r.km):'', Number(r.quantity)||'',
      Number(r.rate)||0, Number(r.amount)||0, r.projectCode||'', r.projectName||'', r.serviceType||'', r.note||'']),
    (()=>{ const r=mk(); r[0]='TỔNG CỘNG'; r[10]=total; return r; })(),
