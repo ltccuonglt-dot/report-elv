@@ -340,10 +340,11 @@ table.rpt select.status-sel:disabled{opacity:.5}
 .ctp-days-toggle input{width:auto!important;flex:none}
 .ctp-menu-pop{position:absolute;top:calc(100% + 6px);right:0;z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow);padding:10px;min-width:220px}
 .ctp-menu-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px}
-.btn-row-view,.btn-row-photos,.btn-row-edit,.btn-row-delete{border:1.5px solid var(--line);background:var(--surface-2);color:var(--muted);width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
-.btn-row-view svg,.btn-row-photos svg,.btn-row-edit svg,.btn-row-delete svg{width:15px;height:15px}
+.btn-row-view,.btn-row-photos,.btn-row-pdf,.btn-row-edit,.btn-row-delete{border:1.5px solid var(--line);background:var(--surface-2);color:var(--muted);width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
+.btn-row-view svg,.btn-row-photos svg,.btn-row-pdf svg,.btn-row-edit svg,.btn-row-delete svg{width:15px;height:15px}
 .btn-row-view:hover{color:var(--info);border-color:var(--info)}
 .btn-row-photos:hover{color:var(--brand);border-color:var(--brand)}
+.btn-row-pdf:hover{color:var(--brand);border-color:var(--brand)}
 .btn-row-edit:hover{color:var(--brand);border-color:var(--brand)}
 .btn-row-delete:hover{color:var(--danger);border-color:var(--danger)}
 
@@ -2921,7 +2922,10 @@ async function exportBblvPdf(no,displayNo,fromArchive){
      if(i>0) doc.addPage();
      doc.addImage(dataUrl,'JPEG',(pageW-w)/2,(pageH-h)/2,w,h);
    }
-   doc.save(`BBLV-phieu-${displayNo||no}.pdf`);
+   // Tên file "BBLV-Tên dự án" (khách hàng); giữ dấu tiếng Việt cho dễ đọc,
+   // chỉ bỏ ký tự cấm trong tên file Windows. Không có tên dự án thì dùng số phiếu.
+   const projName=(rec.customer||'').trim().replace(/[\\/:*?"<>|]/g,'').trim();
+   doc.save(`BBLV-${projName||('phieu-'+(displayNo||no))}.pdf`);
    toast('✅ Đã xuất PDF');
  }catch(err){ toast('⚠️ Không tạo được PDF — ảnh có thể chưa tải xong, thử lại',true); }
 }
