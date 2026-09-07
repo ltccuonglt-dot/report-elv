@@ -1249,10 +1249,10 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9 15 3 3 3-3"/><path d="M12 12v6"/></svg><span>⬇️ Xuất Excel công tác phí (sửa được)</span>
       </button>
       <p class="hint" style="margin-bottom:10px">Xuất file Excel "Giấy đề nghị thanh toán chi phí công tác" cho đợt đang chọn — đúng bố cục mẫu, MỞ RA SỬA ĐƯỢC bằng Excel/Google Sheet.</p>
-      <button type="button" class="btn btn-ghost" id="btnCtpPrint" style="margin:0 0 6px">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg><span>Xem trước &amp; In (để in ký 1 lần)</span>
+      <button type="button" class="btn btn-ghost" id="btnCtpPrintMap" style="margin:0 0 6px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg><span>🗺️ In bản đồ (A4, trắng đen)</span>
       </button>
-      <p class="hint" style="margin-bottom:10px">Xem trước đúng bố cục mẫu (như file Excel) rồi bấm In ra giấy để ký — kèm bản đồ nếu đã chọn ở trên.</p>
+      <p class="hint" style="margin-bottom:10px">In riêng <b>bản đồ đang chọn ở trên</b> ra 1 tờ A4, <b>trắng đen</b>, phóng to hết khổ giấy. (Giấy đề nghị thì xuất Excel ở nút trên để in/ký.)</p>
       <button type="button" class="btn btn-danger" id="btnCtpDeleteTrip" style="margin-bottom:6px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Xoá hẳn đợt công tác này</span>
       </button>
@@ -5841,6 +5841,13 @@ function ctpPlaceValue(){
  const v=$('#ctp_f_place').value;
  return v==='__other' ? $('#ctp_f_place_other').value.trim() : v;
 }
+// Thông tin ĐẦU phiếu (thuộc đợt/trips) — LẤY TỪ FORM đang mở (nguồn thật), vì
+// dòng chi phí local sau khi thêm/sửa KHÔNG mang các trường trip (requestDate/
+// workingPlace/from-to) → nếu đọc lines[0] sẽ bị TRỐNG Ngày/Địa điểm.
+function ctpTripHeader(){
+ return { requestDate:$('#ctp_f_reqdate').value, workingPlace:ctpPlaceValue(),
+   fromDate:$('#ctp_f_fromdate').value, toDate:$('#ctp_f_todate').value, dept:'TECH' };
+}
 
 $('#btnCtpSaveTrip').onclick=async()=>{
  // KHÔNG đụng tới requesterName ở đây — mỗi dòng chi phí đã gắn đúng tên
@@ -5982,6 +5989,7 @@ $('#btnCtpExportExcel').onclick=()=>{
  if(!lines.length){ toast('Chưa có dòng chi phí nào để xuất',true); return; }
  const total=lines.reduce((s,r)=>s+(Number(r.amount)||0),0);
  const first=lines[0]||{};
+ const hdr=ctpTripHeader(); // Ngày/Địa điểm/Từ-đến lấy từ FORM (tránh trống)
  // Người đề nghị = người LÀM PHIẾU = người đầu tiên (KHÔNG gộp nhiều tên).
  const names=first.requesterName||'';
  const svc=['Lắp mới','Khảo sát','Bảo trì','Bảo hành'];
@@ -5995,12 +6003,12 @@ $('#btnCtpExportExcel').onclick=()=>{
  const aoa=[
    rowInfo('GIẤY ĐỀ NGHỊ THANH TOÁN CHI PHÍ CÔNG TÁC'),  // row0: logo phủ góc trái, tiêu đề canh giữa
    rowInfo('PAYMENT REQUEST FOR COST OF WORK'),
-   rowInfo(`Ngày/ Date: …………${dmy(first.requestDate)}…………………….………`),
+   rowInfo(`Ngày/ Date: …………${dmy(hdr.requestDate)}…………………….………`),
    rowInfo("Kính gởi/ To : Ban Giám Đốc Cty Cổ Phần TMDV Sao Nam An (Soeco's Mgt Board)"),
    rowInfo(`Họ tên người đề nghị thanh toán/ Requester Name: ${names}`),
    rowInfo('Bộ phận/ Dept : TECH'),
-   rowInfo(`Địa điểm công tác/ Working Place: ${first.workingPlace||''}`),
-   rowInfo(`Thời gian công tác/ Working days: Từ …………${dmy(first.fromDate)}……………. đến: ………${dmy(first.toDate)}……………..`),
+   rowInfo(`Địa điểm công tác/ Working Place: ${hdr.workingPlace||''}`),
+   rowInfo(`Thời gian công tác/ Working days: Từ …………${dmy(hdr.fromDate)}……………. đến: ………${dmy(hdr.toDate)}……………..`),
    rowInfo(`Mã vụ việc/PJ code : ${first.projectCode||''}`),
    rowInfo(checkboxCell),
    mk(),
@@ -6056,7 +6064,17 @@ $('#btnCtpExportExcel').onclick=()=>{
  toast(`✅ Đã xuất Excel công tác phí — ${lines.length} dòng`);
 };
 
-$('#btnCtpPrint').onclick=()=>{
+$('#btnCtpPrintMap').onclick=()=>{
+ { // ===== IN BẢN ĐỒ đang chọn ra 1 tờ A4, TRẮNG ĐEN, phóng hết khổ (cửa sổ in riêng) =====
+   const mapSrc = ctpUploadedMapDataUrl || (($('#ctp_mapSelect').value)?mapSrcFor($('#ctp_mapSelect').value):'');
+   if(!mapSrc){ toast('Chưa chọn bản đồ ở trên để in',true); return; }
+   const w=window.open('','_blank');
+   if(!w){ toast('Trình duyệt chặn cửa sổ in — cho phép popup rồi thử lại',true); return; }
+   w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Bản đồ</title><style>@page{size:A4;margin:0}html,body{margin:0;padding:0;height:100%;background:#fff}.wrap{width:100%;height:100vh;display:flex;align-items:center;justify-content:center}img{max-width:100%;max-height:100%;filter:grayscale(100%);-webkit-filter:grayscale(100%)}</style></head><body><div class="wrap"><img src="'+mapSrc+'" onload="setTimeout(function(){window.focus();window.print();},300)"></div></body></html>');
+   w.document.close();
+   return;
+ }
+ /* ===== (Bên dưới là code cũ của nút "Xem trước & In" — KHÔNG còn dùng, giữ lại vô hại) ===== */
  const lines=ctpCurrentLines();
  if(!lines.length){ toast('Chưa có dòng chi phí nào để in',true); return; }
  const total=lines.reduce((s,r)=>s+(Number(r.amount)||0),0);
@@ -6084,6 +6102,7 @@ $('#btnCtpPrint').onclick=()=>{
  </tr>`).join('');
  const mapSrc = ctpUploadedMapDataUrl || (($('#ctp_mapSelect').value)?mapSrcFor($('#ctp_mapSelect').value):'');
  const first=lines[0]||{};
+ const hdr=ctpTripHeader(); // Ngày/Địa điểm/Từ-đến lấy từ FORM (tránh trống)
  // Dòng đầu phiếu "Họ tên người đề nghị" gộp TẤT CẢ người có mặt trong đợt
  // (mỗi người 1 dòng riêng trong bảng) — không chỉ lấy tên ở dòng đầu tiên.
  // Người đề nghị = người LÀM PHIẾU = dòng đầu (KHÔNG gộp nhiều tên); bảng chi tiết vẫn nhiều người.
@@ -6105,12 +6124,12 @@ $('#btnCtpPrint').onclick=()=>{
      <div style="font-weight:700;font-style:italic;color:#2E5B9C;font-size:13px">PAYMENT REQUEST FOR COST OF WORK</div>
     </div>
    </div>
-   <p style="text-align:center">Ngày/ Date: …………${fmtDMYFull(first.requestDate)||''}…………………….………</p>
+   <p style="text-align:center">Ngày/ Date: …………${hdr.requestDate?fmtDMYFull(hdr.requestDate):''}…………………….………</p>
    <p style="font-weight:700">Kính gởi/ To: Ban Giám Đốc Cty Cổ Phần TMDV Sao Nam An (Soeco's Mgt Board)</p>
    <p>Họ tên người đề nghị thanh toán/ Requester Name: <b>${esc(allNamesForPrint)}</b></p>
-   <p>Bộ phận/ Dept: ${esc(first.dept||'')}</p>
-   <p>Địa điểm công tác/ Working Place: ${esc(first.workingPlace||'')}</p>
-   <p>Thời gian công tác/ Working days: Từ …………${first.fromDate?fmtDMYFull(first.fromDate):''}……………. đến: ………${first.toDate?fmtDMYFull(first.toDate):''}…………….. </p>
+   <p>Bộ phận/ Dept: TECH</p>
+   <p>Địa điểm công tác/ Working Place: ${esc(hdr.workingPlace||'')}</p>
+   <p>Thời gian công tác/ Working days: Từ …………${hdr.fromDate?fmtDMYFull(hdr.fromDate):''}……………. đến: ………${hdr.toDate?fmtDMYFull(hdr.toDate):''}…………….. </p>
    <p>Mã vụ việc/PJ code: ${esc(first.projectCode||'')}</p>
    <p style="margin:10px 0">${svcBoxesHtml}</p>
    <table style="border-collapse:collapse;width:100%;margin-top:10px">
