@@ -1566,13 +1566,17 @@ const DB={
    const {data,error}=await sb.from('ticket_photos').insert(rows).select();
    return error?{ok:false,error:error.message}:{ok:true,data};
  },
- // Chuyển 1 file vừa upload lên Supabase Storage sang Drive NGAY (không đợi
- // 6 tháng) — Supabase Storage giờ chỉ là trạm trung chuyển/dự phòng, Drive
- // mới là nơi lưu chính. Không cần mật khẩu (đúng UX tạo phiếu không mật khẩu).
- async relayFileToDrive(fileUrl,fileName,customer,ticketDate){
+ // Chuyển 1 file vừa upload Supabase Storage sang Cloudflare R2 — R2 giờ là nơi lưu chính
+ // (ảnh hiển thị trực tiếp <img>, không cần photoTile như Drive), Supabase Storage chỉ là
+ // trạm trung chuyển. Không cần mật khẩu (UX tạo phiếu không có mật khẩu).
+ async relayFileToR2(fileUrl,fileName,customer,ticketDate){
    const r=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-     body:JSON.stringify({token:CFG.token,action:'relayFileToDrive',fileUrl,fileName,customer,ticketDate})});
+     body:JSON.stringify({token:CFG.token,action:'relayFileToR2',fileUrl,fileName,customer,ticketDate})});
    return r.json();
+ },
+ // Giữ lại cho tương thích ngược (nếu có nơi khác vẫn gọi) — deprecated.
+ async relayFileToDrive(fileUrl,fileName,customer,ticketDate){
+   return this.relayFileToR2(fileUrl,fileName,customer,ticketDate);
  },
  async relayTicketFile(ticketId,column,oldUrl,newUrl){
    const {data,error}=await sb.rpc('relay_ticket_file',{p_ticket_id:Number(ticketId),p_column:column,p_old_url:oldUrl,p_new_url:newUrl});
@@ -2724,32 +2728,32 @@ $('#f_bbback_camera').onchange=e=>{if(e.target.files[0])handleBbSide(e.target.fi
 $('#f_bbback_file').onchange=e=>{if(e.target.files[0])handleBbSide(e.target.files[0],bbBack,v=>bbBack=v,renderBbBackPreview,'bbBackUploading'); e.target.value='';};
 
 /* Ngay sau khi phiếu (và ảnh khác, nếu có) đã lưu xong ở Supabase, âm thầm
-   chuyển từng file vừa upload sang Google Drive — Drive giờ là nơi lưu CHÍNH
-   cho ảnh/PDF BBLV, Supabase Storage chỉ còn là trạm trung chuyển tạm/dự
-   phòng. Chạy ngầm, không chặn/không báo gì nếu thành công; nếu 1 file lỡ
-   chuyển thất bại (mất mạng, Drive tạm lỗi...) thì cứ để nguyên trên Supabase
-   Storage — vẫn xem được bình thường, đợi lượt quét sau dọn tiếp. */
-async function relayOneFileToDrive(url,name,customer,ticketDate,onSwapped){
+   chuyển từng file vừa upload sang Cloudflare R2 — R2 giờ là nơi lưu CHÍNH cho
+   ảnh/PDF BBLV (hiển thị trực tiếp trong <img>, hotlink được), Supabase Storage
+   chỉ còn là trạm trung chuyển tạm. Chạy ngầm, không chặn/không báo gì nếu
+   thành công; nếu 1 file lỡ chuyển thất bại (mất mạng, R2 tạm lỗi...) thì cứ
+   để nguyên trên Supabase Storage — vẫn xem được bình thường, đợi lượt sau. */
+async function relayOneFileToR2(url,name,customer,ticketDate,onSwapped){
  if(!url||!isSupabaseStorageUrl(url)) return;
  try{
-   const ar=await DB.relayFileToDrive(url,name,customer,ticketDate);
-   if(!ar.ok||!ar.driveUrl) return;
-   const swapped=await onSwapped(ar.driveUrl);
+   const ar=await DB.relayFileToR2(url,name,customer,ticketDate);
+   if(!ar.ok||!ar.r2Url) return;
+   const swapped=await onSwapped(ar.r2Url);
    if(swapped){
      const m=url.match(/\/ticket-attachments\/(.+)$/);
      if(m) await sb.storage.from('ticket-attachments').remove([decodeURIComponent(m[1])]);
    }
  }catch(err){ /* im lặng — có lỗi thì file vẫn còn nguyên trên Supabase, không mất dữ liệu */ }
 }
-async function relayNewTicketFilesToDrive(ticketId,payload,photoRows){
+async function relayNewTicketFilesToR2(ticketId,payload,photoRows){
  const customer=payload.customer, ticketDate=payload.date;
- if(payload.attachmentUrl) relayOneFileToDrive(payload.attachmentUrl,payload.attachmentName,customer,ticketDate,
-   async(driveUrl)=>(await DB.relayTicketFile(ticketId,'attachment_url',payload.attachmentUrl,driveUrl)).done);
- if(payload.attachmentBackUrl) relayOneFileToDrive(payload.attachmentBackUrl,payload.attachmentBackName,customer,ticketDate,
-   async(driveUrl)=>(await DB.relayTicketFile(ticketId,'attachment_back_url',payload.attachmentBackUrl,driveUrl)).done);
+ if(payload.attachmentUrl) relayOneFileToR2(payload.attachmentUrl,payload.attachmentName,customer,ticketDate,
+   async(newUrl)=>(await DB.relayTicketFile(ticketId,'attachment_url',payload.attachmentUrl,newUrl)).done);
+ if(payload.attachmentBackUrl) relayOneFileToR2(payload.attachmentBackUrl,payload.attachmentBackName,customer,ticketDate,
+   async(newUrl)=>(await DB.relayTicketFile(ticketId,'attachment_back_url',payload.attachmentBackUrl,newUrl)).done);
  (photoRows||[]).forEach(row=>{
-   relayOneFileToDrive(row.url,row.name,customer,ticketDate,
-     async(driveUrl)=>(await DB.relayTicketPhotoFile(row.id,row.url,driveUrl)).done);
+   relayOneFileToR2(row.url,row.name,customer,ticketDate,
+     async(newUrl)=>(await DB.relayTicketPhotoFile(row.id,row.url,newUrl)).done);
  });
 }
 
@@ -3130,9 +3134,9 @@ $('#tkForm').onsubmit=async e=>{
        const ticketId=isEdit?no:j.no;
        const pj=await DB.addTicketPhotos(ticketId,pendingOtherPhotos);
        if(!pj.ok) toast(`⚠️ Phiếu đã lưu nhưng ảnh khác chưa gắn được: ${pj.error||'lỗi'}`,true);
-       else relayNewTicketFilesToDrive(ticketId,payload,pj.data);
+       else relayNewTicketFilesToR2(ticketId,payload,pj.data);
      } else if(j.ok){
-       relayNewTicketFilesToDrive(isEdit?no:j.no,payload,[]);
+       relayNewTicketFilesToR2(isEdit?no:j.no,payload,[]);
      }
      // không cần tự làm mới danh sách phiếu — Realtime sẽ tự đẩy thay đổi về mgrData
    }catch(err){
