@@ -740,28 +740,84 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     </section>
 
     <!-- ===== LỊCH SỬ ===== -->
-    <section id="view-history" class="view">
-      <p class="hint" id="histSourceHint" style="margin:0 0 10px">📋 Toàn bộ phiếu lấy trực tiếp từ <b>Supabase</b> (nơi lưu chính). Dùng bộ lọc ngày bên dưới để tra cứu.</p>
-      <div class="cc-add-grid" style="margin-bottom:8px">
-        <label class="field" style="margin-bottom:0"><span class="lab">Từ ngày</span><input type="date" id="histFromDate"></label>
-        <label class="field" style="margin-bottom:0"><span class="lab">Đến ngày</span><input type="date" id="histToDate"></label>
+    <section id="view-warranty" class="view">
+      <p class="hint" style="margin:0 0 10px">🛠️ Nhận hàng bảo hành: check lỗi → gửi hãng → hãng trả về → trả khách. Kèm ảnh, video (≤45s) và xuất PDF.</p>
+      <div class="toolbar" style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn" id="btnWhNew" style="background:var(--brand);color:#fff">+ Nhận hàng bảo hành mới</button>
+        <select id="whFilterStatus" class="mini-date" style="min-width:140px">
+          <option value="">Tất cả trạng thái</option>
+          <option value="received">🆕 Vừa nhận</option>
+          <option value="sent_to_vendor">📤 Đã gửi hãng</option>
+          <option value="returned_from_vendor">📥 Hãng đã trả</option>
+          <option value="delivered">✅ Đã trả khách</option>
+        </select>
+        <input type="text" id="whSearch" placeholder="🔍 Số phiếu, khách hàng, thiết bị, serial, lỗi..." style="flex:1;min-width:200px" />
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <button type="button" class="btn-mini" id="btnHistApplyRange">Lọc theo khoảng ngày</button>
-        <button type="button" class="btn-mini" id="btnHistClearRange" style="background:var(--surface-2);color:var(--muted);border-color:var(--line)">Bỏ lọc khoảng ngày</button>
-      </div>
-      <div class="ymw-filter" id="histYMW">
-        <select id="histDay" class="mini-date"><option value="">Ngày</option></select>
-        <select id="histWeek" class="mini-date"><option value="">Tuần</option></select>
-        <select id="histMonth" class="mini-date"><option value="">Tháng</option></select>
-        <select id="histYear" class="mini-date"><option value="">Năm</option></select>
-      </div>
-      <div class="toolbar" style="margin-bottom:12px">
-        <input type="text" id="histSearch" placeholder="🔍 Tìm theo tên kỹ sư, sự cố..." />
-      </div>
-      <div class="section-title" id="histListTitle">Lịch sử phiếu</div>
-      <div id="historyList"></div>
+      <div class="section-title" id="whListTitle">Danh sách phiếu bảo hành</div>
+      <div id="warrantyList"></div>
     </section>
+
+    <!-- Modal form Nhan/Sua phieu bao hanh -->
+    <div class="modal" id="whModal" role="dialog" aria-modal="true">
+      <div class="modal-body" style="max-width:900px">
+        <div class="modal-head">
+          <div class="section-title" id="whModalTitle" style="margin:0">Nhận hàng bảo hành</div>
+          <button type="button" class="mini-btn" id="btnWhClose" aria-label="Đóng">✕</button>
+        </div>
+        <div style="padding:12px 14px;max-height:70vh;overflow-y:auto">
+          <input type="hidden" id="wh_id" />
+          <div class="section-title" style="margin-top:0;color:var(--brand)">① Nhận hàng từ khách</div>
+          <div class="cc-add-grid">
+            <label class="field"><span class="lab">Khách hàng *</span><input type="text" id="wh_customer" placeholder="Tên khách/dự án"></label>
+            <label class="field"><span class="lab">Ngày nhận *</span><input type="date" id="wh_receipt_date"></label>
+            <label class="field"><span class="lab">Người nhận</span><input type="text" id="wh_receiver_name"></label>
+            <label class="field"><span class="lab">Hệ thống</span><input type="text" id="wh_system" placeholder="CCTV/Access/BMS…"></label>
+            <label class="field"><span class="lab">Tên thiết bị</span><input type="text" id="wh_device_name"></label>
+            <label class="field"><span class="lab">Model</span><input type="text" id="wh_device_model"></label>
+            <label class="field"><span class="lab">Serial / S/N</span><input type="text" id="wh_device_serial"></label>
+            <label class="field"><span class="lab">Số lượng</span><input type="number" id="wh_quantity" value="1" min="1"></label>
+          </div>
+          <label class="field"><span class="lab">Mô tả lỗi / Hư ở đâu</span><textarea id="wh_fault" rows="3" placeholder="Vd: Không lên hình, chập nguồn, hư ống kính…"></textarea></label>
+          <div class="section-title" style="margin-top:14px">📷 Ảnh & 🎥 Video (nhận hàng)</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+            <button type="button" class="btn-mini" id="btnWhAddPhoto1">+ Thêm ảnh</button>
+            <button type="button" class="btn-mini" id="btnWhAddVideo1">+ Video (≤45s)</button>
+            <input type="file" id="wh_photo1_file" accept="image/*" multiple hidden>
+            <input type="file" id="wh_video1_file" accept="video/*" hidden>
+          </div>
+          <div id="wh_photos1_preview" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:8px"></div>
+          <div id="wh_video1_preview" style="margin-bottom:8px"></div>
+
+          <div class="section-title" style="margin-top:14px;color:var(--brand)">② Gửi hãng & Trả về</div>
+          <div class="cc-add-grid">
+            <label class="field"><span class="lab">Hãng bảo hành</span><input type="text" id="wh_vendor_name" placeholder="Hikvision, Dahua…"></label>
+            <label class="field"><span class="lab">Ngày gửi hãng</span><input type="date" id="wh_sent_at"></label>
+            <label class="field"><span class="lab">Ngày hãng trả</span><input type="date" id="wh_returned_at"></label>
+          </div>
+          <label class="field"><span class="lab">Ghi chú của hãng (sửa gì, còn/hết bảo hành…)</span><textarea id="wh_vendor_note" rows="2"></textarea></label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+            <button type="button" class="btn-mini" id="btnWhAddPhoto2">+ Ảnh sau bảo hành</button>
+            <button type="button" class="btn-mini" id="btnWhAddVideo2">+ Video sau bảo hành (≤45s)</button>
+            <input type="file" id="wh_photo2_file" accept="image/*" multiple hidden>
+            <input type="file" id="wh_video2_file" accept="video/*" hidden>
+          </div>
+          <div id="wh_photos2_preview" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:8px"></div>
+          <div id="wh_video2_preview" style="margin-bottom:8px"></div>
+
+          <div class="section-title" style="margin-top:14px;color:var(--brand)">③ Trả khách</div>
+          <div class="cc-add-grid">
+            <label class="field"><span class="lab">Ngày trả khách</span><input type="date" id="wh_delivered_at"></label>
+            <label class="field"><span class="lab">Người trả</span><input type="text" id="wh_returned_by"></label>
+            <label class="field"><span class="lab">Khách ký nhận</span><input type="text" id="wh_customer_signer"></label>
+          </div>
+          <label class="field"><span class="lab">Ghi chú thêm</span><textarea id="wh_note" rows="2"></textarea></label>
+        </div>
+        <div class="modal-foot" style="display:flex;gap:8px;justify-content:flex-end;padding:10px 14px;border-top:1px solid var(--line)">
+          <button type="button" class="btn btn-ghost" id="btnWhCancel">Đóng</button>
+          <button type="button" class="btn" id="btnWhSave" style="background:var(--brand);color:#fff">💾 Lưu phiếu</button>
+        </div>
+      </div>
+    </div>
 
     <!-- ===== QUẢN LÝ ===== -->
     <!-- ===== DASHBOARD ===== -->
@@ -822,7 +878,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
   <nav class="tabs">
     <button data-tab="report" class="on"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span>Tạo phiếu</button>
-    <button data-tab="history"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg></span>Lịch sử</button>
+    <button data-tab="warranty"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span>Bảo hành</button>
     <button data-tab="dashboard"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 12V3a9 9 0 0 1 9 9h-9z"/></svg></span>Dashboard</button>
     <button data-tab="manager"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="7"/><rect x="12" y="6" width="3" height="11"/><rect x="17" y="13" width="3" height="4"/></svg></span>Quản lý</button>
   </nav>
@@ -2013,6 +2069,35 @@ const DB={
    if(error) return {ok:false,error:error.message};
    const {data:pub}=sb.storage.from('ticket-attachments').getPublicUrl(path);
    return {ok:true,url:pub.publicUrl,name:file.name};
+ },
+ // ===== Bao hanh (warranty_receipts) =====
+ async createWarranty(payload){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('create_warranty',{p:payload});
+   return error?{ok:false,error:error.message}:(data||{ok:false,error:'Không tạo được phiếu'});
+ },
+ async updateWarranty(id,payload){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('update_warranty',{p_id:Number(id),p:payload});
+   return error?{ok:false,error:error.message}:(data||{ok:false,error:'Không cập nhật được'});
+ },
+ async deleteWarranty(id,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('delete_warranty',{p_id:Number(id),p_admin_password:adminPassword});
+   return error?{ok:false,error:error.message}:(data||{ok:false,error:'Không xóa được'});
+ },
+ async listWarranty(){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.from('warranty_receipts').select('*').order('id',{ascending:false});
+   return error?{ok:false,error:error.message}:{ok:true,data:data||[]};
+ },
+ async warrantyRelayFile(id,column,oldUrl,newUrl){
+   const {data,error}=await sb.rpc('warranty_relay_file',{p_id:Number(id),p_column:column,p_old_url:oldUrl,p_new_url:newUrl});
+   return error?{ok:false,error:error.message}:{ok:true,done:!!data};
+ },
+ async warrantyRelayPhoto(id,stage,oldUrl,newUrl){
+   const {data,error}=await sb.rpc('warranty_relay_photo',{p_id:Number(id),p_stage:Number(stage),p_old_url:oldUrl,p_new_url:newUrl});
+   return error?{ok:false,error:error.message}:{ok:true,done:!!data};
  }
 };
 const LS_HIST='kt_history_v1';
@@ -2078,7 +2163,7 @@ function refreshBanner(){const b=$('#banner'),t=$('#bannerText');
 $$('nav.tabs button').forEach(btn=>btn.onclick=()=>{const tab=btn.dataset.tab;
  $$('nav.tabs button').forEach(b=>b.classList.toggle('on',b===btn));
  $$('.view').forEach(v=>v.classList.remove('active'));$('#view-'+tab).classList.add('active');
- if(tab==='history'){if(!mgrData.length)loadManager();else renderHistory();}
+ if(tab==='warranty'){loadWarranty();}
  if(tab==='manager'){if(!mgrData.length)loadManager();else renderManager();}
  if(tab==='dashboard'){if(!mgrData.length)loadManager();else renderDashboard();}
 });
@@ -2142,13 +2227,13 @@ function buildYearOptions(){
  const years=new Set(mgrData.map(r=>(r.date||'').slice(0,4)).filter(Boolean));
  for(let i=0;i<10;i++) years.add(String(now.getFullYear()+i)); // luôn có sẵn 10 năm (năm nay + 9 năm sau) để xem/lên lịch trước, dù chưa có phiếu nào
  const list=[...years].sort((a,b)=>a-b); // từ nhỏ đến lớn
- ['mgrYear','histYear','dashYear'].forEach(id=>{
+ ['mgrYear','dashYear'].forEach(id=>{
    const sel=$('#'+id); if(!sel) return; const cur=sel.value;
    sel.innerHTML='<option value="">Năm</option>'+list.map(y=>`<option value="${y}" ${y===cur?'selected':''}>Năm ${y}</option>`).join('');
  });
 }
 function buildMonthOptions(){
- ['mgrMonth','histMonth','dashMonth'].forEach(id=>{
+ ['mgrMonth','dashMonth'].forEach(id=>{
    const sel=$('#'+id); if(!sel) return; const cur=sel.value;
    let opts='<option value="">Tháng</option>';
    for(let m=1;m<=12;m++){ const v=pad2(m); opts+=`<option value="${v}" ${v===cur?'selected':''}>Tháng ${m}</option>`; }
@@ -2157,7 +2242,7 @@ function buildMonthOptions(){
 }
 function buildDayOptions(){
  const now=vnNow();
- ['mgr','hist','dash'].forEach(pfx=>{
+ ['mgr','dash'].forEach(pfx=>{
    const fYear=$('#'+pfx+'Year').value||now.getFullYear();
    const fMonth=$('#'+pfx+'Month').value||pad2(now.getMonth()+1);
    const fWeek=$('#'+pfx+'Week').value;
@@ -2173,7 +2258,7 @@ function buildDayOptions(){
 }
 function buildWeekOptions(){
  const now=vnNow();
- ['mgr','hist','dash'].forEach(pfx=>{
+ ['mgr','dash'].forEach(pfx=>{
    const fYear=$('#'+pfx+'Year').value||now.getFullYear();
    const fMonth=$('#'+pfx+'Month').value||pad2(now.getMonth()+1);
    const sel=$('#'+pfx+'Week'); if(!sel) return; let cur=sel.value;
@@ -3109,7 +3194,7 @@ $('#tkForm').onsubmit=async e=>{
      localStorage.setItem(LS_HIST,JSON.stringify(hist));
      toast(`✅ Đã cập nhật phiếu #${displayNo}`);
      renderManager(); renderDashboard();
-     if($('#view-history').classList.contains('active')) renderHistory();
+     /* view-history removed */
      cancelEdit();
    } else {
      const rec={...payload,no,thoiGian:new Date().toISOString(),_local:!sb};
@@ -3246,82 +3331,401 @@ async function showPhotos(no,displayNo,fromArchive){
 }
 $('#btnClosePhotos').onclick=()=>$('#photosModal').classList.remove('show');
 $('#photosModal').onclick=e=>{if(e.target===$('#photosModal'))$('#photosModal').classList.remove('show')};
-/* ===== Lịch sử: xem được 2 nguồn dữ liệu =====
-   - "Đang dùng": phiếu hiện hành trên Supabase (mgrData)
-   - "Đã lưu trữ": phiếu đã sao lưu sang Google Sheet — dùng để tra cứu dữ
-     liệu cũ đã xoá khỏi Supabase; ảnh mở trực tiếp từ link Google Drive. */
-let histSource='live';
-let archivedData=null;      // nạp 1 lần rồi giữ lại, bấm "Làm mới" để tải lại
+/* Tab Lich su cu da duoc thay bang tab Bao hanh (view-warranty).
+   Giu lai cac ten ham/bien de code khac goi khong bi null-ref;
+   tra ve du lieu lưu trữ qua tab Quản lý neu can. */
+let archivedData=null;
 let archivedLoading=false;
-async function loadArchivedTickets(force){
- if(archivedLoading) return;
- if(archivedData && !force) return;
- archivedLoading=true;
- $('#historyList').innerHTML='<div class="empty"><div class="t">Đang tải dữ liệu lưu trữ từ Google Sheet...</div></div>';
- try{
-   const j=await DB.listBackupTickets();
-   archivedData=j.ok?(j.data||[]):[];
-   if(!j.ok) toast(j.error||'Không tải được dữ liệu lưu trữ',true);
- }catch(err){ archivedData=[]; toast('Không tải được dữ liệu lưu trữ',true); }
- archivedLoading=false;
- renderHistory();
-}
-$$('#histSource button').forEach(b=>b.onclick=()=>{
- $$('#histSource button').forEach(x=>x.classList.toggle('on',x===b));
- histSource=b.dataset.v;
- $('#histSourceHint').textContent = histSource==='live'
-   ? 'Đang xem DATA Mới (dữ liệu hiện hành trên Supabase). Chuyển sang "DATA Cũ" để tra cứu phiếu đã sao lưu sang Google Sheet (ảnh mở từ Google Drive) — kể cả phiếu đã xoá khỏi Supabase.'
-   : 'Đang xem DATA Cũ (đã sao lưu trong Google Sheet, tab "Tickets"). Đây là dữ liệu chỉ đọc — muốn cập nhật thì bấm "Đồng bộ Supabase → Google Sheet" trong ⚙️ Cài đặt.';
- if(histSource==='archived') loadArchivedTickets(false); else renderHistory();
-});
-// Nút "Làm mới" ở đầu trang: khi đang xem dữ liệu lưu trữ thì tải lại từ Sheet
-// (trước đây chỉ tải lại dữ liệu Supabase, người dùng tưởng nút bị hỏng).
-function refreshCurrentHistorySource(){ if(histSource==='archived') loadArchivedTickets(true); }
+async function loadArchivedTickets(){ archivedData=[]; }
+function refreshCurrentHistorySource(){}
+function renderHistory(){}
 
-/* Lọc theo khoảng ngày (Từ ngày → Đến ngày) — khi đang bật, thay thế hẳn bộ
-   lọc Ngày/Tuần/Tháng/Năm bên dưới (2 kiểu lọc cùng lúc dễ gây hiểu lầm). */
-let histRange=null; // {from,to} hoặc null khi không lọc theo khoảng
-$('#btnHistApplyRange').onclick=()=>{
- const from=$('#histFromDate').value, to=$('#histToDate').value;
- if(!from||!to){ toast('Chọn đủ Từ ngày và Đến ngày',true); return; }
- if(from>to){ toast('"Từ ngày" phải trước "Đến ngày"',true); return; }
- histRange={from,to};
- $$('#histYMW select').forEach(s=>s.value=''); // bỏ lọc theo Ngày/Tuần/Tháng/Năm cho khỏi chồng chéo
- renderHistory();
+/* ===================== BAO HANH (warranty_receipts) =====================
+   Form nhan hang bao hanh 2 giai doan (Nhan vao → Tra khach). Anh + video ≤45s
+   upload len Supabase Storage, sau do relay ngam sang R2 (nhu ticket). PDF va
+   playback video ngay trong app. */
+let whData = [];
+let whLoading = false;
+let whCurrentId = null;   // null = tao moi; number = sua phieu id nay
+let whStage1Photos = [];  // {url,name}
+let whStage2Photos = [];
+let whStage1Video = null; // {url,name} hoac null
+let whStage2Video = null;
+
+const WH_STATUS = {
+  received: {label:'🆕 Vừa nhận', color:'#0369a1', bg:'#e0f2fe'},
+  sent_to_vendor: {label:'📤 Đã gửi hãng', color:'#a16207', bg:'#fef3c7'},
+  returned_from_vendor: {label:'📥 Hãng đã trả', color:'#6d28d9', bg:'#ede9fe'},
+  delivered: {label:'✅ Đã trả khách', color:'#166534', bg:'#dcfce7'}
 };
-$('#btnHistClearRange').onclick=()=>{
- histRange=null; $('#histFromDate').value=''; $('#histToDate').value='';
- renderHistory();
+function whStatusPill(s){
+  const st = WH_STATUS[s] || {label:s||'?', color:'#334155', bg:'#e2e8f0'};
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;color:${st.color};background:${st.bg}">${st.label}</span>`;
+}
+// Tu dong tinh status tu cac cot ngay: co delivered_at → delivered; co returned_from_vendor_at → returned_from_vendor;
+// co sent_to_vendor_at → sent_to_vendor; con lai → received.
+function whComputeStatus(r){
+  if (r.returned_to_customer_at) return 'delivered';
+  if (r.returned_from_vendor_at) return 'returned_from_vendor';
+  if (r.sent_to_vendor_at) return 'sent_to_vendor';
+  return 'received';
+}
+
+async function loadWarranty(force){
+  if (whLoading) return;
+  whLoading = true;
+  if (force || !whData.length) $('#warrantyList').innerHTML = '<div class="empty"><div class="t">Đang tải danh sách phiếu bảo hành...</div></div>';
+  try{
+    const j = await DB.listWarranty();
+    whData = j.ok ? j.data : [];
+    if (!j.ok) toast(j.error||'Không tải được danh sách bảo hành', true);
+  }catch(err){ whData = []; toast('Lỗi tải danh sách bảo hành', true); }
+  whLoading = false;
+  renderWarrantyList();
+}
+
+function renderWarrantyList(){
+  const q = ($('#whSearch').value||'').trim().toLowerCase();
+  const status = $('#whFilterStatus').value;
+  let list = whData.slice();
+  if (status) list = list.filter(r => whComputeStatus(r) === status);
+  if (q) list = list.filter(r => (
+    (r.receipt_no||'') + ' ' + (r.customer||'') + ' ' + (r.device_name||'') + ' ' +
+    (r.device_model||'') + ' ' + (r.device_serial||'') + ' ' + (r.fault_description||'') + ' ' +
+    (r.vendor_name||'') + ' ' + (r.note||'')
+  ).toLowerCase().includes(q));
+  $('#whListTitle').textContent = `Danh sách phiếu bảo hành (${list.length})`;
+  if (!list.length){
+    $('#warrantyList').innerHTML = emptyState(q||status?'Không tìm thấy':'Chưa có phiếu bảo hành',
+      q||status?'Không có phiếu khớp bộ lọc/tìm kiếm.':'Bấm nút "+ Nhận hàng bảo hành mới" phía trên để tạo phiếu đầu tiên.');
+    return;
+  }
+  $('#warrantyList').innerHTML = list.map(r => {
+    const s = whComputeStatus(r);
+    const photos = (r.stage1_photos||[]).length + (r.stage2_photos||[]).length;
+    const vids = (r.stage1_video_url?1:0) + (r.stage2_video_url?1:0);
+    return `<div class="tk card" style="margin-bottom:10px;padding:12px" data-id="${r.id}">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="font-weight:700;color:var(--brand)">${esc(r.receipt_no||('#'+r.id))} · ${esc(r.customer||'—')}</div>
+        ${whStatusPill(s)}
+      </div>
+      <div style="margin-top:6px;color:var(--muted);font-size:13px">
+        <span>📅 ${fmtDMYFull(r.receipt_date)}</span> ·
+        <span>🔧 ${esc(r.device_name||'—')}${r.device_model?' ('+esc(r.device_model)+')':''}</span>
+        ${r.device_serial?' · <span>S/N: '+esc(r.device_serial)+'</span>':''}
+        ${r.quantity>1?' · <span>SL: '+r.quantity+'</span>':''}
+      </div>
+      ${r.fault_description?`<div style="margin-top:4px;font-size:13px"><b>Lỗi:</b> ${esc(r.fault_description)}</div>`:''}
+      ${r.vendor_name?`<div style="margin-top:4px;font-size:13px;color:var(--muted)">🏭 Hãng: ${esc(r.vendor_name)}${r.sent_to_vendor_at?' · Gửi: '+fmtDMYFull(r.sent_to_vendor_at):''}${r.returned_from_vendor_at?' · Về: '+fmtDMYFull(r.returned_from_vendor_at):''}</div>`:''}
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+        ${photos?`<span class="btn-mini" style="background:var(--surface-2);color:var(--muted);cursor:default">📷 ${photos} ảnh</span>`:''}
+        ${vids?`<span class="btn-mini" style="background:var(--surface-2);color:var(--muted);cursor:default">🎥 ${vids} video</span>`:''}
+        <button type="button" class="btn-mini wh-edit" data-id="${r.id}">✏️ Sửa / Xem</button>
+        <button type="button" class="btn-mini wh-pdf" data-id="${r.id}">📄 PDF</button>
+        <button type="button" class="btn-mini wh-del" data-id="${r.id}" style="background:#fee2e2;color:#991b1b">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+  $$('#warrantyList .wh-edit').forEach(b => b.onclick = () => openWarrantyForm(Number(b.dataset.id)));
+  $$('#warrantyList .wh-pdf').forEach(b => b.onclick = () => exportWarrantyPdf(Number(b.dataset.id)));
+  $$('#warrantyList .wh-del').forEach(b => b.onclick = () => deleteWarrantyPrompt(Number(b.dataset.id)));
+}
+
+$('#whSearch').oninput = renderWarrantyList;
+$('#whFilterStatus').onchange = renderWarrantyList;
+$('#btnWhNew').onclick = () => openWarrantyForm(null);
+$('#btnWhClose').onclick = $('#btnWhCancel').onclick = () => $('#whModal').classList.remove('show');
+$('#whModal').onclick = e => { if (e.target === $('#whModal')) $('#whModal').classList.remove('show'); };
+
+function openWarrantyForm(id){
+  whCurrentId = id;
+  whStage1Photos = []; whStage2Photos = []; whStage1Video = null; whStage2Video = null;
+  $('#whModalTitle').textContent = id ? 'Sửa / Xem phiếu bảo hành' : 'Nhận hàng bảo hành mới';
+  $('#wh_id').value = id || '';
+  // Reset fields
+  ['wh_customer','wh_system','wh_device_name','wh_device_model','wh_device_serial',
+   'wh_fault','wh_receiver_name','wh_vendor_name','wh_vendor_note',
+   'wh_returned_by','wh_customer_signer','wh_note'].forEach(k => { const el=$('#'+k); if(el) el.value=''; });
+  $('#wh_quantity').value = 1;
+  ['wh_receipt_date','wh_sent_at','wh_returned_at','wh_delivered_at'].forEach(k => $('#'+k).value = '');
+  // Default receipt_date = today VN
+  const today = vnNow();
+  $('#wh_receipt_date').value = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
+  if (id){
+    const r = whData.find(x => x.id === id);
+    if (r){
+      $('#wh_customer').value = r.customer||'';
+      $('#wh_system').value = r.system||'';
+      $('#wh_device_name').value = r.device_name||'';
+      $('#wh_device_model').value = r.device_model||'';
+      $('#wh_device_serial').value = r.device_serial||'';
+      $('#wh_quantity').value = r.quantity||1;
+      $('#wh_fault').value = r.fault_description||'';
+      $('#wh_receiver_name').value = r.receiver_name||'';
+      if (r.receipt_date) $('#wh_receipt_date').value = r.receipt_date;
+      $('#wh_vendor_name').value = r.vendor_name||'';
+      if (r.sent_to_vendor_at) $('#wh_sent_at').value = r.sent_to_vendor_at;
+      if (r.returned_from_vendor_at) $('#wh_returned_at').value = r.returned_from_vendor_at;
+      $('#wh_vendor_note').value = r.vendor_note||'';
+      if (r.returned_to_customer_at) $('#wh_delivered_at').value = r.returned_to_customer_at;
+      $('#wh_returned_by').value = r.returned_by||'';
+      $('#wh_customer_signer').value = r.customer_signer||'';
+      $('#wh_note').value = r.note||'';
+      whStage1Photos = (r.stage1_photos||[]).slice();
+      whStage2Photos = (r.stage2_photos||[]).slice();
+      if (r.stage1_video_url) whStage1Video = {url:r.stage1_video_url, name:r.stage1_video_name||'video1'};
+      if (r.stage2_video_url) whStage2Video = {url:r.stage2_video_url, name:r.stage2_video_name||'video2'};
+    }
+  }
+  renderWhPhotos(1); renderWhPhotos(2); renderWhVideo(1); renderWhVideo(2);
+  $('#whModal').classList.add('show');
+}
+
+function renderWhPhotos(stage){
+  const arr = stage===1 ? whStage1Photos : whStage2Photos;
+  const box = $(`#wh_photos${stage}_preview`);
+  if (!arr.length){ box.innerHTML=''; return; }
+  box.innerHTML = arr.map((p,i)=>`<div style="position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden">
+    <a href="${esc(p.url)}" target="_blank" rel="noopener"><img src="${esc(p.url)}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block"></a>
+    <button type="button" class="wh-rm-photo" data-stage="${stage}" data-i="${i}" style="position:absolute;top:4px;right:4px;background:rgba(220,38,38,.9);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:1">×</button>
+  </div>`).join('');
+  $$(`#wh_photos${stage}_preview .wh-rm-photo`).forEach(b => b.onclick = () => {
+    const s = Number(b.dataset.stage), idx = Number(b.dataset.i);
+    if (s===1) whStage1Photos.splice(idx,1); else whStage2Photos.splice(idx,1);
+    renderWhPhotos(s);
+  });
+}
+
+function renderWhVideo(stage){
+  const v = stage===1 ? whStage1Video : whStage2Video;
+  const box = $(`#wh_video${stage}_preview`);
+  if (!v){ box.innerHTML=''; return; }
+  box.innerHTML = `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px;background:var(--surface-2);border-radius:8px">
+    <video src="${esc(v.url)}" controls playsinline style="max-width:280px;width:100%;border-radius:6px;background:#000"></video>
+    <button type="button" class="wh-rm-video" data-stage="${stage}" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px">🗑 Xóa video</button>
+  </div>`;
+  $(`#wh_video${stage}_preview .wh-rm-video`).onclick = () => {
+    if (stage===1) whStage1Video=null; else whStage2Video=null;
+    renderWhVideo(stage);
+  };
+}
+
+// Wire cac nut them anh/video
+[1,2].forEach(stage => {
+  $(`#btnWhAddPhoto${stage}`).onclick = () => $(`#wh_photo${stage}_file`).click();
+  $(`#wh_photo${stage}_file`).onchange = async e => {
+    const files = Array.from(e.target.files||[]);
+    e.target.value = '';
+    if (!files.length) return;
+    toast(`⏳ Đang tải ${files.length} ảnh...`);
+    for (const f of files){
+      if (f.size > 15*1024*1024){ toast(`⚠️ Ảnh "${f.name}" > 15MB, bỏ qua`, true); continue; }
+      const up = await DB.uploadAttachment(f);
+      if (!up.ok){ toast(`⚠️ Upload thất bại: ${up.error||'lỗi'}`, true); continue; }
+      const rec = {url: up.url, name: up.name};
+      if (stage===1) whStage1Photos.push(rec); else whStage2Photos.push(rec);
+    }
+    renderWhPhotos(stage);
+    toast('✅ Đã tải ảnh xong');
+  };
+  $(`#btnWhAddVideo${stage}`).onclick = () => $(`#wh_video${stage}_file`).click();
+  $(`#wh_video${stage}_file`).onchange = async e => {
+    const f = e.target.files[0]; e.target.value = '';
+    if (!f) return;
+    if (f.size > 50*1024*1024){ toast('⚠️ Video > 50MB — vui lòng quay ngắn hơn hoặc nén trước', true); return; }
+    // Check thoi luong ≤45s truoc khi upload
+    const dur = await new Promise(res => {
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      v.onloadedmetadata = () => { URL.revokeObjectURL(v.src); res(v.duration); };
+      v.onerror = () => res(0);
+      v.src = URL.createObjectURL(f);
+    });
+    if (dur > 46){ toast(`⚠️ Video ${dur.toFixed(1)}s > 45s — vui lòng quay ngắn hơn hoặc cắt trước`, true); return; }
+    toast('⏳ Đang tải video...');
+    const up = await DB.uploadAttachment(f);
+    if (!up.ok){ toast(`⚠️ Upload video thất bại: ${up.error||'lỗi'}`, true); return; }
+    const rec = {url: up.url, name: up.name};
+    if (stage===1) whStage1Video = rec; else whStage2Video = rec;
+    renderWhVideo(stage);
+    toast(`✅ Video đã tải (${dur.toFixed(1)}s)`);
+  };
+});
+
+$('#btnWhSave').onclick = async () => {
+  const customer = $('#wh_customer').value.trim();
+  if (!customer){ toast('Nhập tên khách hàng', true); $('#wh_customer').focus(); return; }
+  const receiptDate = $('#wh_receipt_date').value;
+  if (!receiptDate){ toast('Chọn ngày nhận', true); $('#wh_receipt_date').focus(); return; }
+  const payload = {
+    customer,
+    system: $('#wh_system').value.trim() || null,
+    device_name: $('#wh_device_name').value.trim() || null,
+    device_model: $('#wh_device_model').value.trim() || null,
+    device_serial: $('#wh_device_serial').value.trim() || null,
+    quantity: Number($('#wh_quantity').value)||1,
+    fault_description: $('#wh_fault').value.trim() || null,
+    receiver_name: $('#wh_receiver_name').value.trim() || null,
+    receipt_date: receiptDate,
+    stage1_photos: whStage1Photos,
+    stage1_video_url: whStage1Video ? whStage1Video.url : null,
+    stage1_video_name: whStage1Video ? whStage1Video.name : null,
+    vendor_name: $('#wh_vendor_name').value.trim() || null,
+    sent_to_vendor_at: $('#wh_sent_at').value || null,
+    returned_from_vendor_at: $('#wh_returned_at').value || null,
+    vendor_note: $('#wh_vendor_note').value.trim() || null,
+    stage2_photos: whStage2Photos,
+    stage2_video_url: whStage2Video ? whStage2Video.url : null,
+    stage2_video_name: whStage2Video ? whStage2Video.name : null,
+    returned_to_customer_at: $('#wh_delivered_at').value || null,
+    returned_by: $('#wh_returned_by').value.trim() || null,
+    customer_signer: $('#wh_customer_signer').value.trim() || null,
+    note: $('#wh_note').value.trim() || null
+  };
+  // Auto derive status tu cac cot ngay
+  payload.status = whComputeStatus(payload);
+  const btn = $('#btnWhSave'); btn.disabled = true; btn.textContent = '⏳ Đang lưu...';
+  try{
+    const j = whCurrentId
+      ? await DB.updateWarranty(whCurrentId, payload)
+      : await DB.createWarranty(payload);
+    if (!j.ok){ toast(j.error||'Lưu thất bại', true); return; }
+    toast(whCurrentId ? '✅ Đã cập nhật phiếu' : `✅ Đã tạo phiếu ${j.receipt_no||''}`);
+    $('#whModal').classList.remove('show');
+    loadWarranty(true);
+    // Relay ngam sang R2 (khong chan)
+    const savedId = whCurrentId || j.id;
+    setTimeout(() => whRelayFiles(savedId, payload).catch(()=>{}), 200);
+  }catch(err){ toast('Lỗi khi lưu: '+err.message, true); }
+  finally{ btn.disabled=false; btn.textContent='💾 Lưu phiếu'; }
 };
-function renderHistory(){
- const fYear=$('#histYear').value, fMonth=$('#histMonth').value, fDay=$('#histDay').value, fWeek=$('#histWeek').value;
- const q=($('#histSearch').value||'').trim().toLowerCase();
- const isArchived=histSource==='archived';
- const source=isArchived?(archivedData||[]):mgrData;
- let h=histRange
-   ? source.filter(r=>r.date&&r.date>=histRange.from&&r.date<=histRange.to)
-   : source.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
- if(q) h=h.filter(r=>((r.engineer||'')+' '+(r.issue||'')+' '+(r.customer||'')+' '+(r.system||'')+' '+(r.workType||'')).toLowerCase().includes(q));
- h.sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(Number(a.no)-Number(b.no))); // ngày nhỏ (cũ) đến lớn (mới), xem chú thích ở renderManager
- const lbl=histRange?`${fmtDMYFull(histRange.from)} → ${fmtDMYFull(histRange.to)}`
-   :[fYear&&('Năm '+fYear),fMonth&&('Tháng '+Number(fMonth)),fDay&&('Ngày '+Number(fDay)),fWeek&&('Tuần '+fWeek)].filter(Boolean).join(', ')||'Tất cả';
- $('#histListTitle').textContent=`${isArchived?'Phiếu đã lưu trữ':'Lịch sử phiếu'} · ${lbl} (${h.length})`;
- if(isArchived && archivedLoading) return;
- if(!h.length){$('#historyList').innerHTML=emptyState(q?'Không tìm thấy':'Chưa có phiếu',
-   q?'Không có phiếu khớp tìm kiếm.'
-   :isArchived?'Chưa có phiếu nào trong Google Sheet. Vào ⚙️ Cài đặt bấm "Đồng bộ Supabase → Google Sheet" để sao lưu.'
-   :sb?'Không có phiếu trong khoảng thời gian này.':'Kết nối Supabase để xem lịch sử.');return}
- $('#historyList').innerHTML=`<div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột</div>
-   <div class="rpt-wrap"><table class="rpt">
-   <thead><tr><th>No</th><th>Ngày</th><th>Khách hàng</th><th>Hệ thống</th><th>Loại công việc</th><th>Sự cố</th><th>Ưu tiên</th><th>Kỹ sư</th><th>Hỗ trợ</th><th>Trạng thái</th><th>Sửa</th></tr></thead>
-   <tbody>${h.map((r,i)=>rptRow(r,i+1,isArchived)).join('')}</tbody>
- </table></div>`;
- $$('#historyList .status-sel').forEach(sel=>sel.onchange=()=>updateStatus(sel.dataset.no,sel.value,sel));
- $$('#historyList .btn-row-view').forEach(b=>b.onclick=()=>showRemark(b.dataset.no,b.dataset.displayNo,b.dataset.archived==='1'));
- $$('#historyList .btn-row-photos').forEach(b=>b.onclick=()=>showPhotos(b.dataset.no,b.dataset.displayNo,b.dataset.archived==='1'));
- $$('#historyList .btn-row-pdf').forEach(b=>b.onclick=()=>exportBblvPdf(b.dataset.no,b.dataset.displayNo,b.dataset.archived==='1'));
- $$('#historyList .btn-row-edit').forEach(b=>b.onclick=()=>startEdit(b.dataset.no,b.dataset.displayNo));
- $$('#historyList .btn-row-delete').forEach(b=>b.onclick=()=>deleteTicket(b.dataset.no,b.dataset.displayNo));
+
+async function whRelayFiles(id, payload){
+  // Video: dung CAS RPC
+  const relayVid = async (col, v) => {
+    if (!v || !isSupabaseStorageUrl(v.url)) return;
+    const ar = await DB.relayFileToR2(v.url, v.name, payload.customer, payload.receipt_date);
+    if (!ar.ok || !ar.r2Url) return;
+    const sw = await DB.warrantyRelayFile(id, col, v.url, ar.r2Url);
+    if (sw.done){
+      const m = v.url.match(/\/ticket-attachments\/(.+)$/);
+      if (m) try{ await sb.storage.from('ticket-attachments').remove([decodeURIComponent(m[1])]); }catch{}
+    }
+  };
+  await relayVid('stage1_video_url', whStage1Video && payload.stage1_video_url ? whStage1Video : null);
+  await relayVid('stage2_video_url', whStage2Video && payload.stage2_video_url ? whStage2Video : null);
+  // Anh: relay tung URL, swap trong mang jsonb bang warrantyRelayPhoto
+  const relayPhotos = async (stage, arr) => {
+    for (const p of (arr||[])){
+      if (!isSupabaseStorageUrl(p.url)) continue;
+      const ar = await DB.relayFileToR2(p.url, p.name, payload.customer, payload.receipt_date);
+      if (!ar.ok || !ar.r2Url) continue;
+      const sw = await DB.warrantyRelayPhoto(id, stage, p.url, ar.r2Url);
+      if (sw.done){
+        const m = p.url.match(/\/ticket-attachments\/(.+)$/);
+        if (m) try{ await sb.storage.from('ticket-attachments').remove([decodeURIComponent(m[1])]); }catch{}
+      }
+    }
+  };
+  await relayPhotos(1, whStage1Photos);
+  await relayPhotos(2, whStage2Photos);
+}
+
+async function deleteWarrantyPrompt(id){
+  const r = whData.find(x => x.id === id);
+  if (!r){ toast('Không tìm thấy phiếu', true); return; }
+  const pass = prompt(`Xóa phiếu ${r.receipt_no||'#'+id} (${r.customer})? Nhập mật khẩu quản trị:`);
+  if (pass == null) return;
+  const j = await DB.deleteWarranty(id, pass);
+  if (!j.ok){ toast(j.error||'Xóa thất bại', true); return; }
+  toast('✅ Đã xóa phiếu');
+  loadWarranty(true);
+}
+
+async function exportWarrantyPdf(id){
+  const r = whData.find(x => x.id === id);
+  if (!r){ toast('Không tìm thấy phiếu', true); return; }
+  if (!window.jspdf){ toast('Chưa tải xong thư viện PDF, thử lại sau', true); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  const pageW = 210, mL = 12, mR = 12, contentW = pageW - mL - mR;
+  let y = 15;
+  doc.setFont('helvetica','bold'); doc.setFontSize(16);
+  doc.text('PHIẾU NHẬN BẢO HÀNH', pageW/2, y, {align:'center'}); y += 6;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text(`Số: ${r.receipt_no||'#'+r.id}    Trạng thái: ${(WH_STATUS[whComputeStatus(r)]||{}).label||'-'}`, pageW/2, y, {align:'center'}); y += 8;
+
+  const row = (label, val) => {
+    if (val == null || val === '') return;
+    doc.setFont('helvetica','bold'); doc.text(label+':', mL, y);
+    doc.setFont('helvetica','normal');
+    const lines = doc.splitTextToSize(String(val), contentW-38);
+    doc.text(lines, mL+38, y);
+    y += 5 * Math.max(1, lines.length);
+    if (y > 275){ doc.addPage(); y = 15; }
+  };
+  const section = (title) => {
+    y += 2; doc.setFont('helvetica','bold'); doc.setFontSize(12);
+    doc.setFillColor(230,240,255); doc.rect(mL, y-4, contentW, 7, 'F');
+    doc.text(title, mL+2, y+1); y += 6;
+    doc.setFontSize(10);
+  };
+
+  section('① Thông tin nhận hàng');
+  row('Khách hàng', r.customer);
+  row('Ngày nhận', fmtDMYFull(r.receipt_date));
+  row('Người nhận', r.receiver_name);
+  row('Hệ thống', r.system);
+  row('Tên thiết bị', r.device_name);
+  row('Model', r.device_model);
+  row('Serial', r.device_serial);
+  row('Số lượng', r.quantity);
+  row('Mô tả lỗi', r.fault_description);
+
+  section('② Gửi hãng & Trả về');
+  row('Hãng bảo hành', r.vendor_name);
+  row('Ngày gửi hãng', fmtDMYFull(r.sent_to_vendor_at));
+  row('Ngày hãng trả', fmtDMYFull(r.returned_from_vendor_at));
+  row('Ghi chú hãng', r.vendor_note);
+
+  section('③ Trả khách');
+  row('Ngày trả khách', fmtDMYFull(r.returned_to_customer_at));
+  row('Người trả', r.returned_by);
+  row('Khách ký nhận', r.customer_signer);
+  row('Ghi chú', r.note);
+
+  const p1 = (r.stage1_photos||[]).map(p=>p.url).filter(Boolean);
+  const p2 = (r.stage2_photos||[]).map(p=>p.url).filter(Boolean);
+  if (p1.length || p2.length){
+    y += 3;
+    if (y > 260){ doc.addPage(); y = 15; }
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('Hình ảnh đính kèm:', mL, y); y += 5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    const addLinks = (label, urls) => {
+      if (!urls.length) return;
+      doc.text(`${label} (${urls.length}):`, mL, y); y += 4;
+      urls.forEach((u,i) => {
+        const line = `  ${i+1}. ${u}`;
+        const lines = doc.splitTextToSize(line, contentW);
+        doc.text(lines, mL, y);
+        y += 4 * lines.length;
+        if (y > 285){ doc.addPage(); y = 15; }
+      });
+    };
+    addLinks('Ảnh nhận hàng', p1);
+    addLinks('Ảnh sau bảo hành', p2);
+  }
+  if (r.stage1_video_url || r.stage2_video_url){
+    y += 3;
+    if (y > 275){ doc.addPage(); y = 15; }
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('Video:', mL, y); y += 5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    if (r.stage1_video_url){ const l = doc.splitTextToSize('  • Nhận hàng: '+r.stage1_video_url, contentW); doc.text(l, mL, y); y += 4*l.length; }
+    if (r.stage2_video_url){ const l = doc.splitTextToSize('  • Sau bảo hành: '+r.stage2_video_url, contentW); doc.text(l, mL, y); y += 4*l.length; }
+  }
+  doc.save(`Phieu-BaoHanh-${r.receipt_no||r.id}.pdf`);
 }
 
 /* manager */
@@ -3574,7 +3978,7 @@ async function updateStatus(no,status,selEl){
      if(hrec){ hrec.status=status; localStorage.setItem(LS_HIST,JSON.stringify(hist)); }
      renderManager();   // làm mới bảng, thống kê, biểu đồ thanh ngang trong Quản lý
      renderDashboard();  // làm mới biểu đồ tròn trong Dashboard
-     if($('#view-history').classList.contains('active')) renderHistory();
+     /* view-history removed */
    } else { toast(j.error||'Lỗi cập nhật',true); selEl.disabled=false; }
  }catch(err){toast('Không cập nhật được. Kiểm tra mạng.',true); selEl.disabled=false;}
 }
@@ -3640,14 +4044,12 @@ async function deleteTicket(no,displayNo){
      localStorage.setItem(LS_HIST,JSON.stringify(hist));
      if(editingNo!=null && String(editingNo)===String(no)) cancelEdit();
      renderManager(); renderDashboard();
-     if($('#view-history').classList.contains('active')) renderHistory();
+     /* view-history removed */
    } else toast(j.error||'Lỗi xóa phiếu',true);
  }catch(err){ toast('Không xóa được. Kiểm tra mạng.',true); }
 }
 $('#mgrSearch').oninput=renderManager;
-$('#histSearch').oninput=renderHistory;
 wireYMW('mgr',renderManager);
-wireYMW('hist',renderHistory);
 wireYMW('dash',renderDashboard);
 $('#mgrCustomer').onchange=renderManager;
 $('#mgrSystem').onchange=renderManager;
