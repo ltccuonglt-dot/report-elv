@@ -1056,7 +1056,12 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       </div>
       <div class="filter-row">
         <select id="mgrCustomer"><option value="">Tất cả dự án</option></select>
-        <select id="mgrSystem"><option value="">Tất cả hệ thống</option></select>
+        <select id="mgrStatusSel">
+          <option value="">Tất cả trạng thái</option>
+          <option value="Done">✅ Done</option>
+          <option value="In Progress">⏳ Đang xử lý</option>
+          <option value="Pending">⏸ Chờ</option>
+        </select>
         <select id="mgrPriority">
           <option value="">Tất cả mức ưu tiên</option>
           <option value="Low">🟢 Low</option>
@@ -1072,7 +1077,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         </div>
       </div>
       <div class="toolbar">
-        <input type="text" id="mgrSearch" placeholder="🔍 Tìm sự cố, kỹ sư..." />
+        <input type="text" id="mgrSearch" placeholder="🔍 Tìm sự cố, kỹ sư, trạng thái..." />
         <button class="mini-btn" id="btnRefresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
       </div>
       <div class="stats" id="mgrStats"></div>
@@ -4295,7 +4300,6 @@ let mgrData=[];
 const MGR_CACHE_KEY='kt_mgr_cache_v1';
 function renderAllFromMgrData(){
  buildFilterOptions('mgrCustomer',mgrData.map(r=>r.customer));
- buildFilterOptions('mgrSystem',mgrData.map(r=>r.system));
  buildEngineerFilterOptions();
  buildYMWOptions();
  if (typeof buildDateFilterOptions==='function' && $('#mgrTable')) buildDateFilterOptions();
@@ -4562,11 +4566,12 @@ function thFilterConfig(){
  ].map(c=>({...c, btn:c.prefix+'_btn', panel:c.prefix+'_panel', search:c.prefix+'_search', list:c.prefix+'_list'}));
 }
 function mgrFilterVal(key){ return {date:mgrFilterDate, workType:mgrFilterWorkType, support:mgrFilterSupport, status:mgrFilterStatus}[key]; }
+function getThCfg(key){ return thFilterConfig().find(c=>c.key===key); }
 function setMgrFilter(key,val){
  if(key==='date') mgrFilterDate=val;
  else if(key==='workType') mgrFilterWorkType=val;
  else if(key==='support') mgrFilterSupport=val;
- else if(key==='status') mgrFilterStatus=val;
+ else if(key==='status'){ mgrFilterStatus=val; const sel=$('#mgrStatusSel'); if(sel) sel.value=val||''; }
 }
 function applyMgrThFilters(data){
  if(mgrFilterDate) data=data.filter(r=>r.date===mgrFilterDate);
@@ -4651,14 +4656,13 @@ function ensureMgrTableSkeleton(){
 function renderManager(){
  const fYear=$('#mgrYear').value, fMonth=$('#mgrMonth').value, fDay=$('#mgrDay').value, fWeek=$('#mgrWeek').value;
  const q=$('#mgrSearch').value.trim().toLowerCase();
- const fCus=$('#mgrCustomer').value,fSys=$('#mgrSystem').value,fPri=$('#mgrPriority').value;
+ const fCus=$('#mgrCustomer').value,fPri=$('#mgrPriority').value;
  let data=mgrData.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
  if(fCus)data=data.filter(r=>r.customer===fCus);
- if(fSys)data=data.filter(r=>r.system===fSys);
  if(fPri)data=data.filter(r=>r.priority===fPri);
  data=applyMgrThFilters(data);
  if(mgrEngineerFilter)data=data.filter(r=>(r.engineer||'').includes(mgrEngineerFilter));
- if(q)data=data.filter(r=>((r.issue||'')+(r.engineer||'')+(r.system||'')+(r.customer||'')+(r.priority||'')+(r.workType||'')).toLowerCase().includes(q));
+ if(q)data=data.filter(r=>((r.issue||'')+(r.engineer||'')+(r.customer||'')+(r.priority||'')+(r.workType||'')+' '+slabel(r.status)+' '+(r.status||'')).toLowerCase().includes(q));
  // Xếp theo NGÀY từ nhỏ đến lớn (cũ → mới, giống thứ tự từ lúc build app) —
  // không xếp theo No, vì No chỉ là số thứ tự lúc tạo phiếu, không đổi khi
  // sửa ngày; xếp theo No sẽ để phiếu ngày cũ hơn nằm dưới phiếu ngày mới
@@ -4715,7 +4719,7 @@ $('#mgrSearch').oninput=renderManager;
 wireYMW('mgr',renderManager);
 wireYMW('dash',renderDashboard);
 $('#mgrCustomer').onchange=renderManager;
-$('#mgrSystem').onchange=renderManager;
+$('#mgrStatusSel').onchange=e=>{ setMgrFilter('status', e.target.value); updateThButtonState(getThCfg('status')); renderManager(); };
 $('#mgrPriority').onchange=renderManager;
 $('#btnRefresh').onclick=()=>{loadManager();/*no history*/toast('Đã làm mới')};
 /* Làm mới TOÀN BỘ TRANG (không chỉ dữ liệu) — tải lại bản mới nhất từ server,
@@ -4727,14 +4731,13 @@ $('#btnPageReload').onclick=()=>{ location.href=location.pathname+'?v='+Date.now
 $('#btnExport').onclick=()=>{
  const fYear=$('#mgrYear').value, fMonth=$('#mgrMonth').value, fDay=$('#mgrDay').value, fWeek=$('#mgrWeek').value;
  const q=$('#mgrSearch').value.trim().toLowerCase();
- const fCus=$('#mgrCustomer').value,fSys=$('#mgrSystem').value,fPri=$('#mgrPriority').value;
+ const fCus=$('#mgrCustomer').value,fPri=$('#mgrPriority').value;
  let data=mgrData.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
  if(fCus)data=data.filter(r=>r.customer===fCus);
- if(fSys)data=data.filter(r=>r.system===fSys);
  if(fPri)data=data.filter(r=>r.priority===fPri);
  data=applyMgrThFilters(data);
  if(mgrEngineerFilter)data=data.filter(r=>(r.engineer||'').includes(mgrEngineerFilter));
- if(q) data=data.filter(r=>((r.issue||'')+(r.engineer||'')+(r.system||'')+(r.customer||'')+(r.priority||'')+(r.workType||'')).toLowerCase().includes(q));
+ if(q) data=data.filter(r=>((r.issue||'')+(r.engineer||'')+(r.customer||'')+(r.priority||'')+(r.workType||'')+' '+slabel(r.status)+' '+(r.status||'')).toLowerCase().includes(q));
  if(!data.length){toast('Không có dữ liệu để xuất',true);return}
  if(typeof XLSX==='undefined'){toast('Chưa tải được thư viện xuất Excel, thử lại sau',true);return}
 
