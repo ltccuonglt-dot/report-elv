@@ -397,6 +397,19 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .filter-row .msel{flex:1;min-width:120px}
 .filter-row .msel-btn{font-size:12.5px;font-weight:600;padding:8px 28px 8px 10px;border-radius:9px}
 
+/* Dropdown lọc tìm kiếm ngay trong header bảng Quản lý (Ngày/Loại công việc/
+   Hỗ trợ/Trạng thái) — chỉ hiện trên desktop vì thead ẩn hoàn toàn ở mobile
+   (table.rpt thead{display:none} mặc định, chỉ display:table-header-group từ
+   breakpoint desktop trở lên). Panel dùng position:fixed + toạ độ tính bằng
+   JS lúc mở, để không bị .rpt-wrap{overflow-x:auto} cắt mất. */
+.th-filter{display:inline-block;margin-left:5px;vertical-align:middle}
+.th-fbtn{width:18px;height:18px;padding:0;border:none;background:transparent;color:inherit;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;opacity:.6;vertical-align:middle}
+.th-fbtn:hover{opacity:1;background:rgba(0,0,0,.08)}
+.th-fbtn.has-filter{opacity:1;color:var(--brand)}
+.th-fbtn svg{width:11px;height:11px}
+.th-fpanel{position:fixed;width:210px;background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow);padding:8px;z-index:200;text-transform:none;letter-spacing:normal;font-weight:500}
+.th-fpanel[hidden]{display:none}
+
 /* report table */
 /* Mặc định (điện thoại, màn hẹp): KHÔNG cuộn ngang — mỗi phiếu hiện thành 1 thẻ,
    mỗi cột thành 1 dòng "nhãn: giá trị" xếp dọc, vừa khít màn hình. */
@@ -1049,13 +1062,6 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
           <option value="Low">🟢 Low</option>
           <option value="Medium">🟡 Medium</option>
           <option value="High">🔴 High</option>
-        </select>
-        <select id="mgrWorkType">
-          <option value="">Tất cả loại công việc</option>
-          <option value="Bảo hành">Bảo hành</option>
-          <option value="Bảo trì">Bảo trì</option>
-          <option value="Lắp mới">Lắp mới</option>
-          <option value="Khảo sát">Khảo sát</option>
         </select>
         <div class="msel" id="mgrEngineer_dd">
           <button type="button" class="msel-btn placeholder" id="mgrEngineer_btn">Tất cả kỹ sư</button>
@@ -4292,6 +4298,7 @@ function renderAllFromMgrData(){
  buildFilterOptions('mgrSystem',mgrData.map(r=>r.system));
  buildEngineerFilterOptions();
  buildYMWOptions();
+ if (typeof buildDateFilterOptions==='function' && $('#mgrTable')) buildDateFilterOptions();
  renderManager();
  renderDashboard();
  /*no history*/
@@ -4538,15 +4545,118 @@ async function updateStatus(no,status,selEl){
    } else { toast(j.error||'Lỗi cập nhật',true); selEl.disabled=false; }
  }catch(err){toast('Không cập nhật được. Kiểm tra mạng.',true); selEl.disabled=false;}
 }
+
+/* ===== Bộ lọc dropdown tìm kiếm ngay trong header bảng Quản lý (Ngày/Loại
+   công việc/Hỗ trợ/Trạng thái) — chỉ hiện trên desktop vì <thead> ẩn hoàn
+   toàn ở mobile (table.rpt thead{display:none} mặc định). Panel dùng
+   position:fixed + toạ độ tính bằng JS lúc mở, không bị .rpt-wrap cắt mất.
+   Header (<thead>) được dựng 1 lần (ensureMgrTableSkeleton), không bị vẽ
+   lại mỗi lần renderManager() chạy, nên state mở/đóng panel không bị mất. */
+let mgrFilterDate='', mgrFilterWorkType='', mgrFilterSupport='', mgrFilterStatus='';
+function thFilterConfig(){
+ return [
+   {key:'date', prefix:'mgrFdate'},
+   {key:'workType', prefix:'mgrFwt'},
+   {key:'support', prefix:'mgrFsup'},
+   {key:'status', prefix:'mgrFst'}
+ ].map(c=>({...c, btn:c.prefix+'_btn', panel:c.prefix+'_panel', search:c.prefix+'_search', list:c.prefix+'_list'}));
+}
+function mgrFilterVal(key){ return {date:mgrFilterDate, workType:mgrFilterWorkType, support:mgrFilterSupport, status:mgrFilterStatus}[key]; }
+function setMgrFilter(key,val){
+ if(key==='date') mgrFilterDate=val;
+ else if(key==='workType') mgrFilterWorkType=val;
+ else if(key==='support') mgrFilterSupport=val;
+ else if(key==='status') mgrFilterStatus=val;
+}
+function applyMgrThFilters(data){
+ if(mgrFilterDate) data=data.filter(r=>r.date===mgrFilterDate);
+ if(mgrFilterWorkType) data=data.filter(r=>r.workType===mgrFilterWorkType);
+ if(mgrFilterSupport) data=data.filter(r=>{const isSite=(r.support||'').toLowerCase().includes('site'); return mgrFilterSupport==='On-Site'?isSite:!isSite;});
+ if(mgrFilterStatus) data=data.filter(r=>{const norm=/prog|xử/i.test(r.status)?'In Progress':/pend|chờ/i.test(r.status)?'Pending':'Done'; return norm===mgrFilterStatus;});
+ return data;
+}
+function thFilterHtml(prefix,title){
+ return `<span class="th-filter" id="${prefix}"><button type="button" class="th-fbtn" id="${prefix}_btn" title="${esc(title)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h18l-7 8v6l-4 2v-8z"/></svg></button><div class="th-fpanel" id="${prefix}_panel" hidden><input type="text" class="msel-search" id="${prefix}_search" placeholder="🔍 Tìm kiếm..."><div class="msel-list" id="${prefix}_list"></div></div></span>`;
+}
+function closeAllThFilters(){
+ thFilterConfig().forEach(c=>{ const p=$('#'+c.panel); if(p) p.hidden=true; });
+}
+document.addEventListener('click', e=>{ if(e.target.closest('.th-filter')) return; closeAllThFilters(); });
+window.addEventListener('resize', closeAllThFilters);
+document.addEventListener('scroll', e=>{ if(e.target && e.target.closest && e.target.closest('.rpt-wrap')) closeAllThFilters(); }, true);
+function openThFilterPanel(cfg){
+ const btn=$('#'+cfg.btn), panel=$('#'+cfg.panel);
+ if(!btn||!panel) return;
+ const willOpen=panel.hidden;
+ closeAllThFilters();
+ if(!willOpen) return;
+ const r=btn.getBoundingClientRect();
+ panel.style.top=(r.bottom+6)+'px';
+ const maxLeft=window.innerWidth-226;
+ panel.style.left=Math.max(8,Math.min(r.left,maxLeft))+'px';
+ panel.hidden=false;
+ const search=$('#'+cfg.search); if(search){ search.value=''; filterThList(cfg,''); search.focus(); }
+}
+function filterThList(cfg,q){
+ q=(q||'').trim().toLowerCase();
+ $$('#'+cfg.list+' .msel-opt').forEach(opt=>{ opt.hidden = !!q && !!opt.dataset.label && !opt.dataset.label.toLowerCase().includes(q); });
+}
+function buildThOptions(cfg,items,allLabel){
+ const list=$('#'+cfg.list); if(!list) return;
+ list.innerHTML=`<label class="msel-opt" data-value="" data-label="${esc(allLabel)}" style="font-weight:700">${esc(allLabel)}</label>`+
+   items.map(it=>`<label class="msel-opt" data-value="${esc(it.value)}" data-label="${esc(it.label)}">${esc(it.label)}</label>`).join('');
+ $$('#'+cfg.list+' .msel-opt').forEach(opt=>opt.onclick=()=>{
+   setMgrFilter(cfg.key, opt.dataset.value);
+   updateThButtonState(cfg);
+   closeAllThFilters();
+   renderManager();
+ });
+ updateThButtonState(cfg);
+}
+function updateThButtonState(cfg){
+ const btn=$('#'+cfg.btn);
+ if(btn) btn.classList.toggle('has-filter', !!mgrFilterVal(cfg.key));
+}
+function wireThFilterTriggers(){
+ thFilterConfig().forEach(cfg=>{
+   const btn=$('#'+cfg.btn); if(!btn) return;
+   btn.onclick=e=>{ e.stopPropagation(); openThFilterPanel(cfg); };
+   const panel=$('#'+cfg.panel); if(panel) panel.onclick=e=>e.stopPropagation();
+   const search=$('#'+cfg.search); if(search) search.oninput=e=>filterThList(cfg,e.target.value);
+ });
+}
+function buildStaticThOptions(){
+ const [,cfgWT,cfgSup,cfgSt]=thFilterConfig();
+ buildThOptions(cfgWT, ['Bảo hành','Bảo trì','Lắp mới','Khảo sát'].map(v=>({value:v,label:v})), 'Tất cả loại công việc');
+ buildThOptions(cfgSup, [{value:'Online',label:'Online'},{value:'On-Site',label:'On-Site'}], 'Tất cả hỗ trợ');
+ buildThOptions(cfgSt, [{value:'Done',label:'✅ Done'},{value:'In Progress',label:'⏳ Đang xử lý'},{value:'Pending',label:'⏸ Chờ'}], 'Tất cả trạng thái');
+}
+function buildDateFilterOptions(){
+ const [cfgDate]=thFilterConfig();
+ const uniqDates=[...new Set(mgrData.map(r=>r.date).filter(Boolean))].sort((a,b)=>b.localeCompare(a));
+ buildThOptions(cfgDate, uniqDates.map(d=>({value:d,label:fmtDMYFull(d)})), 'Tất cả ngày');
+}
+function ensureMgrTableSkeleton(){
+ if ($('#mgrTable')) return;
+ $('#managerList').innerHTML=`<div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột</div>
+   <div class="rpt-wrap"><table class="rpt" id="mgrTable">
+   <thead><tr><th>No</th><th>Ngày${thFilterHtml('mgrFdate','Lọc theo ngày')}</th><th>Khách hàng</th><th>Hệ thống</th><th>Loại công việc${thFilterHtml('mgrFwt','Lọc theo loại công việc')}</th><th>Sự cố</th><th>Ưu tiên</th><th>Kỹ sư</th><th>Hỗ trợ${thFilterHtml('mgrFsup','Lọc theo hỗ trợ')}</th><th>Trạng thái${thFilterHtml('mgrFst','Lọc theo trạng thái')}</th><th>Sửa</th></tr></thead>
+   <tbody id="mgrTableBody"></tbody>
+ </table></div>`;
+ wireThFilterTriggers();
+ buildStaticThOptions();
+ buildDateFilterOptions();
+}
+
 function renderManager(){
  const fYear=$('#mgrYear').value, fMonth=$('#mgrMonth').value, fDay=$('#mgrDay').value, fWeek=$('#mgrWeek').value;
  const q=$('#mgrSearch').value.trim().toLowerCase();
- const fCus=$('#mgrCustomer').value,fSys=$('#mgrSystem').value,fPri=$('#mgrPriority').value,fWT=$('#mgrWorkType').value;
+ const fCus=$('#mgrCustomer').value,fSys=$('#mgrSystem').value,fPri=$('#mgrPriority').value;
  let data=mgrData.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
  if(fCus)data=data.filter(r=>r.customer===fCus);
  if(fSys)data=data.filter(r=>r.system===fSys);
  if(fPri)data=data.filter(r=>r.priority===fPri);
- if(fWT)data=data.filter(r=>r.workType===fWT);
+ data=applyMgrThFilters(data);
  if(mgrEngineerFilter)data=data.filter(r=>(r.engineer||'').includes(mgrEngineerFilter));
  if(q)data=data.filter(r=>((r.issue||'')+(r.engineer||'')+(r.system||'')+(r.customer||'')+(r.priority||'')+(r.workType||'')).toLowerCase().includes(q));
  // Xếp theo NGÀY từ nhỏ đến lớn (cũ → mới, giống thứ tự từ lúc build app) —
@@ -4575,11 +4685,8 @@ function renderManager(){
    $('#managerList').innerHTML=emptyState('Không có phiếu',sb?'Không có phiếu khớp bộ lọc hiện tại.':'Kết nối Supabase để xem dữ liệu cả nhóm.');
    return;
  }
- $('#managerList').innerHTML=`<div class="rpt-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>Kéo ngang thanh cuộn bên dưới để xem đủ cột</div>
-   <div class="rpt-wrap"><table class="rpt">
-   <thead><tr><th>No</th><th>Ngày</th><th>Khách hàng</th><th>Hệ thống</th><th>Loại công việc</th><th>Sự cố</th><th>Ưu tiên</th><th>Kỹ sư</th><th>Hỗ trợ</th><th>Trạng thái</th><th>Sửa</th></tr></thead>
-   <tbody>${data.map((r,i)=>rptRow(r,i+1)).join('')}</tbody>
- </table></div>`;
+ ensureMgrTableSkeleton();
+ $('#mgrTableBody').innerHTML=data.map((r,i)=>rptRow(r,i+1)).join('');
  $$('#managerList .status-sel').forEach(sel=>sel.onchange=()=>updateStatus(sel.dataset.no,sel.value,sel));
  $$('#managerList .btn-row-view').forEach(b=>b.onclick=()=>showRemark(b.dataset.no,b.dataset.displayNo));
  $$('#managerList .btn-row-photos').forEach(b=>b.onclick=()=>showPhotos(b.dataset.no,b.dataset.displayNo));
@@ -4610,7 +4717,6 @@ wireYMW('dash',renderDashboard);
 $('#mgrCustomer').onchange=renderManager;
 $('#mgrSystem').onchange=renderManager;
 $('#mgrPriority').onchange=renderManager;
-$('#mgrWorkType').onchange=renderManager;
 $('#btnRefresh').onclick=()=>{loadManager();/*no history*/toast('Đã làm mới')};
 /* Làm mới TOÀN BỘ TRANG (không chỉ dữ liệu) — tải lại bản mới nhất từ server,
    bỏ qua cache trình duyệt, dùng khi vừa cập nhật app mà máy vẫn hiện bản cũ. */
@@ -4621,12 +4727,12 @@ $('#btnPageReload').onclick=()=>{ location.href=location.pathname+'?v='+Date.now
 $('#btnExport').onclick=()=>{
  const fYear=$('#mgrYear').value, fMonth=$('#mgrMonth').value, fDay=$('#mgrDay').value, fWeek=$('#mgrWeek').value;
  const q=$('#mgrSearch').value.trim().toLowerCase();
- const fCus=$('#mgrCustomer').value,fSys=$('#mgrSystem').value,fPri=$('#mgrPriority').value,fWT=$('#mgrWorkType').value;
+ const fCus=$('#mgrCustomer').value,fSys=$('#mgrSystem').value,fPri=$('#mgrPriority').value;
  let data=mgrData.filter(r=>inYMW(r.date,fYear,fMonth,fDay,fWeek));
  if(fCus)data=data.filter(r=>r.customer===fCus);
  if(fSys)data=data.filter(r=>r.system===fSys);
  if(fPri)data=data.filter(r=>r.priority===fPri);
- if(fWT)data=data.filter(r=>r.workType===fWT);
+ data=applyMgrThFilters(data);
  if(mgrEngineerFilter)data=data.filter(r=>(r.engineer||'').includes(mgrEngineerFilter));
  if(q) data=data.filter(r=>((r.issue||'')+(r.engineer||'')+(r.system||'')+(r.customer||'')+(r.priority||'')+(r.workType||'')).toLowerCase().includes(q));
  if(!data.length){toast('Không có dữ liệu để xuất',true);return}
