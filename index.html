@@ -170,6 +170,23 @@ body{background:var(--ground);color:var(--ink);font-family:var(--font);font-size
 .wh-card-actions .wh-del{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
 .wh-card-tags{display:inline-flex;gap:4px;flex-wrap:wrap}
 .wh-tag{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:999px;font-size:11.5px;background:var(--surface-2);color:var(--muted);font-weight:500}
+/* Progress stepper tren card danh sach */
+.wh-progress{display:flex;align-items:center;gap:0;margin:10px 0 8px;padding:8px 4px;background:var(--surface-2);border-radius:10px}
+.wh-prog-step{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;font-size:11px;color:var(--muted);font-weight:500;min-width:0;text-align:center;padding:0 4px}
+.wh-prog-dot{width:22px;height:22px;border-radius:50%;background:var(--surface);border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--muted);z-index:2;transition:.2s}
+.wh-prog-step.done .wh-prog-dot{background:#10b981;border-color:#10b981;color:#fff}
+.wh-prog-step.current .wh-prog-dot{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 0 0 4px var(--brand-soft);animation:whPulse 1.6s ease-in-out infinite}
+.wh-prog-step.current{color:var(--brand);font-weight:700}
+.wh-prog-step.done{color:#059669;font-weight:600}
+.wh-prog-step .wh-prog-lab{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;font-size:10.5px}
+@keyframes whPulse{0%,100%{box-shadow:0 0 0 4px var(--brand-soft)}50%{box-shadow:0 0 0 7px transparent}}
+/* Đường nối giữa các dot — tô xanh khi bước trước đã done */
+.wh-prog-step:not(:first-child)::before{content:'';position:absolute;left:-50%;top:11px;width:100%;height:3px;background:var(--line);z-index:1}
+.wh-prog-step.done::before,.wh-prog-step.current::before{background:#10b981}
+@media(max-width:520px){.wh-prog-step .wh-prog-lab{font-size:9.5px}}
+.wh-advance{margin:0 auto 6px;display:flex;align-items:center;gap:5px;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;border:none;cursor:pointer;background:linear-gradient(135deg,var(--brand),#7c3aed);color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.15);transition:.2s}
+.wh-advance:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.wh-advance:disabled{opacity:.55;cursor:not-allowed;transform:none;filter:none}
 /* Scanner overlay */
 .qr-scan-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
 .qr-scan-modal.show{display:flex}
@@ -3571,11 +3588,24 @@ function renderWarrantyList(){
     const s = whComputeStatus(r);
     const photos = (r.stage1_photos||[]).length + (r.stage2_photos||[]).length;
     const vids = (r.stage1_video_url?1:0) + (r.stage2_video_url?1:0);
+    // Progress stepper: 4 buoc — Nhan / Gui hang / Hang tra / Tra khach
+    // Trang thai hien tai = "current" (dang ban ky sư nao) — cac buoc truoc = "done"
+    const STAGE_ORDER = ['received','sent_to_vendor','returned_from_vendor','delivered'];
+    const STAGE_LABELS = ['Nhận','Gửi hãng','Hãng trả','Trả khách'];
+    const curIdx = STAGE_ORDER.indexOf(s);
+    const progressHtml = `<div class="wh-progress">${STAGE_LABELS.map((lab,i)=>{
+      const cls = i<curIdx?'done':(i===curIdx?'current':'');
+      return `<div class="wh-prog-step ${cls}"><div class="wh-prog-dot">${i<curIdx?'✓':(i+1)}</div><div class="wh-prog-lab">${lab}</div></div>`;
+    }).join('')}</div>`;
+    const NEXT_LABELS = {received:'→ Gửi hãng',sent_to_vendor:'→ Hãng đã trả',returned_from_vendor:'→ Trả khách'};
+    const advBtn = NEXT_LABELS[s] ? `<button type="button" class="wh-advance" data-id="${r.id}" data-stage="${s}">▶ ${NEXT_LABELS[s]}</button>` : '';
     return `<div class="wh-card" data-id="${r.id}">
       <div class="wh-card-head">
         <div class="wh-card-no">${esc(r.receipt_no||('#'+r.id))} · ${esc(r.customer||'—')}</div>
         ${whStatusPill(s)}
       </div>
+      ${progressHtml}
+      ${advBtn}
       <div class="wh-card-meta">
         <span class="m-item">📅 ${fmtDMYFull(r.receipt_date)}</span>
         <span class="m-item">🔧 ${esc(r.device_name||'—')}${r.device_model?' ('+esc(r.device_model)+')':''}</span>
@@ -3601,6 +3631,61 @@ function renderWarrantyList(){
   $$('#warrantyList .wh-edit').forEach(b => b.onclick = () => openWarrantyForm(Number(b.dataset.id)));
   $$('#warrantyList .wh-pdf').forEach(b => b.onclick = () => exportWarrantyPdf(Number(b.dataset.id)));
   $$('#warrantyList .wh-del').forEach(b => b.onclick = () => deleteWarrantyPrompt(Number(b.dataset.id)));
+  $$('#warrantyList .wh-advance').forEach(b => b.onclick = () => whAdvanceStage(Number(b.dataset.id), b.dataset.stage, b));
+}
+
+// Cot ngay + nhan tuong ung voi tung buoc chuyen tiep tiep theo
+const WH_NEXT_STAGE = {
+  received: {col:'sent_to_vendor_at', confirm:'Xác nhận đã GỬI HÃNG bảo hành?'},
+  sent_to_vendor: {col:'returned_from_vendor_at', confirm:'Xác nhận HÃNG ĐÃ TRẢ hàng về?'},
+  returned_from_vendor: {col:'returned_to_customer_at', confirm:'Xác nhận đã TRẢ KHÁCH hàng?'}
+};
+async function whAdvanceStage(id, stage, btn){
+  const step = WH_NEXT_STAGE[stage];
+  if (!step) return;
+  if (!confirm(step.confirm)) return;
+  const r = whData.find(x => x.id === id);
+  if (!r) return;
+  if (btn){ btn.disabled = true; btn.textContent = '⏳ Đang cập nhật...'; }
+  try{
+    // update_warranty ghi de TOAN BO cot nullable tu payload (khong coalesce),
+    // nen phai gui du du lieu hien co cua phieu, chi doi 1 cot ngay + status.
+    const merged = {...r, [step.col]: vnTodayIso()};
+    const payload = {
+      customer: merged.customer,
+      system: merged.system || null,
+      device_name: merged.device_name || null,
+      device_model: merged.device_model || null,
+      device_serial: merged.device_serial || null,
+      quantity: merged.quantity || 1,
+      fault_description: merged.fault_description || null,
+      receiver_name: merged.receiver_name || null,
+      receipt_date: merged.receipt_date,
+      stage1_photos: merged.stage1_photos || [],
+      stage1_video_url: merged.stage1_video_url || null,
+      stage1_video_name: merged.stage1_video_name || null,
+      stage1_video_captured_at: merged.stage1_video_captured_at || null,
+      vendor_name: merged.vendor_name || null,
+      sent_to_vendor_at: merged.sent_to_vendor_at || null,
+      returned_from_vendor_at: merged.returned_from_vendor_at || null,
+      vendor_note: merged.vendor_note || null,
+      stage2_photos: merged.stage2_photos || [],
+      stage2_video_url: merged.stage2_video_url || null,
+      stage2_video_name: merged.stage2_video_name || null,
+      stage2_video_captured_at: merged.stage2_video_captured_at || null,
+      returned_to_customer_at: merged.returned_to_customer_at || null,
+      returned_by: merged.returned_by || null,
+      customer_signer: merged.customer_signer || null,
+      note: merged.note || null
+    };
+    payload.status = whComputeStatus(payload);
+    const j = await DB.updateWarranty(id, payload);
+    if (!j.ok){ toast(j.error||'Cập nhật thất bại', true); return; }
+    Object.assign(r, payload);
+    toast('✅ Đã cập nhật tiến độ');
+    renderWarrantyList();
+  }catch(err){ toast('Lỗi khi cập nhật: '+err.message, true); }
+  finally{ if (btn){ btn.disabled = false; } }
 }
 
 $('#whSearch').oninput = renderWarrantyList;
@@ -3724,8 +3809,8 @@ function openWarrantyForm(id){
       $('#wh_note').value = r.note||'';
       whStage1Photos = (r.stage1_photos||[]).slice();
       whStage2Photos = (r.stage2_photos||[]).slice();
-      if (r.stage1_video_url) whStage1Video = {url:r.stage1_video_url, name:r.stage1_video_name||'video1'};
-      if (r.stage2_video_url) whStage2Video = {url:r.stage2_video_url, name:r.stage2_video_name||'video2'};
+      if (r.stage1_video_url) whStage1Video = {url:r.stage1_video_url, name:r.stage1_video_name||'video1', capturedAt:r.stage1_video_captured_at||null};
+      if (r.stage2_video_url) whStage2Video = {url:r.stage2_video_url, name:r.stage2_video_name||'video2', capturedAt:r.stage2_video_captured_at||null};
     }
   }
   updateWhReceiverLabel();
@@ -3768,14 +3853,53 @@ function renderWhVideo(stage){
   const v = stage===1 ? whStage1Video : whStage2Video;
   const box = $(`#wh_video${stage}_preview`);
   if (!v){ box.innerHTML=''; return; }
+  // capturedAt: video cu (truoc khi co tinh nang nay) khong co moc gio — dung ngay nhan/tra thay the.
+  const dateLabel = v.capturedAt || (stage===1 ? fmtDMYFull($('#wh_receipt_date').value) : (fmtDMYFull($('#wh_delivered_at').value)||fmtDMYFull($('#wh_returned_at').value)));
   box.innerHTML = `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px;background:var(--surface-2);border-radius:8px">
-    <video src="${esc(v.url)}" controls playsinline style="max-width:280px;width:100%;border-radius:6px;background:#000"></video>
+    <div style="position:relative;max-width:280px;width:100%">
+      <video src="${esc(v.url)}" controls playsinline style="width:100%;border-radius:6px;background:#000;display:block"></video>
+      ${dateLabel?`<div style="position:absolute;right:6px;bottom:38px;background:rgba(0,0,0,.6);color:#fff;font:bold 11px monospace;padding:3px 7px;border-radius:4px;pointer-events:none">🕐 ${esc(dateLabel)}</div>`:''}
+    </div>
     <button type="button" class="wh-rm-video" data-stage="${stage}" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px">🗑 Xóa video</button>
   </div>`;
   $(`#wh_video${stage}_preview .wh-rm-video`).onclick = () => {
     if (stage===1) whStage1Video=null; else whStage2Video=null;
     renderWhVideo(stage);
   };
+}
+
+// Đóng dấu ngày giờ THẬT vào ảnh (kiểu timestamp camera an ninh) trước khi
+// upload — vẽ vào canvas rồi xuất lại thành JPEG, không cần server xử lý.
+function vnNowLabel(){
+  const d = vnNow();
+  return `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+async function stampPhotoDate(file){
+  const label = vnNowLabel();
+  const img = await new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = rej;
+    im.src = URL.createObjectURL(file);
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  URL.revokeObjectURL(img.src);
+  const fontSize = Math.max(18, Math.round(canvas.width * 0.028));
+  ctx.font = `bold ${fontSize}px monospace`;
+  const padX = fontSize*0.6, padY = fontSize*0.5;
+  const textW = ctx.measureText(label).width;
+  const boxW = textW + padX*2, boxH = fontSize + padY*1.6;
+  const x = canvas.width - boxW - fontSize*0.5, y = canvas.height - boxH - fontSize*0.5;
+  ctx.fillStyle = 'rgba(0,0,0,.55)';
+  ctx.fillRect(x, y, boxW, boxH);
+  ctx.fillStyle = '#fff';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, x+padX, y+boxH/2);
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.9));
+  return new File([blob], file.name.replace(/\.\w+$/,'')+'.jpg', {type:'image/jpeg'});
 }
 
 // Wire cac nut them anh/video
@@ -3785,16 +3909,18 @@ function renderWhVideo(stage){
     const files = Array.from(e.target.files||[]);
     e.target.value = '';
     if (!files.length) return;
-    toast(`⏳ Đang tải ${files.length} ảnh...`);
+    toast(`⏳ Đang đóng dấu ngày & tải ${files.length} ảnh...`);
     for (const f of files){
       if (f.size > 15*1024*1024){ toast(`⚠️ Ảnh "${f.name}" > 15MB, bỏ qua`, true); continue; }
-      const up = await DB.uploadAttachment(f);
+      let toUpload = f;
+      try{ toUpload = await stampPhotoDate(f); }catch(err){ /* lỗi đóng dấu — vẫn upload ảnh gốc */ }
+      const up = await DB.uploadAttachment(toUpload);
       if (!up.ok){ toast(`⚠️ Upload thất bại: ${up.error||'lỗi'}`, true); continue; }
       const rec = {url: up.url, name: up.name};
       if (stage===1) whStage1Photos.push(rec); else whStage2Photos.push(rec);
     }
     renderWhPhotos(stage);
-    toast('✅ Đã tải ảnh xong');
+    toast('✅ Đã tải ảnh xong (đã đóng dấu ngày)');
   };
   $(`#btnWhAddVideo${stage}`).onclick = () => $(`#wh_video${stage}_file`).click();
   $(`#wh_video${stage}_file`).onchange = async e => {
@@ -3813,7 +3939,9 @@ function renderWhVideo(stage){
     toast('⏳ Đang tải video...');
     const up = await DB.uploadAttachment(f);
     if (!up.ok){ toast(`⚠️ Upload video thất bại: ${up.error||'lỗi'}`, true); return; }
-    const rec = {url: up.url, name: up.name};
+    // Video KHÔNG ghi đè vào file (tránh phải re-encode, dễ vỡ trên iPhone) —
+    // chỉ lưu mốc giờ quay để hiển thị đè lên khi xem lại (renderWhVideo).
+    const rec = {url: up.url, name: up.name, capturedAt: vnNowLabel()};
     if (stage===1) whStage1Video = rec; else whStage2Video = rec;
     renderWhVideo(stage);
     toast(`✅ Video đã tải (${dur.toFixed(1)}s)`);
@@ -3844,6 +3972,7 @@ $('#btnWhSave').onclick = async () => {
     stage1_photos: whStage1Photos,
     stage1_video_url: whStage1Video ? whStage1Video.url : null,
     stage1_video_name: whStage1Video ? whStage1Video.name : null,
+    stage1_video_captured_at: whStage1Video ? whStage1Video.capturedAt : null,
     vendor_name: $('#wh_vendor_name').value.trim() || null,
     sent_to_vendor_at: $('#wh_sent_at').value || null,
     returned_from_vendor_at: $('#wh_returned_at').value || null,
@@ -3851,6 +3980,7 @@ $('#btnWhSave').onclick = async () => {
     stage2_photos: whStage2Photos,
     stage2_video_url: whStage2Video ? whStage2Video.url : null,
     stage2_video_name: whStage2Video ? whStage2Video.name : null,
+    stage2_video_captured_at: whStage2Video ? whStage2Video.capturedAt : null,
     returned_to_customer_at: $('#wh_delivered_at').value || null,
     returned_by: $('#wh_returned_by').value.trim() || null,
     customer_signer: $('#wh_customer_signer').value.trim() || null,
@@ -3916,30 +4046,58 @@ async function deleteWarrantyPrompt(id){
   loadWarranty(true);
 }
 
+// Cache font Roboto (Unicode Vietnamese) qua nhieu lan xuat PDF — nap 1 lan duy nhat.
+let _pdfVnFont = null;
+async function ensureVnFont(doc){
+  if (!_pdfVnFont){
+    const urls = {
+      'Roboto-Regular.ttf': 'https://cdnjs.cloudflare.com/ajax/libs/roboto-fontface/0.10.0/fonts/roboto/Roboto-Regular.ttf',
+      'Roboto-Bold.ttf':    'https://cdnjs.cloudflare.com/ajax/libs/roboto-fontface/0.10.0/fonts/roboto/Roboto-Bold.ttf'
+    };
+    const out = {};
+    for (const [name, url] of Object.entries(urls)){
+      const buf = await (await fetch(url)).arrayBuffer();
+      let bin = ''; const bytes = new Uint8Array(buf);
+      // Chunk for tranh stack overflow tren file > 100KB
+      for (let i = 0; i < bytes.length; i += 0x8000){
+        bin += String.fromCharCode.apply(null, bytes.subarray(i, i+0x8000));
+      }
+      out[name] = btoa(bin);
+    }
+    _pdfVnFont = out;
+  }
+  doc.addFileToVFS('Roboto-Regular.ttf', _pdfVnFont['Roboto-Regular.ttf']);
+  doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+  doc.addFileToVFS('Roboto-Bold.ttf', _pdfVnFont['Roboto-Bold.ttf']);
+  doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
+}
+
 async function exportWarrantyPdf(id){
   const r = whData.find(x => x.id === id);
   if (!r){ toast('Không tìm thấy phiếu', true); return; }
   if (!window.jspdf){ toast('Chưa tải xong thư viện PDF, thử lại sau', true); return; }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({unit:'mm', format:'a4'});
+  try{ await ensureVnFont(doc); doc.setFont('Roboto','normal'); }
+  catch(err){ toast('⚠️ Không tải được font tiếng Việt, PDF có thể mất dấu: '+err.message, true); }
   const pageW = 210, mL = 12, mR = 12, contentW = pageW - mL - mR;
   let y = 15;
-  doc.setFont('helvetica','bold'); doc.setFontSize(16);
+  doc.setFont('Roboto','bold'); doc.setFontSize(16);
   doc.text('PHIẾU NHẬN BẢO HÀNH', pageW/2, y, {align:'center'}); y += 6;
-  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.setFont('Roboto','normal'); doc.setFontSize(10);
   doc.text(`Số: ${r.receipt_no||'#'+r.id}    Trạng thái: ${(WH_STATUS[whComputeStatus(r)]||{}).label||'-'}`, pageW/2, y, {align:'center'}); y += 8;
 
   const row = (label, val) => {
     if (val == null || val === '') return;
-    doc.setFont('helvetica','bold'); doc.text(label+':', mL, y);
-    doc.setFont('helvetica','normal');
+    doc.setFont('Roboto','bold'); doc.text(label+':', mL, y);
+    doc.setFont('Roboto','normal');
     const lines = doc.splitTextToSize(String(val), contentW-38);
     doc.text(lines, mL+38, y);
     y += 5 * Math.max(1, lines.length);
     if (y > 275){ doc.addPage(); y = 15; }
   };
   const section = (title) => {
-    y += 2; doc.setFont('helvetica','bold'); doc.setFontSize(12);
+    y += 2; doc.setFont('Roboto','bold'); doc.setFontSize(12);
     doc.setFillColor(230,240,255); doc.rect(mL, y-4, contentW, 7, 'F');
     doc.text(title, mL+2, y+1); y += 6;
     doc.setFontSize(10);
@@ -3973,9 +4131,9 @@ async function exportWarrantyPdf(id){
   if (p1.length || p2.length){
     y += 3;
     if (y > 260){ doc.addPage(); y = 15; }
-    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.setFont('Roboto','bold'); doc.setFontSize(11);
     doc.text('Hình ảnh đính kèm:', mL, y); y += 5;
-    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.setFont('Roboto','normal'); doc.setFontSize(9);
     const addLinks = (label, urls) => {
       if (!urls.length) return;
       doc.text(`${label} (${urls.length}):`, mL, y); y += 4;
@@ -3993,9 +4151,9 @@ async function exportWarrantyPdf(id){
   if (r.stage1_video_url || r.stage2_video_url){
     y += 3;
     if (y > 275){ doc.addPage(); y = 15; }
-    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.setFont('Roboto','bold'); doc.setFontSize(11);
     doc.text('Video:', mL, y); y += 5;
-    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.setFont('Roboto','normal'); doc.setFontSize(9);
     if (r.stage1_video_url){ const l = doc.splitTextToSize('  • Nhận hàng: '+r.stage1_video_url, contentW); doc.text(l, mL, y); y += 4*l.length; }
     if (r.stage2_video_url){ const l = doc.splitTextToSize('  • Sau bảo hành: '+r.stage2_video_url, contentW); doc.text(l, mL, y); y += 4*l.length; }
   }
