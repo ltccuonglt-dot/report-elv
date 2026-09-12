@@ -24,6 +24,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js" defer></script>
 <style>
 :root{
   --ground:#f2eef4; --surface:#ffffff; --surface-2:#f8f5fa;
@@ -111,6 +112,105 @@ body{background:var(--ground);color:var(--ink);font-family:var(--font);font-size
 .cc-filters select{flex:1;min-width:110px;border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:9px 10px;font:inherit;background:var(--surface)}
 .btn-mini{border:1.5px solid var(--brand);background:var(--brand-soft);color:var(--brand);font:inherit;font-weight:700;font-size:12.5px;padding:9px 14px;border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap}
 .cc-add-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+/* ===== Bao hanh: giao dien phieu ===== */
+.wh-modal .modal-body{max-width:960px;width:96vw;border-radius:14px;overflow:hidden}
+.wh-step{display:flex;gap:6px;padding:10px 16px;background:linear-gradient(135deg,#eef2ff,#f0f9ff);border-bottom:1px solid var(--line);overflow-x:auto}
+.wh-step-item{flex:1;min-width:100px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px;border-radius:8px;font-size:12px;color:var(--muted);position:relative}
+.wh-step-item.active{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.06);color:var(--brand);font-weight:600}
+.wh-step-item.done{color:#059669}
+.wh-step-num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--surface-2);color:var(--muted);font-weight:700;font-size:14px;flex:none}
+.wh-step-item.active .wh-step-num{background:var(--brand);color:#fff}
+.wh-step-item.done .wh-step-num{background:#10b981;color:#fff}
+.wh-form-scroll{max-height:min(76vh,720px);overflow-y:auto;padding:16px 20px;background:var(--surface)}
+@media(max-width:640px){.wh-form-scroll{padding:12px 14px;max-height:calc(100vh - 220px)}}
+/* Layout ngang tren PC: 3 buoc canh nhau, cuon nhu 3 cot */
+@media(min-width:1024px){
+  .wh-modal .modal-body{max-width:1400px;width:96vw}
+  .wh-form-scroll{padding:18px 22px}
+  .wh-sec-grid{display:grid;grid-template-columns:1.15fr 1fr 0.85fr;gap:14px;align-items:start}
+  .wh-sec-grid .wh-section{margin-bottom:0}
+  /* Anh/video block: van tren cung 1 cot voi section thong tin */
+  .wh-sec-media{display:flex;flex-direction:column;gap:14px}
+}
+.wh-section{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.wh-section-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--brand);margin:0 0 12px}
+.wh-section-title .n{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--brand);color:#fff;font-size:12px;font-weight:800}
+.wh-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px 12px}
+.wh-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+@media(max-width:600px){.wh-grid-2{grid-template-columns:1fr}}
+.wh-input-with-btn{position:relative}
+.wh-input-with-btn input{padding-right:44px}
+.wh-scan-btn{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:8px;width:34px;height:34px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:.15s}
+.wh-scan-btn:hover{transform:translateY(-50%) scale(1.05)}
+.wh-scan-btn svg{width:18px;height:18px}
+.wh-media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+.wh-media-tile{position:relative;aspect-ratio:1;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface-2)}
+.wh-media-tile img{width:100%;height:100%;object-fit:cover;display:block}
+.wh-media-rm{position:absolute;top:4px;right:4px;background:rgba(220,38,38,.92);color:#fff;border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.wh-video-box{padding:10px;background:var(--surface-2);border-radius:10px;border:1px solid var(--line);display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.wh-video-box video{max-width:100%;width:320px;border-radius:8px;background:#000}
+.wh-add-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1.5px dashed var(--brand);background:var(--brand-soft);color:var(--brand);border-radius:10px;font-weight:600;font-size:13px;cursor:pointer;transition:.15s}
+.wh-add-btn:hover{background:var(--brand);color:#fff;border-style:solid}
+.wh-media-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.wh-modal-foot{display:flex;gap:10px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--line);background:var(--surface-2)}
+.wh-modal-foot .btn{padding:10px 20px;border-radius:10px;font-weight:600}
+/* Danh sach phieu — card style */
+.wh-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.wh-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);border-color:var(--brand)}
+.wh-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.wh-card-no{font-weight:800;color:var(--brand);font-size:15px}
+.wh-card-meta{color:var(--muted);font-size:13px;line-height:1.55;display:flex;flex-wrap:wrap;gap:4px 12px;margin-bottom:6px}
+.wh-card-meta .m-item{display:inline-flex;align-items:center;gap:4px}
+.wh-card-fault{background:var(--surface-2);border-left:3px solid var(--brand);border-radius:6px;padding:8px 10px;font-size:13px;margin:6px 0}
+.wh-card-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.wh-card-actions button{padding:6px 12px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--line);background:var(--surface);cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:4px}
+.wh-card-actions button:hover{background:var(--surface-2)}
+.wh-card-actions .wh-edit{background:var(--brand);color:#fff;border-color:var(--brand)}
+.wh-card-actions .wh-edit:hover{filter:brightness(1.1)}
+.wh-card-actions .wh-del{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+.wh-card-tags{display:inline-flex;gap:4px;flex-wrap:wrap}
+.wh-tag{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:999px;font-size:11.5px;background:var(--surface-2);color:var(--muted);font-weight:500}
+/* Scanner overlay */
+.qr-scan-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
+.qr-scan-modal.show{display:flex}
+.qr-scan-inner{background:var(--surface);border-radius:14px;padding:16px;max-width:440px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;gap:10px}
+.qr-scan-video-wrap{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:1}
+.qr-scan-video-wrap video{width:100%;height:100%;object-fit:cover;display:block}
+.qr-scan-frame{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at center,transparent 0,transparent 130px,rgba(0,0,0,.4) 200px)}
+.qr-scan-frame::after{content:'';position:absolute;left:50%;top:50%;width:220px;height:220px;transform:translate(-50%,-50%);border:3px solid #22c55e;border-radius:12px;box-shadow:0 0 0 200vmax rgba(0,0,0,.5)}
+.qr-scan-hint{color:var(--muted);font-size:13px;text-align:center;padding:4px 8px;background:var(--surface-2);border-radius:8px}
+.qr-scan-actions{display:flex;gap:8px;justify-content:space-between}
+/* ===== Cai dat: giao dien nang cap ===== */
+.settings-hero{background:linear-gradient(135deg,var(--brand),#7c3aed);color:#fff;padding:16px 20px;border-radius:14px;margin-bottom:16px;box-shadow:0 6px 20px rgba(124,58,237,.22)}
+.settings-hero h3{margin:0 0 4px;font-size:17px;font-weight:700}
+.settings-hero p{margin:0;opacity:.85;font-size:13px;line-height:1.55}
+/* Storage tracker cards */
+.stor-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+@media(max-width:600px){.stor-grid{grid-template-columns:1fr}}
+.stor-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;position:relative;overflow:hidden}
+.stor-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--stor-color,var(--brand))}
+.stor-card.r2{--stor-color:linear-gradient(90deg,#f59e0b,#ef4444)}
+.stor-card.sb{--stor-color:linear-gradient(90deg,#10b981,#059669)}
+.stor-card-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
+.stor-card-title{font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px}
+.stor-card-icon{display:inline-flex;width:26px;height:26px;border-radius:8px;align-items:center;justify-content:center;font-size:14px}
+.stor-card.r2 .stor-card-icon{background:#fef3c7;color:#a16207}
+.stor-card.sb .stor-card-icon{background:#dcfce7;color:#059669}
+.stor-card-count{font-size:12px;color:var(--muted)}
+.stor-size{font-size:28px;font-weight:800;line-height:1.1;color:var(--ink);margin:6px 0 2px;font-variant-numeric:tabular-nums}
+.stor-size-unit{font-size:14px;font-weight:600;color:var(--muted);margin-left:4px}
+.stor-limit{font-size:11.5px;color:var(--muted);margin-top:2px}
+.stor-bar{height:6px;background:var(--surface-2);border-radius:6px;overflow:hidden;margin-top:8px}
+.stor-bar-fill{height:100%;background:var(--stor-color);transition:width .6s ease}
+.stor-top{margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-size:11.5px;color:var(--muted)}
+.stor-top-item{display:flex;justify-content:space-between;gap:6px;padding:2px 0;font-variant-numeric:tabular-nums}
+.stor-top-item .k{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.stor-refresh-btn{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:11px;cursor:pointer;color:var(--muted);display:inline-flex;align-items:center;gap:4px;font-weight:600}
+.stor-refresh-btn:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
+/* Nang cap card cai dat cu (chia block giong storage cards) */
+.settings-block{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.settings-block-title{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;margin:0 0 10px;color:var(--brand)}
+.settings-block-title .b-icon{display:inline-flex;width:26px;height:26px;border-radius:8px;background:var(--brand-soft);color:var(--brand);align-items:center;justify-content:center;font-size:14px}
 .cc-add-grid label.field{margin-bottom:0}
 @media (max-width:520px){.cc-add-grid{grid-template-columns:1fr}}
 .pw-change-block{border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px;background:var(--surface-2)}
@@ -757,64 +857,149 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <div id="warrantyList"></div>
     </section>
 
-    <!-- Modal form Nhan/Sua phieu bao hanh -->
-    <div class="modal" id="whModal" role="dialog" aria-modal="true">
-      <div class="modal-body" style="max-width:900px">
-        <div class="modal-head">
-          <div class="section-title" id="whModalTitle" style="margin:0">Nhận hàng bảo hành</div>
-          <button type="button" class="mini-btn" id="btnWhClose" aria-label="Đóng">✕</button>
+    <!-- Modal form Nhan/Sua phieu bao hanh — redesigned -->
+    <div class="modal wh-modal" id="whModal" role="dialog" aria-modal="true">
+      <div class="modal-body">
+        <div class="modal-head" style="background:linear-gradient(135deg,var(--brand),#7c3aed);color:#fff">
+          <div class="section-title" id="whModalTitle" style="margin:0;color:#fff">🛠️ Nhận hàng bảo hành</div>
+          <button type="button" class="mini-btn" id="btnWhClose" aria-label="Đóng" style="background:rgba(255,255,255,.2);color:#fff">✕</button>
         </div>
-        <div style="padding:12px 14px;max-height:70vh;overflow-y:auto">
+        <div class="wh-step" id="whStep">
+          <div class="wh-step-item active" data-step="1"><span class="wh-step-num">1</span><span>Nhận từ khách</span></div>
+          <div class="wh-step-item" data-step="2"><span class="wh-step-num">2</span><span>Gửi hãng / Hãng trả</span></div>
+          <div class="wh-step-item" data-step="3"><span class="wh-step-num">3</span><span>Trả khách</span></div>
+        </div>
+        <div class="wh-form-scroll">
           <input type="hidden" id="wh_id" />
-          <div class="section-title" style="margin-top:0;color:var(--brand)">① Nhận hàng từ khách</div>
-          <div class="cc-add-grid">
-            <label class="field"><span class="lab">Khách hàng *</span><input type="text" id="wh_customer" placeholder="Tên khách/dự án"></label>
-            <label class="field"><span class="lab">Ngày nhận *</span><input type="date" id="wh_receipt_date"></label>
-            <label class="field"><span class="lab">Người nhận</span><input type="text" id="wh_receiver_name"></label>
-            <label class="field"><span class="lab">Hệ thống</span><input type="text" id="wh_system" placeholder="CCTV/Access/BMS…"></label>
-            <label class="field"><span class="lab">Tên thiết bị</span><input type="text" id="wh_device_name"></label>
-            <label class="field"><span class="lab">Model</span><input type="text" id="wh_device_model"></label>
-            <label class="field"><span class="lab">Serial / S/N</span><input type="text" id="wh_device_serial"></label>
-            <label class="field"><span class="lab">Số lượng</span><input type="number" id="wh_quantity" value="1" min="1"></label>
+          <div class="wh-sec-grid">
+          <div class="wh-sec-media">
+          <div class="wh-section" data-sec="1">
+            <div class="wh-section-title"><span class="n">1</span>Thông tin khách hàng & thiết bị</div>
+            <div class="wh-grid-2">
+              <label class="field"><span class="lab">Khách hàng <span class="req">*</span></span><input type="text" id="wh_customer" placeholder="Tên khách/dự án"></label>
+              <label class="field"><span class="lab">Ngày nhận <span class="req">*</span></span><input type="date" id="wh_receipt_date"></label>
+              <label class="field"><span class="lab">Người nhận</span>
+                <div class="msel" id="wh_receiver_dd">
+                  <button type="button" class="msel-btn placeholder" id="wh_receiver_btn">— Chọn người nhận —</button>
+                  <div class="msel-panel" id="wh_receiver_panel" hidden>
+                    <input type="text" class="msel-search" id="wh_receiver_search" placeholder="🔍 Tìm kỹ sư..." />
+                    <div class="msel-list" id="wh_receiver_list"></div>
+                    <label class="msel-opt msel-other-opt"><input type="radio" name="wh_recv_radio" id="wh_receiver_other_chk"><span>Khác…</span></label>
+                    <div class="msel-other" id="wh_receiver_other_wrap" hidden>
+                      <input type="text" id="wh_receiver_other" placeholder="Nhập tên người nhận" />
+                    </div>
+                  </div>
+                </div>
+              </label>
+              <label class="field"><span class="lab">Hệ thống</span>
+                <select id="wh_system">
+                  <option value="">— Chọn hệ thống —</option>
+                  <option>IT Helpdesk</option><option>IT Network</option><option>IT System</option>
+                  <option>CCTV</option><option>ACS</option><option>PA</option><option>BMS</option>
+                  <option>Car Parking</option><option>Intercom</option><option>Print</option>
+                  <option>Scan</option><option>ELV</option>
+                  <option value="__other">Khác…</option>
+                </select>
+              </label>
+              <label class="field" id="wh_system_other_wrap" style="display:none"><span class="lab">Nhập tên hệ thống</span><input type="text" id="wh_system_other" placeholder="VD: Thang máy, Hệ thống nước..."></label>
+              <label class="field"><span class="lab">Tên thiết bị</span>
+                <div class="wh-input-with-btn">
+                  <input type="text" id="wh_device_name" placeholder="VD: Camera IP Dome 4MP">
+                  <button type="button" class="wh-scan-btn" data-target="wh_device_name" title="Quét QR để điền" aria-label="Quét QR">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="4" height="4"/><rect x="13" y="7" width="4" height="4"/><rect x="7" y="13" width="4" height="4"/><path d="M13 13h4v4h-4z"/></svg>
+                  </button>
+                </div>
+              </label>
+              <label class="field"><span class="lab">Model</span>
+                <div class="wh-input-with-btn">
+                  <input type="text" id="wh_device_model" placeholder="VD: DS-2CD2043G2">
+                  <button type="button" class="wh-scan-btn" data-target="wh_device_model" title="Quét QR để điền" aria-label="Quét QR">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="4" height="4"/><rect x="13" y="7" width="4" height="4"/><rect x="7" y="13" width="4" height="4"/><path d="M13 13h4v4h-4z"/></svg>
+                  </button>
+                </div>
+              </label>
+              <label class="field"><span class="lab">Serial / S/N</span>
+                <div class="wh-input-with-btn">
+                  <input type="text" id="wh_device_serial" placeholder="Số serial trên thân máy">
+                  <button type="button" class="wh-scan-btn" data-target="wh_device_serial" title="Quét QR để điền" aria-label="Quét QR">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="4" height="4"/><rect x="13" y="7" width="4" height="4"/><rect x="7" y="13" width="4" height="4"/><path d="M13 13h4v4h-4z"/></svg>
+                  </button>
+                </div>
+              </label>
+              <label class="field"><span class="lab">Số lượng</span><input type="number" id="wh_quantity" value="1" min="1"></label>
+            </div>
+            <label class="field" style="margin-top:10px;margin-bottom:0"><span class="lab">Mô tả lỗi / Hư ở đâu</span><textarea id="wh_fault" rows="3" placeholder="VD: Không lên hình, chập nguồn, hư ống kính..."></textarea></label>
           </div>
-          <label class="field"><span class="lab">Mô tả lỗi / Hư ở đâu</span><textarea id="wh_fault" rows="3" placeholder="Vd: Không lên hình, chập nguồn, hư ống kính…"></textarea></label>
-          <div class="section-title" style="margin-top:14px">📷 Ảnh & 🎥 Video (nhận hàng)</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-            <button type="button" class="btn-mini" id="btnWhAddPhoto1">+ Thêm ảnh</button>
-            <button type="button" class="btn-mini" id="btnWhAddVideo1">+ Video (≤45s)</button>
-            <input type="file" id="wh_photo1_file" accept="image/*" multiple hidden>
-            <input type="file" id="wh_video1_file" accept="video/*" hidden>
-          </div>
-          <div id="wh_photos1_preview" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:8px"></div>
-          <div id="wh_video1_preview" style="margin-bottom:8px"></div>
 
-          <div class="section-title" style="margin-top:14px;color:var(--brand)">② Gửi hãng & Trả về</div>
-          <div class="cc-add-grid">
-            <label class="field"><span class="lab">Hãng bảo hành</span><input type="text" id="wh_vendor_name" placeholder="Hikvision, Dahua…"></label>
-            <label class="field"><span class="lab">Ngày gửi hãng</span><input type="date" id="wh_sent_at"></label>
-            <label class="field"><span class="lab">Ngày hãng trả</span><input type="date" id="wh_returned_at"></label>
+          <div class="wh-section" data-sec="1">
+            <div class="wh-section-title"><span class="n">📷</span>Ảnh & Video nhận hàng</div>
+            <div class="wh-media-toolbar">
+              <button type="button" class="wh-add-btn" id="btnWhAddPhoto1">➕ Thêm ảnh</button>
+              <button type="button" class="wh-add-btn" id="btnWhAddVideo1">🎥 Video (≤45s)</button>
+              <input type="file" id="wh_photo1_file" accept="image/*" multiple hidden>
+              <input type="file" id="wh_video1_file" accept="video/*" capture="environment" hidden>
+            </div>
+            <div id="wh_photos1_preview" class="wh-media-grid"></div>
+            <div id="wh_video1_preview" style="margin-top:8px"></div>
           </div>
-          <label class="field"><span class="lab">Ghi chú của hãng (sửa gì, còn/hết bảo hành…)</span><textarea id="wh_vendor_note" rows="2"></textarea></label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-            <button type="button" class="btn-mini" id="btnWhAddPhoto2">+ Ảnh sau bảo hành</button>
-            <button type="button" class="btn-mini" id="btnWhAddVideo2">+ Video sau bảo hành (≤45s)</button>
-            <input type="file" id="wh_photo2_file" accept="image/*" multiple hidden>
-            <input type="file" id="wh_video2_file" accept="video/*" hidden>
           </div>
-          <div id="wh_photos2_preview" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:8px"></div>
-          <div id="wh_video2_preview" style="margin-bottom:8px"></div>
 
-          <div class="section-title" style="margin-top:14px;color:var(--brand)">③ Trả khách</div>
-          <div class="cc-add-grid">
-            <label class="field"><span class="lab">Ngày trả khách</span><input type="date" id="wh_delivered_at"></label>
-            <label class="field"><span class="lab">Người trả</span><input type="text" id="wh_returned_by"></label>
-            <label class="field"><span class="lab">Khách ký nhận</span><input type="text" id="wh_customer_signer"></label>
+          <div class="wh-sec-media">
+          <div class="wh-section" data-sec="2">
+            <div class="wh-section-title"><span class="n">2</span>Gửi hãng & Trả về</div>
+            <div class="wh-grid-2">
+              <label class="field"><span class="lab">Hãng bảo hành</span><input type="text" id="wh_vendor_name" placeholder="Hikvision, Dahua, HP..."></label>
+              <label class="field"><span class="lab">Ngày gửi hãng</span><input type="date" id="wh_sent_at"></label>
+              <label class="field"><span class="lab">Ngày hãng trả</span><input type="date" id="wh_returned_at"></label>
+            </div>
+            <label class="field" style="margin-top:10px"><span class="lab">Ghi chú của hãng (sửa gì, còn/hết bảo hành…)</span><textarea id="wh_vendor_note" rows="2"></textarea></label>
+            <div class="wh-media-toolbar" style="margin-top:6px">
+              <button type="button" class="wh-add-btn" id="btnWhAddPhoto2">➕ Ảnh sau BH</button>
+              <button type="button" class="wh-add-btn" id="btnWhAddVideo2">🎥 Video sau BH (≤45s)</button>
+              <input type="file" id="wh_photo2_file" accept="image/*" multiple hidden>
+              <input type="file" id="wh_video2_file" accept="video/*" capture="environment" hidden>
+            </div>
+            <div id="wh_photos2_preview" class="wh-media-grid"></div>
+            <div id="wh_video2_preview" style="margin-top:8px"></div>
           </div>
-          <label class="field"><span class="lab">Ghi chú thêm</span><textarea id="wh_note" rows="2"></textarea></label>
+          </div>
+
+          <div class="wh-sec-media">
+          <div class="wh-section" data-sec="3">
+            <div class="wh-section-title"><span class="n">3</span>Trả khách</div>
+            <div class="wh-grid-2">
+              <label class="field"><span class="lab">Ngày trả khách</span><input type="date" id="wh_delivered_at"></label>
+              <label class="field"><span class="lab">Người trả</span><input type="text" id="wh_returned_by"></label>
+              <label class="field" style="grid-column:1/-1"><span class="lab">Khách ký nhận</span><input type="text" id="wh_customer_signer" placeholder="Tên người của khách hàng nhận lại thiết bị"></label>
+            </div>
+            <label class="field" style="margin-top:10px;margin-bottom:0"><span class="lab">Ghi chú thêm</span><textarea id="wh_note" rows="2"></textarea></label>
+          </div>
+          </div>
+          </div>
         </div>
-        <div class="modal-foot" style="display:flex;gap:8px;justify-content:flex-end;padding:10px 14px;border-top:1px solid var(--line)">
+        <div class="wh-modal-foot">
           <button type="button" class="btn btn-ghost" id="btnWhCancel">Đóng</button>
-          <button type="button" class="btn" id="btnWhSave" style="background:var(--brand);color:#fff">💾 Lưu phiếu</button>
+          <button type="button" class="btn" id="btnWhSave" style="background:linear-gradient(135deg,var(--brand),#7c3aed);color:#fff;box-shadow:0 2px 8px rgba(124,58,237,.3)">💾 Lưu phiếu</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR Scanner modal -->
+    <div class="qr-scan-modal" id="qrScanModal" role="dialog" aria-modal="true">
+      <div class="qr-scan-inner">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:700;color:var(--brand)">📷 Quét mã QR / Barcode</div>
+          <button type="button" class="mini-btn" id="btnQrClose">✕</button>
+        </div>
+        <div class="qr-scan-video-wrap">
+          <video id="qrVideo" playsinline muted autoplay></video>
+          <div class="qr-scan-frame"></div>
+        </div>
+        <div class="qr-scan-hint" id="qrScanHint">Đưa mã vào giữa khung xanh — sẽ tự nhận diện</div>
+        <div class="qr-scan-actions">
+          <button type="button" class="btn btn-ghost" id="btnQrPickImage">🖼 Chọn ảnh</button>
+          <input type="file" id="qrPickFile" accept="image/*" hidden>
+          <button type="button" class="btn" id="btnQrCancel" style="background:#e5e7eb">Hủy</button>
         </div>
       </div>
     </div>
@@ -964,9 +1149,47 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
 <div class="modal" id="settingsModal">
   <div class="sheet">
-    <h2>Kết nối Google Sheet</h2>
-    <p class="desc">Dán đường link "Web App" nhận được sau khi Deploy Google Apps Script. Xem file <b>HUONG-DAN.txt</b> để làm theo từng bước.</p>
-    <div class="status-dot" id="connStatus" style="margin-bottom:14px"><i></i><span>Chưa kết nối</span></div>
+    <h2 style="display:flex;align-items:center;gap:8px">⚙️ Cài đặt hệ thống</h2>
+    <div class="settings-hero">
+      <h3>🗄️ Kiến trúc lưu trữ</h3>
+      <p><b>Ảnh · Video · PDF</b> → Cloudflare R2 (hotlink được, giá rẻ)<br>
+      <b>Dữ liệu phiếu · chấm công · CTP</b> → Supabase Postgres (nguồn CHÍNH)</p>
+    </div>
+
+    <div class="settings-block">
+      <div class="settings-block-title"><span class="b-icon">📊</span>Dung lượng đang dùng</div>
+      <div class="stor-grid" id="storGrid">
+        <div class="stor-card r2">
+          <div class="stor-card-head">
+            <div class="stor-card-title"><span class="stor-card-icon">☁️</span>Cloudflare R2</div>
+            <button type="button" class="stor-refresh-btn" id="btnRefreshR2">↻ Cập nhật</button>
+          </div>
+          <div class="stor-card-count" id="storR2Count">Đang đếm file…</div>
+          <div class="stor-size" id="storR2Size">— <span class="stor-size-unit">MB</span></div>
+          <div class="stor-limit">Miễn phí: 10 GB / tháng</div>
+          <div class="stor-bar"><div class="stor-bar-fill" id="storR2Bar" style="width:0"></div></div>
+          <div class="stor-top" id="storR2Top" hidden></div>
+        </div>
+        <div class="stor-card sb">
+          <div class="stor-card-head">
+            <div class="stor-card-title"><span class="stor-card-icon">🗄️</span>Supabase Storage</div>
+            <button type="button" class="stor-refresh-btn" id="btnRefreshSb">↻ Cập nhật</button>
+          </div>
+          <div class="stor-card-count" id="storSbCount">Đang đếm file…</div>
+          <div class="stor-size" id="storSbSize">— <span class="stor-size-unit">MB</span></div>
+          <div class="stor-limit">Miễn phí: 1 GB · chỉ dùng làm trạm trung chuyển</div>
+          <div class="stor-bar"><div class="stor-bar-fill" id="storSbBar" style="width:0"></div></div>
+          <div class="stor-top" id="storSbTop" hidden></div>
+        </div>
+      </div>
+      <p class="hint" style="margin:6px 2px 0;line-height:1.55">Ảnh/video mới upload lên Supabase rồi chuyển ngầm sang R2 — Supabase Storage sẽ dần về gần 0 khi các file đã relay xong. Nếu Supabase tăng cao thì check mạng/quyền R2.</p>
+    </div>
+
+    <div class="settings-block">
+      <div class="settings-block-title"><span class="b-icon">🔗</span>Kết nối Google Apps Script</div>
+      <p class="desc" style="margin-top:0">Dán đường link "Web App" nhận được sau khi Deploy Google Apps Script. Xem file <b>HUONG-DAN.txt</b> để làm theo từng bước.</p>
+      <div class="status-dot" id="connStatus" style="margin-bottom:14px"><i></i><span>Chưa kết nối</span></div>
+    </div>
     <label class="field">
       <span class="lab">Link Web App (URL)</span>
       <input type="text" id="s_url" placeholder="https://script.google.com/macros/s/.../exec" />
@@ -2098,6 +2321,16 @@ const DB={
  async warrantyRelayPhoto(id,stage,oldUrl,newUrl){
    const {data,error}=await sb.rpc('warranty_relay_photo',{p_id:Number(id),p_stage:Number(stage),p_old_url:oldUrl,p_new_url:newUrl});
    return error?{ok:false,error:error.message}:{ok:true,done:!!data};
+ },
+ async getSupabaseStorageUsage(){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('get_storage_usage');
+   return error?{ok:false,error:error.message}:(data||{ok:false,error:'Không lấy được dung lượng'});
+ },
+ async getR2Usage(){
+   const r=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+     body:JSON.stringify({token:CFG.token,action:'getR2Usage'})});
+   return r.json();
  }
 };
 const LS_HIST='kt_history_v1';
@@ -3404,25 +3637,30 @@ function renderWarrantyList(){
     const s = whComputeStatus(r);
     const photos = (r.stage1_photos||[]).length + (r.stage2_photos||[]).length;
     const vids = (r.stage1_video_url?1:0) + (r.stage2_video_url?1:0);
-    return `<div class="tk card" style="margin-bottom:10px;padding:12px" data-id="${r.id}">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-        <div style="font-weight:700;color:var(--brand)">${esc(r.receipt_no||('#'+r.id))} · ${esc(r.customer||'—')}</div>
+    return `<div class="wh-card" data-id="${r.id}">
+      <div class="wh-card-head">
+        <div class="wh-card-no">${esc(r.receipt_no||('#'+r.id))} · ${esc(r.customer||'—')}</div>
         ${whStatusPill(s)}
       </div>
-      <div style="margin-top:6px;color:var(--muted);font-size:13px">
-        <span>📅 ${fmtDMYFull(r.receipt_date)}</span> ·
-        <span>🔧 ${esc(r.device_name||'—')}${r.device_model?' ('+esc(r.device_model)+')':''}</span>
-        ${r.device_serial?' · <span>S/N: '+esc(r.device_serial)+'</span>':''}
-        ${r.quantity>1?' · <span>SL: '+r.quantity+'</span>':''}
+      <div class="wh-card-meta">
+        <span class="m-item">📅 ${fmtDMYFull(r.receipt_date)}</span>
+        <span class="m-item">🔧 ${esc(r.device_name||'—')}${r.device_model?' ('+esc(r.device_model)+')':''}</span>
+        ${r.device_serial?`<span class="m-item">🔖 S/N: ${esc(r.device_serial)}</span>`:''}
+        ${r.quantity>1?`<span class="m-item">SL: ${r.quantity}</span>`:''}
+        ${r.system?`<span class="m-item">⚙️ ${esc(r.system)}</span>`:''}
+        ${r.receiver_name?`<span class="m-item">👤 ${esc(r.receiver_name)}</span>`:''}
       </div>
-      ${r.fault_description?`<div style="margin-top:4px;font-size:13px"><b>Lỗi:</b> ${esc(r.fault_description)}</div>`:''}
-      ${r.vendor_name?`<div style="margin-top:4px;font-size:13px;color:var(--muted)">🏭 Hãng: ${esc(r.vendor_name)}${r.sent_to_vendor_at?' · Gửi: '+fmtDMYFull(r.sent_to_vendor_at):''}${r.returned_from_vendor_at?' · Về: '+fmtDMYFull(r.returned_from_vendor_at):''}</div>`:''}
-      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
-        ${photos?`<span class="btn-mini" style="background:var(--surface-2);color:var(--muted);cursor:default">📷 ${photos} ảnh</span>`:''}
-        ${vids?`<span class="btn-mini" style="background:var(--surface-2);color:var(--muted);cursor:default">🎥 ${vids} video</span>`:''}
-        <button type="button" class="btn-mini wh-edit" data-id="${r.id}">✏️ Sửa / Xem</button>
-        <button type="button" class="btn-mini wh-pdf" data-id="${r.id}">📄 PDF</button>
-        <button type="button" class="btn-mini wh-del" data-id="${r.id}" style="background:#fee2e2;color:#991b1b">🗑</button>
+      ${r.fault_description?`<div class="wh-card-fault"><b>Lỗi:</b> ${esc(r.fault_description)}</div>`:''}
+      ${r.vendor_name?`<div class="wh-card-meta" style="margin-top:4px"><span class="m-item">🏭 Hãng: ${esc(r.vendor_name)}</span>${r.sent_to_vendor_at?`<span class="m-item">📤 Gửi: ${fmtDMYFull(r.sent_to_vendor_at)}</span>`:''}${r.returned_from_vendor_at?`<span class="m-item">📥 Về: ${fmtDMYFull(r.returned_from_vendor_at)}</span>`:''}</div>`:''}
+      <div class="wh-card-actions">
+        <div class="wh-card-tags">
+          ${photos?`<span class="wh-tag">📷 ${photos}</span>`:''}
+          ${vids?`<span class="wh-tag">🎥 ${vids}</span>`:''}
+        </div>
+        <div style="flex:1"></div>
+        <button type="button" class="wh-edit" data-id="${r.id}">✏️ Xem / Sửa</button>
+        <button type="button" class="wh-pdf" data-id="${r.id}">📄 PDF</button>
+        <button type="button" class="wh-del" data-id="${r.id}">🗑</button>
       </div>
     </div>`;
   }).join('');
@@ -3437,15 +3675,85 @@ $('#btnWhNew').onclick = () => openWarrantyForm(null);
 $('#btnWhClose').onclick = $('#btnWhCancel').onclick = () => $('#whModal').classList.remove('show');
 $('#whModal').onclick = e => { if (e.target === $('#whModal')) $('#whModal').classList.remove('show'); };
 
+// Dropdown Nguoi nhan — single-select dua tren msel, dung chung engineerList
+let whReceiverName = ''; // gia tri hien tai (rong = chua chon)
+function renderWhReceiverList(filter){
+  const q = (filter||'').toLowerCase();
+  const items = (engineerList||[]).filter(n => n.toLowerCase().includes(q));
+  const html = items.map(n =>
+    `<label class="msel-opt"><input type="radio" name="wh_recv_radio" value="${esc(n)}" ${n===whReceiverName?'checked':''}><span>${esc(n)}</span></label>`
+  ).join('');
+  $('#wh_receiver_list').innerHTML = html || '<div class="msel-empty">Không tìm thấy</div>';
+  // Wire radio buttons
+  $$('#wh_receiver_list input[type=radio]').forEach(r => r.onchange = () => {
+    if (r.checked){
+      whReceiverName = r.value;
+      $('#wh_receiver_other_chk').checked = false;
+      $('#wh_receiver_other_wrap').hidden = true;
+      updateWhReceiverLabel();
+      // Đóng dropdown sau khi chọn
+      $('#wh_receiver_panel').hidden = true;
+      $('#wh_receiver_dd').classList.remove('open');
+    }
+  });
+}
+function updateWhReceiverLabel(){
+  const btn = $('#wh_receiver_btn');
+  if (whReceiverName){ btn.textContent = whReceiverName; btn.classList.remove('placeholder'); }
+  else { btn.textContent = '— Chọn người nhận —'; btn.classList.add('placeholder'); }
+}
+$('#wh_receiver_btn').onclick = () => {
+  const panel = $('#wh_receiver_panel'), dd = $('#wh_receiver_dd');
+  const willOpen = panel.hidden;
+  panel.hidden = !willOpen;
+  dd.classList.toggle('open', willOpen);
+  if (willOpen){ renderWhReceiverList(''); $('#wh_receiver_search').value=''; $('#wh_receiver_search').focus(); }
+};
+$('#wh_receiver_search').oninput = e => renderWhReceiverList(e.target.value);
+$('#wh_receiver_other_chk').onchange = () => {
+  const chk = $('#wh_receiver_other_chk');
+  $('#wh_receiver_other_wrap').hidden = !chk.checked;
+  if (chk.checked){
+    // Bo chon cac radio ten kỹ sư
+    $$('#wh_receiver_list input[type=radio]').forEach(r => r.checked = false);
+    $('#wh_receiver_other').focus();
+  } else {
+    whReceiverName = $('#wh_receiver_other').value.trim();
+    updateWhReceiverLabel();
+  }
+};
+$('#wh_receiver_other').oninput = e => {
+  whReceiverName = e.target.value.trim();
+  updateWhReceiverLabel();
+};
+document.addEventListener('click', e => {
+  const dd = $('#wh_receiver_dd');
+  if (dd && !dd.contains(e.target) && !dd.classList.contains('open') === false){
+    $('#wh_receiver_panel').hidden = true;
+    dd.classList.remove('open');
+  }
+});
+
+// He thong: hien field "Khac" khi chon __other
+$('#wh_system').onchange = e => {
+  $('#wh_system_other_wrap').style.display = e.target.value === '__other' ? 'block' : 'none';
+};
+
 function openWarrantyForm(id){
   whCurrentId = id;
   whStage1Photos = []; whStage2Photos = []; whStage1Video = null; whStage2Video = null;
-  $('#whModalTitle').textContent = id ? 'Sửa / Xem phiếu bảo hành' : 'Nhận hàng bảo hành mới';
+  whReceiverName = '';
+  $('#whModalTitle').textContent = id ? '✏️ Sửa / Xem phiếu bảo hành' : '🛠️ Nhận hàng bảo hành mới';
   $('#wh_id').value = id || '';
   // Reset fields
-  ['wh_customer','wh_system','wh_device_name','wh_device_model','wh_device_serial',
-   'wh_fault','wh_receiver_name','wh_vendor_name','wh_vendor_note',
-   'wh_returned_by','wh_customer_signer','wh_note'].forEach(k => { const el=$('#'+k); if(el) el.value=''; });
+  ['wh_customer','wh_device_name','wh_device_model','wh_device_serial',
+   'wh_fault','wh_vendor_name','wh_vendor_note',
+   'wh_returned_by','wh_customer_signer','wh_note','wh_system_other','wh_receiver_other'
+  ].forEach(k => { const el=$('#'+k); if(el) el.value=''; });
+  $('#wh_system').value = '';
+  $('#wh_system_other_wrap').style.display = 'none';
+  $('#wh_receiver_other_chk').checked = false;
+  $('#wh_receiver_other_wrap').hidden = true;
   $('#wh_quantity').value = 1;
   ['wh_receipt_date','wh_sent_at','wh_returned_at','wh_delivered_at'].forEach(k => $('#'+k).value = '');
   // Default receipt_date = today VN
@@ -3455,13 +3763,22 @@ function openWarrantyForm(id){
     const r = whData.find(x => x.id === id);
     if (r){
       $('#wh_customer').value = r.customer||'';
-      $('#wh_system').value = r.system||'';
+      // System: neu ton tai trong option thi chon, khong thi vao "Khac"
+      const sysOpts = Array.from($('#wh_system').options).map(o => o.value||o.textContent);
+      if (r.system && sysOpts.includes(r.system)){ $('#wh_system').value = r.system; }
+      else if (r.system){ $('#wh_system').value = '__other'; $('#wh_system_other').value = r.system; $('#wh_system_other_wrap').style.display='block'; }
       $('#wh_device_name').value = r.device_name||'';
       $('#wh_device_model').value = r.device_model||'';
       $('#wh_device_serial').value = r.device_serial||'';
       $('#wh_quantity').value = r.quantity||1;
       $('#wh_fault').value = r.fault_description||'';
-      $('#wh_receiver_name').value = r.receiver_name||'';
+      // Receiver: neu ton tai trong engineerList thi chon, neu khong thi vao "Khac"
+      whReceiverName = r.receiver_name||'';
+      if (whReceiverName && !(engineerList||[]).includes(whReceiverName)){
+        $('#wh_receiver_other_chk').checked = true;
+        $('#wh_receiver_other_wrap').hidden = false;
+        $('#wh_receiver_other').value = whReceiverName;
+      }
       if (r.receipt_date) $('#wh_receipt_date').value = r.receipt_date;
       $('#wh_vendor_name').value = r.vendor_name||'';
       if (r.sent_to_vendor_at) $('#wh_sent_at').value = r.sent_to_vendor_at;
@@ -3477,9 +3794,26 @@ function openWarrantyForm(id){
       if (r.stage2_video_url) whStage2Video = {url:r.stage2_video_url, name:r.stage2_video_name||'video2'};
     }
   }
+  updateWhReceiverLabel();
   renderWhPhotos(1); renderWhPhotos(2); renderWhVideo(1); renderWhVideo(2);
+  updateWhStepIndicator();
   $('#whModal').classList.add('show');
 }
+
+// Step indicator: hien buoc dang lam theo cot ngay da nhap
+function updateWhStepIndicator(){
+  const hasSent = !!$('#wh_sent_at').value;
+  const hasReturned = !!$('#wh_returned_at').value;
+  const hasDelivered = !!$('#wh_delivered_at').value;
+  const items = $$('#whStep .wh-step-item');
+  items.forEach(el => { el.classList.remove('active','done'); });
+  if (hasDelivered){ items[0].classList.add('done'); items[1].classList.add('done'); items[2].classList.add('active'); }
+  else if (hasReturned || hasSent){ items[0].classList.add('done'); items[1].classList.add('active'); }
+  else { items[0].classList.add('active'); }
+}
+['wh_sent_at','wh_returned_at','wh_delivered_at'].forEach(id => {
+  $('#'+id).addEventListener('change', updateWhStepIndicator);
+});
 
 function renderWhPhotos(stage){
   const arr = stage===1 ? whStage1Photos : whStage2Photos;
@@ -3557,15 +3891,21 @@ $('#btnWhSave').onclick = async () => {
   if (!customer){ toast('Nhập tên khách hàng', true); $('#wh_customer').focus(); return; }
   const receiptDate = $('#wh_receipt_date').value;
   if (!receiptDate){ toast('Chọn ngày nhận', true); $('#wh_receipt_date').focus(); return; }
+  // System: giai quyet gia tri thuc — neu chon "Khac" thi lay o input phu
+  let systemVal = $('#wh_system').value;
+  if (systemVal === '__other') systemVal = $('#wh_system_other').value.trim();
+  else systemVal = systemVal.trim();
+  // Receiver: lay tu state whReceiverName (da xu ly ca "Khac")
+  const receiverVal = (whReceiverName || $('#wh_receiver_other').value || '').trim();
   const payload = {
     customer,
-    system: $('#wh_system').value.trim() || null,
+    system: systemVal || null,
     device_name: $('#wh_device_name').value.trim() || null,
     device_model: $('#wh_device_model').value.trim() || null,
     device_serial: $('#wh_device_serial').value.trim() || null,
     quantity: Number($('#wh_quantity').value)||1,
     fault_description: $('#wh_fault').value.trim() || null,
-    receiver_name: $('#wh_receiver_name').value.trim() || null,
+    receiver_name: receiverVal || null,
     receipt_date: receiptDate,
     stage1_photos: whStage1Photos,
     stage1_video_url: whStage1Video ? whStage1Video.url : null,
@@ -3727,6 +4067,130 @@ async function exportWarrantyPdf(id){
   }
   doc.save(`Phieu-BaoHanh-${r.receipt_no||r.id}.pdf`);
 }
+
+/* ===================== QR / Barcode scanner cho form Bao hanh =====================
+   Uu tien BarcodeDetector API cua trinh duyet (nhieu format: QR, Code128, Code39,
+   EAN...), fallback jsQR chi cho QR khi API chua co. Tra ket qua bang cach dien
+   thang vao 1 field da chi dinh (data-target) tren nut da bam. */
+let qrStream = null, qrScanRAF = 0, qrTargetId = null;
+async function openQrScanner(targetId){
+  qrTargetId = targetId;
+  $('#qrScanHint').textContent = 'Đang mở camera...';
+  $('#qrScanModal').classList.add('show');
+  try{
+    qrStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false});
+    const v = $('#qrVideo');
+    v.srcObject = qrStream;
+    await v.play();
+    $('#qrScanHint').textContent = 'Đưa mã vào giữa khung xanh — sẽ tự nhận diện';
+    scanQrLoop();
+  }catch(err){
+    $('#qrScanHint').textContent = '⚠️ Không mở được camera: '+(err.message||err)+'. Bấm "Chọn ảnh" để quét từ ảnh.';
+  }
+}
+function closeQrScanner(){
+  cancelAnimationFrame(qrScanRAF); qrScanRAF = 0;
+  if (qrStream){ qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
+  const v = $('#qrVideo'); if (v) v.srcObject = null;
+  $('#qrScanModal').classList.remove('show');
+  qrTargetId = null;
+}
+function fillQrResultToTarget(text){
+  if (!text || !qrTargetId) return;
+  // Neu QR chua JSON co san field mapping, tu dien vao dung o
+  let mapped = false;
+  try{
+    const obj = JSON.parse(text);
+    if (obj && typeof obj === 'object'){
+      const setIf = (k, ids) => { if (obj[k]!=null){ for(const id of ids){ const el=$('#'+id); if(el){ el.value = String(obj[k]); mapped = true; break; } } } };
+      setIf('sn', ['wh_device_serial']); setIf('serial', ['wh_device_serial']); setIf('SN', ['wh_device_serial']);
+      setIf('model', ['wh_device_model']); setIf('Model', ['wh_device_model']);
+      setIf('name', ['wh_device_name']); setIf('device', ['wh_device_name']);
+    }
+  }catch{}
+  // Fallback: key-value ngan cach ; hoac \n (SN:xxx;MODEL:yyy)
+  if (!mapped && /[:=]/.test(text) && /[;\n]/.test(text)){
+    text.split(/[;\n]/).forEach(part => {
+      const m = part.match(/^\s*(SN|Serial|MODEL|Model|NAME|Name|Device)\s*[:=]\s*(.+)$/i);
+      if (m){
+        const key = m[1].toLowerCase(), val = m[2].trim();
+        const id = (key==='sn'||key==='serial') ? 'wh_device_serial'
+                 : (key==='model') ? 'wh_device_model'
+                 : 'wh_device_name';
+        const el = $('#'+id); if (el){ el.value = val; mapped = true; }
+      }
+    });
+  }
+  if (!mapped){
+    // Truong hop don gian: dien nguyen chuoi vao target da chi dinh
+    const el = $('#'+qrTargetId); if (el) el.value = text.trim();
+  }
+  toast('✅ Đã quét: '+text.slice(0,60));
+  closeQrScanner();
+}
+async function scanQrLoop(){
+  const v = $('#qrVideo');
+  if (!v || v.readyState < 2){ qrScanRAF = requestAnimationFrame(scanQrLoop); return; }
+  // Uu tien BarcodeDetector cua browser
+  if ('BarcodeDetector' in window){
+    try{
+      const det = new BarcodeDetector({formats:['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e','data_matrix','pdf417']});
+      const codes = await det.detect(v);
+      if (codes && codes.length){ fillQrResultToTarget(codes[0].rawValue); return; }
+    }catch{}
+  } else if (window.jsQR){
+    // Fallback QR-only qua jsQR
+    const canvas = document.createElement('canvas');
+    canvas.width = v.videoWidth; canvas.height = v.videoHeight;
+    if (canvas.width && canvas.height){
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(v, 0, 0);
+      try{
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imgData.data, imgData.width, imgData.height, {inversionAttempts:'dontInvert'});
+        if (code && code.data){ fillQrResultToTarget(code.data); return; }
+      }catch{}
+    }
+  }
+  qrScanRAF = requestAnimationFrame(scanQrLoop);
+}
+// Wire scan buttons + close
+document.addEventListener('click', e => {
+  const scanBtn = e.target.closest('.wh-scan-btn');
+  if (scanBtn){ openQrScanner(scanBtn.dataset.target); }
+});
+$('#btnQrClose').onclick = closeQrScanner;
+$('#btnQrCancel').onclick = closeQrScanner;
+$('#qrScanModal').onclick = e => { if (e.target === $('#qrScanModal')) closeQrScanner(); };
+// Fallback: chon anh QR tu thu vien (khi camera loi)
+$('#btnQrPickImage').onclick = () => $('#qrPickFile').click();
+$('#qrPickFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  const img = new Image();
+  img.onload = async () => {
+    URL.revokeObjectURL(img.src);
+    if ('BarcodeDetector' in window){
+      try{
+        const det = new BarcodeDetector({formats:['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e','data_matrix','pdf417']});
+        const codes = await det.detect(img);
+        if (codes && codes.length){ fillQrResultToTarget(codes[0].rawValue); return; }
+      }catch{}
+    }
+    if (window.jsQR){
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
+      try{
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imgData.data, imgData.width, imgData.height);
+        if (code && code.data){ fillQrResultToTarget(code.data); return; }
+      }catch{}
+    }
+    toast('⚠️ Không nhận diện được mã trong ảnh', true);
+  };
+  img.src = URL.createObjectURL(f);
+};
 
 /* manager */
 let mgrData=[];
@@ -4128,7 +4592,61 @@ $('#btnExport').onclick=()=>{
 const gate=$('#adminGateModal');
 function openSettingsModal(){$('#s_url').value=CFG.url;$('#s_token').value=CFG.token;$('#s_token').classList.add('masked');$('#s_store').value=CFG.store;
  $('#s_display').value=localStorage.getItem('kt_display_mode')||'auto';
- const cs=$('#connStatus');cs.className='status-dot'+(CFG.url?' live':'');cs.querySelector('span').textContent=CFG.url?'Đã kết nối':'Chưa kết nối';modal.classList.add('show');loadEngineers();loadAeonSiteManage();loadProjectCodes().then(renderPcManageList);loadDataSizeInfo();maybeMonthlySupabaseBackup();}
+ const cs=$('#connStatus');cs.className='status-dot'+(CFG.url?' live':'');cs.querySelector('span').textContent=CFG.url?'Đã kết nối':'Chưa kết nối';modal.classList.add('show');loadEngineers();loadAeonSiteManage();loadProjectCodes().then(renderPcManageList);loadDataSizeInfo();maybeMonthlySupabaseBackup();
+ // Auto-load storage usage khi mo Cai dat (khong chan neu loi)
+ loadStorageUsage();
+}
+
+// ===== Storage usage tracker (R2 + Supabase Storage) =====
+function fmtBytes(n){
+  if(!Number.isFinite(n)) return '—';
+  if(n<1024) return n+' B';
+  if(n<1024*1024) return (n/1024).toFixed(1)+' KB';
+  if(n<1024*1024*1024) return (n/1024/1024).toFixed(1)+' MB';
+  return (n/1024/1024/1024).toFixed(2)+' GB';
+}
+function shortKey(k){ return k.length>44?k.slice(0,20)+'…'+k.slice(-20):k; }
+async function loadR2Usage(){
+  $('#storR2Count').textContent = 'Đang đếm…'; $('#storR2Size').innerHTML = '— <span class="stor-size-unit">MB</span>';
+  $('#storR2Bar').style.width = '0'; $('#storR2Top').hidden = true;
+  try{
+    const j = await DB.getR2Usage();
+    if (!j.ok){ $('#storR2Count').textContent = '⚠️ '+(j.error||'không lấy được'); return; }
+    const total = j.total_bytes||0, pct = Math.min(100, total/(10*1024*1024*1024)*100);
+    $('#storR2Count').textContent = `${j.file_count||0} file · bucket ${j.bucket||''}`;
+    const f = fmtBytes(total);
+    const num = f.split(' ')[0], unit = f.split(' ')[1]||'';
+    $('#storR2Size').innerHTML = `${num} <span class="stor-size-unit">${unit}</span>`;
+    $('#storR2Bar').style.width = pct.toFixed(2)+'%';
+    if ((j.top_files||[]).length){
+      $('#storR2Top').innerHTML = '<div style="font-weight:600;margin-bottom:3px">📁 File lớn nhất</div>'
+        + j.top_files.slice(0,5).map(f=>`<div class="stor-top-item"><span class="k">${esc(shortKey(f.key||''))}</span><span>${fmtBytes(f.size)}</span></div>`).join('');
+      $('#storR2Top').hidden = false;
+    }
+  }catch(err){ $('#storR2Count').textContent = '⚠️ '+err.message; }
+}
+async function loadSbStorageUsage(){
+  $('#storSbCount').textContent = 'Đang đếm…'; $('#storSbSize').innerHTML = '— <span class="stor-size-unit">MB</span>';
+  $('#storSbBar').style.width = '0'; $('#storSbTop').hidden = true;
+  try{
+    const j = await DB.getSupabaseStorageUsage();
+    if (!j.ok){ $('#storSbCount').textContent = '⚠️ '+(j.error||'không lấy được'); return; }
+    const total = j.total_bytes||0, pct = Math.min(100, total/(1*1024*1024*1024)*100);
+    $('#storSbCount').textContent = `${j.file_count||0} file · bucket ${j.bucket||''}`;
+    const f = fmtBytes(total);
+    const num = f.split(' ')[0], unit = f.split(' ')[1]||'';
+    $('#storSbSize').innerHTML = `${num} <span class="stor-size-unit">${unit}</span>`;
+    $('#storSbBar').style.width = pct.toFixed(2)+'%';
+    if ((j.top_files||[]).length){
+      $('#storSbTop').innerHTML = '<div style="font-weight:600;margin-bottom:3px">📁 File chưa relay</div>'
+        + j.top_files.slice(0,5).map(f=>`<div class="stor-top-item"><span class="k">${esc(shortKey(f.name||''))}</span><span>${fmtBytes(f.size)}</span></div>`).join('');
+      $('#storSbTop').hidden = false;
+    }
+  }catch(err){ $('#storSbCount').textContent = '⚠️ '+err.message; }
+}
+function loadStorageUsage(){ loadR2Usage(); loadSbStorageUsage(); }
+$('#btnRefreshR2').onclick = loadR2Usage;
+$('#btnRefreshSb').onclick = loadSbStorageUsage;
 // Hiện dung lượng dữ liệu hiện tại (số bản ghi + KB = đúng cỡ file backup) — tự cập nhật mỗi lần mở Cài đặt.
 async function loadDataSizeInfo(){
  const el=$('#sbDataSize'); if(!el) return;
