@@ -1880,20 +1880,6 @@ const DB={
    const {error}=await sb.rpc('delete_ticket',{p_id:Number(no),p_admin_password:adminPassword});
    return error?{ok:false,error:error.message}:{ok:true};
  },
- // Ghi lại link Drive sau khi chuyển ảnh/PDF phiếu cũ — bắt buộc qua RPC có
- // mật khẩu Administrator (trước đây dựa vào policy UPDATE công khai của
- // bảng, đã bỏ policy đó để không ai sửa được tickets/ticket_photos trực
- // tiếp qua API mà không qua RPC).
- async archiveTicketUrl(id,column,driveUrl,adminPassword){
-   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
-   const {data,error}=await sb.rpc('archive_ticket_url',{p_admin_password:adminPassword,p_id:Number(id),p_column:column,p_drive_url:driveUrl});
-   return error?{ok:false,error:error.message}:{ok:true,data};
- },
- async archiveTicketPhotoUrl(photoId,driveUrl,adminPassword){
-   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
-   const {data,error}=await sb.rpc('archive_ticket_photo_url',{p_admin_password:adminPassword,p_photo_id:Number(photoId),p_drive_url:driveUrl});
-   return error?{ok:false,error:error.message}:{ok:true,data};
- },
  // Báo cáo AEON Huế/Thanh Khê — bảng riêng aeon_tickets, tách khỏi tickets sống
  async listAeonTickets(){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
@@ -2003,16 +1989,6 @@ const DB={
    const {data,error}=await sb.rpc('delete_project_code',{p_code:code,p_admin_password:adminPassword});
    return error?{ok:false,error:error.message}:{ok:true,data:data||[]};
  },
- // Đẩy toàn bộ phiếu từ Supabase sang Google Sheet backup (kèm link ảnh,
- // kể cả ảnh đã chuyển sang Drive) — gọi qua Apps Script, chia lô cho nhẹ.
- async backupTicketsToSheet(rows,adminPassword){
-   if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
-   try{
-     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-       body:JSON.stringify({token:CFG.token,action:'backupTickets',rows,adminPassword})});
-     return await res.json();
-   }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
- },
  async backupAeonTicketsToSheet(rows,adminPassword){
    if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
    try{
@@ -2071,34 +2047,11 @@ const DB={
      return await res.json();
    }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
  },
- async backupAttendanceToSheet(rows,adminPassword){
-   if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
-   try{
-     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-       body:JSON.stringify({token:CFG.token,action:'backupAttendance',rows,adminPassword})});
-     return await res.json();
-   }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
- },
- async backupExpensesToSheet(rows,adminPassword){
-   if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
-   try{
-     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-       body:JSON.stringify({token:CFG.token,action:'backupExpenses',rows,adminPassword})});
-     return await res.json();
-   }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
- },
  async syncAttendanceEngineerToSheet(employee,rows,adminPassword){
    if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
    try{
      const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
        body:JSON.stringify({token:CFG.token,action:'syncAttendanceEngineer',employee,rows,adminPassword})});
-     return await res.json();
-   }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
- },
- async listBackupTickets(){
-   if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
-   try{
-     const res=await fetch(`${CFG.url}?action=listBackupTickets&token=${encodeURIComponent(CFG.token)}`);
      return await res.json();
    }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
  },
@@ -2257,19 +2210,6 @@ const DB={
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
    const {data,error}=await sb.rpc('delete_trip',{p_trip_id:tripId,p_admin_password:adminPassword});
    return error?{ok:false,error:error.message}:{ok:true,deletedLines:data};
- },
- // Chuyển 1 file từ Supabase Storage sang Google Drive — gọi qua Apps Script
- // (Code.gs) vì nó đã có sẵn quyền Drive dưới tài khoản Google của admin,
- // không cần thêm thông tin đăng nhập/khóa API nào mới.
- // customer/ticketDate quyết định thư mục con lưu vào Drive (Tên dự án/Ngày
- // phiếu) — để sau này kiểm duyệt lại dễ tìm, không đổ hết vào 1 thư mục.
- async archiveFileToDrive(fileUrl,fileName,adminPassword,customer,ticketDate){
-   if(!CFG.url) return {ok:false,error:'Chưa cấu hình Apps Script URL'};
-   try{
-     const res=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-       body:JSON.stringify({token:CFG.token,action:'archiveFileToDrive',fileUrl,fileName,adminPassword,customer,ticketDate})});
-     return await res.json();
-   }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
  },
  async uploadCtpMap(file,label){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
@@ -3388,7 +3328,7 @@ $('#tkForm').onsubmit=async e=>{
        const pin=prompt(`Phiếu #${displayNo} đã sửa đủ ${EDIT_LIMIT} lần. Nhập mật khẩu quản trị để sửa tiếp:`);
        if(pin===null) return;
        const ok=await verifyAdminPassword(pin);
-       if(ok){ renderManager(); renderHistory(); }
+       if(ok){ renderManager()/*no history*/; }
        else{ toast('Sai mật khẩu quản trị',true); return; }
      }
    }
@@ -3494,11 +3434,9 @@ function emptyState(t,d){return `<div class="empty"><svg viewBox="0 0 24 24" fil
 /* history — lấy đúng dữ liệu THẬT từ Sheet (mgrData), giống hệt Quản lý,
    lọc theo Ngày/Tuần/Tháng/Tất cả — không dùng bộ nhớ máy riêng nữa nên
    luôn khớp với Quản lý (trước đây dùng localStorage nên có thể lệch/sót). */
-function findTicket(no,fromArchive){
- if(fromArchive) return (archivedData||[]).find(r=>String(r.no)===String(no));
+function findTicket(no){
  return mgrData.find(r=>String(r.no)===String(no))
-   || JSON.parse(localStorage.getItem(LS_HIST)||'[]').find(r=>String(r.no)===String(no))
-   || (archivedData||[]).find(r=>String(r.no)===String(no));
+   || JSON.parse(localStorage.getItem(LS_HIST)||'[]').find(r=>String(r.no)===String(no));
 }
 // Xem "Hướng xử lý" (remark) của 1 phiếu — không hiện thành cột riêng trong
 // bảng (quá dài, chiếm chỗ), nên bấm nút 👁 cạnh nút Sửa để xem trong popup.
@@ -3567,11 +3505,7 @@ $('#photosModal').onclick=e=>{if(e.target===$('#photosModal'))$('#photosModal').
 /* Tab Lich su cu da duoc thay bang tab Bao hanh (view-warranty).
    Giu lai cac ten ham/bien de code khac goi khong bi null-ref;
    tra ve du lieu lưu trữ qua tab Quản lý neu can. */
-let archivedData=null;
-let archivedLoading=false;
-async function loadArchivedTickets(){ archivedData=[]; }
-function refreshCurrentHistorySource(){}
-function renderHistory(){}
+/* Tab "Lịch sử" cũ đã bị thay bằng tab "Bảo hành" — không còn cần archivedData / renderHistory. */
 
 /* ===================== BAO HANH (warranty_receipts) =====================
    Form nhan hang bao hanh 2 giai doan (Nhan vao → Tra khach). Anh + video ≤45s
@@ -4202,7 +4136,7 @@ function renderAllFromMgrData(){
  buildYMWOptions();
  renderManager();
  renderDashboard();
- renderHistory();
+ /*no history*/
 }
 /* Tải dữ liệu kiểu "cũ trước, mới sau" (stale-while-revalidate): nếu máy đã
    từng tải thành công 1 lần, hiện NGAY dữ liệu lần trước (không phải chờ
@@ -4519,7 +4453,7 @@ $('#mgrCustomer').onchange=renderManager;
 $('#mgrSystem').onchange=renderManager;
 $('#mgrPriority').onchange=renderManager;
 $('#mgrWorkType').onchange=renderManager;
-$('#btnRefresh').onclick=()=>{loadManager();refreshCurrentHistorySource();toast('Đã làm mới')};
+$('#btnRefresh').onclick=()=>{loadManager();/*no history*/toast('Đã làm mới')};
 /* Làm mới TOÀN BỘ TRANG (không chỉ dữ liệu) — tải lại bản mới nhất từ server,
    bỏ qua cache trình duyệt, dùng khi vừa cập nhật app mà máy vẫn hiện bản cũ. */
 $('#btnPageReload').onclick=()=>{ location.href=location.pathname+'?v='+Date.now(); };
@@ -4724,104 +4658,9 @@ async function loadPeriodInfo(){
 /* Sao lưu Supabase → Google Sheet: đọc hết phiếu + ảnh từ Supabase rồi gửi
    sang Apps Script ghi vào tab "Tickets" của file backup. Chia lô 50 phiếu
    mỗi lần để không vượt giới hạn kích thước request của Apps Script. */
-const _rmBtnSyncBackup=$('#btnSyncBackup'); if(_rmBtnSyncBackup) _rmBtnSyncBackup.onclick=async()=>{
- if(!sb){ toast('Chưa kết nối Supabase',true); return; }
- if(!CFG.url){ toast('Chưa cấu hình Apps Script URL',true); return; }
- const btn=$('#btnSyncBackup'); btn.disabled=true;
- const box=$('#syncBackupStatus'); box.style.display='block'; box.className='period-notice';
- box.textContent='Đang đọc dữ liệu từ Supabase...';
- try{
-   const tj=await DB.listTicketsFull();
-   if(!tj.ok){ throw new Error(tj.error||'Không đọc được phiếu'); }
-   const tickets=tj.data||[];
-   if(!tickets.length){ box.textContent='Chưa có phiếu nào để sao lưu.'; btn.disabled=false; return; }
-   // gom ảnh "khác" theo từng phiếu (1 truy vấn, gộp lại phía app)
-   const allPhotos=[]; // cũng phải phân trang vì giới hạn 1000 dòng
-   for(let from=0;;from+=1000){
-     const {data,error}=await sb.from('ticket_photos').select('ticket_id,url').order('id').range(from,from+999);
-     if(error) throw new Error(error.message);
-     allPhotos.push(...data);
-     if(data.length<1000) break;
-   }
-   const photoMap={};
-   (allPhotos||[]).forEach(p=>{ (photoMap[p.ticket_id]=photoMap[p.ticket_id]||[]).push(p.url); });
-   const rows=tickets.map(t=>({id:t.no,date:t.date,customer:t.customer,system:t.system,issue:t.issue,
-     priority:t.priority,engineer:t.engineer,support:t.support,status:t.status,remark:t.remark,
-     workType:t.workType,attachmentUrl:t.attachmentUrl,attachmentName:t.attachmentName,
-     attachmentBackUrl:t.attachmentBackUrl,attachmentBackName:t.attachmentBackName,
-     bienbanPdfUrl:t.bienbanPdfUrl,bienbanPdfName:t.bienbanPdfName,photos:photoMap[t.no]||[]}));
-   let added=0, updated=0;
-   for(let i=0;i<rows.length;i+=50){
-     const batch=rows.slice(i,i+50);
-     box.textContent=`Đang sao lưu ${Math.min(i+batch.length,rows.length)}/${rows.length} phiếu...`;
-     const j=await DB.backupTicketsToSheet(batch,adminPassword.settings);
-     if(!j.ok) throw new Error(j.error||'Lỗi ghi vào Sheet');
-     added+=j.added||0; updated+=j.updated||0;
-   }
-   box.className='period-notice';
-   box.textContent=`✅ Đã sao lưu ${rows.length} phiếu sang Google Sheet (thêm mới ${added}, cập nhật ${updated}).`;
-   toast(`✅ Đã sao lưu ${rows.length} phiếu sang Google Sheet`);
-   archivedData=null; // buộc mục Lịch sử tải lại bản lưu trữ mới nhất
- }catch(err){
-   box.className='period-notice overdue'; box.textContent='Lỗi: '+err.message;
-   toast('⚠️ Sao lưu thất bại',true);
- }
- btn.disabled=false;
-};
-// Đồng bộ backup Chấm công/Công tác phí — cùng khuôn với btnSyncBackup ở
-// trên, chỉ đổi nguồn đọc (DB.listAttendance/listExpenses) và action đích.
-const _rmBtnSyncCc=$('#btnSyncBackupCc'); if(_rmBtnSyncCc) _rmBtnSyncCc.onclick=async()=>{
- if(!CFG.url){ toast('Chưa cấu hình Apps Script URL',true); return; }
- const btn=$('#btnSyncBackupCc'); btn.disabled=true;
- const box=$('#syncCcCtpStatus'); box.style.display='block'; box.className='period-notice';
- box.textContent='Đang đọc dữ liệu Chấm công từ Supabase...';
- try{
-   const j0=await DB.listAttendance(null,null,null,adminPassword.chamcong_ctp);
-   if(!j0.ok) throw new Error(j0.error||'Không đọc được chấm công');
-   const rows=j0.data||[];
-   if(!rows.length){ box.textContent='Chưa có dòng chấm công nào để sao lưu.'; btn.disabled=false; return; }
-   let added=0, updated=0;
-   for(let i=0;i<rows.length;i+=50){
-     const batch=rows.slice(i,i+50);
-     box.textContent=`Đang sao lưu ${Math.min(i+batch.length,rows.length)}/${rows.length} dòng...`;
-     const j=await DB.backupAttendanceToSheet(batch,adminPassword.settings);
-     if(!j.ok) throw new Error(j.error||'Lỗi ghi vào Sheet');
-     added+=j.added||0; updated+=j.updated||0;
-   }
-   box.textContent=`✅ Đã sao lưu ${rows.length} dòng chấm công (thêm mới ${added}, cập nhật ${updated}).`;
-   toast(`✅ Đã sao lưu ${rows.length} dòng chấm công`);
- }catch(err){
-   box.className='period-notice overdue'; box.textContent='Lỗi: '+err.message;
-   toast('⚠️ Sao lưu thất bại',true);
- }
- btn.disabled=false;
-};
-const _rmBtnSyncCtp=$('#btnSyncBackupCtp'); if(_rmBtnSyncCtp) _rmBtnSyncCtp.onclick=async()=>{
- if(!CFG.url){ toast('Chưa cấu hình Apps Script URL',true); return; }
- const btn=$('#btnSyncBackupCtp'); btn.disabled=true;
- const box=$('#syncCcCtpStatus'); box.style.display='block'; box.className='period-notice';
- box.textContent='Đang đọc dữ liệu Công tác phí từ Supabase...';
- try{
-   const j0=await DB.listExpenses(adminPassword.chamcong_ctp);
-   if(!j0.ok) throw new Error(j0.error||'Không đọc được công tác phí');
-   const rows=j0.data||[];
-   if(!rows.length){ box.textContent='Chưa có dòng công tác phí nào để sao lưu.'; btn.disabled=false; return; }
-   let added=0, updated=0;
-   for(let i=0;i<rows.length;i+=50){
-     const batch=rows.slice(i,i+50);
-     box.textContent=`Đang sao lưu ${Math.min(i+batch.length,rows.length)}/${rows.length} dòng...`;
-     const j=await DB.backupExpensesToSheet(batch,adminPassword.settings);
-     if(!j.ok) throw new Error(j.error||'Lỗi ghi vào Sheet');
-     added+=j.added||0; updated+=j.updated||0;
-   }
-   box.textContent=`✅ Đã sao lưu ${rows.length} dòng công tác phí (thêm mới ${added}, cập nhật ${updated}).`;
-   toast(`✅ Đã sao lưu ${rows.length} dòng công tác phí`);
- }catch(err){
-   box.className='period-notice overdue'; box.textContent='Lỗi: '+err.message;
-   toast('⚠️ Sao lưu thất bại',true);
- }
- btn.disabled=false;
-};
+/* Đã xoá các handler đồng bộ Supabase → Google Sheet (btnSyncBackup*)
+   theo yêu cầu — không còn cần backup ra Sheet vì đã có Backup JSON hàng tháng
+   sang Drive (btnBackupSupabase) và đã chuyển ảnh sang Cloudflare R2. */
 const _rmBtnClearBk=$('#btnClearBackupRange'); if(_rmBtnClearBk) _rmBtnClearBk.onclick=async()=>{
  if(!CFG.url){ toast('Chưa kết nối Google Sheet',true); return; }
  const from=$('#s_bkFrom').value, to=$('#s_bkTo').value;
@@ -4922,104 +4761,9 @@ const _rmBtnClearAll=$('#btnClearAllData'); if(_rmBtnClearAll) _rmBtnClearAll.on
  }catch(err){ toast('Không kết nối được. Kiểm tra mạng.',true); }
 };
 
-/* ===== Chuyển ảnh/PDF đính kèm của phiếu cũ (>6 tháng) sang Google Drive,
-   xóa bản gốc khỏi Supabase Storage để giải phóng dung lượng free tier.
-   Thủ công, admin tự bấm khi cần — không tự động chạy định kỳ. */
-/* Chỉ file còn nằm trên Supabase Storage mới cần chuyển. File đã ở Drive rồi
-   (lần chạy trước) phải BỎ QUA — nếu không mỗi lần bấm nút lại tải về rồi
-   tạo thêm 1 bản sao mới trên Drive, vừa trùng vừa tốn dung lượng Drive. */
+/* Nhận diện URL Supabase Storage — dùng bởi phần R2 relay khi upload file mới.
+   (Đã xoá handler "Chuyển ảnh phiếu cũ sang Drive" theo yêu cầu — nay dùng R2.) */
 function isSupabaseStorageUrl(u){ return /\/storage\/v1\/object\/public\/ticket-attachments\//.test(u||''); }
-async function findOldTicketAttachments(){
- const cutoff=vnNow(); cutoff.setMonth(cutoff.getMonth()-6);
- const cutoffStr=`${cutoff.getFullYear()}-${pad2(cutoff.getMonth()+1)}-${pad2(cutoff.getDate())}`;
- // Lấy TẤT CẢ phiếu cũ (không lọc sẵn theo cột ảnh) — vì có phiếu không có
- // ảnh biên bản/PDF nhưng vẫn có "ảnh khác" trong bảng ticket_photos; lọc
- // trước ở đây sẽ bỏ sót đúng nhóm phiếu đó.
- const {data:tix,error:e1}=await sb.from('tickets')
-   .select('id,customer,ticket_date,attachment_url,attachment_name,attachment_back_url,attachment_back_name,bienban_pdf_url,bienban_pdf_name')
-   .lt('ticket_date',cutoffStr).limit(5000);
- if(e1) throw new Error(e1.message);
- const ids=(tix||[]).map(t=>t.id);
- let photos=[];
- if(ids.length){
-   const {data,error:e2}=await sb.from('ticket_photos').select('id,ticket_id,url,name').in('ticket_id',ids).limit(5000);
-   if(e2) throw new Error(e2.message);
-   photos=(data||[]).filter(p=>isSupabaseStorageUrl(p.url));
- }
- // chỉ giữ phiếu thật sự còn file trên Supabase cần chuyển
- const tickets=(tix||[]).filter(t=>isSupabaseStorageUrl(t.attachment_url)||isSupabaseStorageUrl(t.attachment_back_url)||isSupabaseStorageUrl(t.bienban_pdf_url));
- // Map id->{customer,ticketDate} cho CẢ tickets (kể cả phiếu không có ảnh
- // biên bản/PDF, chỉ có "ảnh khác") — dùng để đặt tên/thư mục Drive cho
- // đúng dự án khi lưu trữ ảnh trong ticket_photos (bảng đó không tự có sẵn
- // 2 cột này).
- const metaById={}; (tix||[]).forEach(t=>{ metaById[t.id]={customer:t.customer,ticketDate:t.ticket_date}; });
- return {tickets, photos, metaById};
-}
-function storagePathFromUrl(url){
- const m=url.match(/\/ticket-attachments\/(.+)$/);
- return m?decodeURIComponent(m[1]):null;
-}
-const _rmBtnArchive=$('#btnArchiveOldPhotos'); if(_rmBtnArchive) _rmBtnArchive.onclick=async()=>{
- if(!sb){ toast('Chưa kết nối Supabase',true); return; }
- if(!CFG.url){ toast('Chưa cấu hình Apps Script URL (cần để lưu vào Drive)',true); return; }
- if(!confirm('Chuyển toàn bộ ảnh/PDF đính kèm của phiếu quá 6 tháng sang Google Drive và xóa bản gốc khỏi Supabase?\n\nViệc này không thể hoàn tác (bản gốc trên Supabase sẽ bị xóa sau khi chuyển xong).')) return;
- const btn=$('#btnArchiveOldPhotos'); btn.disabled=true;
- const statusBox=$('#archivePhotosStatus'); statusBox.style.display='block'; statusBox.className='period-notice';
- statusBox.textContent='Đang quét phiếu cũ...';
- try{
-   const {tickets,photos,metaById}=await findOldTicketAttachments();
-   let jobs=[]; // {kind, ticketId/photoId, url, name, customer, ticketDate}
-   tickets.forEach(t=>{
-     if(isSupabaseStorageUrl(t.attachment_url)) jobs.push({kind:'ticket_attachment',id:t.id,url:t.attachment_url,name:t.attachment_name,customer:t.customer,ticketDate:t.ticket_date});
-     if(isSupabaseStorageUrl(t.attachment_back_url)) jobs.push({kind:'ticket_attachment_back',id:t.id,url:t.attachment_back_url,name:t.attachment_back_name,customer:t.customer,ticketDate:t.ticket_date});
-     if(isSupabaseStorageUrl(t.bienban_pdf_url)) jobs.push({kind:'ticket_pdf',id:t.id,url:t.bienban_pdf_url,name:t.bienban_pdf_name,customer:t.customer,ticketDate:t.ticket_date});
-   });
-   // ticket_photos không tự có sẵn dự án/ngày — tra qua metaById (id phiếu
-   // cha) để vẫn lưu đúng thư mục/tên file, không bị lộn xộn với dòng khác.
-   photos.forEach(p=>{ const meta=metaById[p.ticket_id]||{}; jobs.push({kind:'ticket_photo',id:p.id,url:p.url,name:p.name,customer:meta.customer,ticketDate:meta.ticketDate}); });
-   if(!jobs.length){ statusBox.textContent='Không có ảnh/PDF nào của phiếu quá 6 tháng cần chuyển.'; btn.disabled=false; return; }
-   let done=0, failed=0; const errors=[];
-   for(let idx=0; idx<jobs.length; idx++){
-     const job=jobs[idx];
-     statusBox.textContent=`Đang chuyển ${idx+1}/${jobs.length}...`;
-     // Gọi Apps Script đôi khi lỗi tạm thời (khởi động nguội, nghẽn khoá) —
-     // thử lại tối đa 3 lần trước khi coi là thất bại, để chạy hàng loạt
-     // không bị bỏ sót file vì 1 trục trặc thoáng qua.
-     let ar=null;
-     for(let attempt=1; attempt<=3; attempt++){
-       ar=await DB.archiveFileToDrive(job.url,job.name,adminPassword.settings,job.customer,job.ticketDate);
-       if(ar.ok) break;
-       if(attempt<3){ statusBox.textContent=`Đang chuyển ${idx+1}/${jobs.length} (thử lại lần ${attempt+1})...`; await new Promise(r=>setTimeout(r,2000)); }
-     }
-     if(!ar.ok){ failed++; errors.push(`${job.name||job.url}: ${ar.error||'lỗi'}`); continue; }
-     // Cập nhật link mới (Drive) trong Supabase RỒI MỚI xoá bản gốc — qua RPC
-     // có mật khẩu Administrator (không còn dựa vào policy UPDATE công khai
-     // nữa, xem archive_ticket_url/archive_ticket_photo_url phía Supabase).
-     let updRes;
-     if(job.kind==='ticket_attachment') updRes=await DB.archiveTicketUrl(job.id,'attachment_url',ar.driveUrl,adminPassword.settings);
-     else if(job.kind==='ticket_attachment_back') updRes=await DB.archiveTicketUrl(job.id,'attachment_back_url',ar.driveUrl,adminPassword.settings);
-     else if(job.kind==='ticket_pdf') updRes=await DB.archiveTicketUrl(job.id,'bienban_pdf_url',ar.driveUrl,adminPassword.settings);
-     else updRes=await DB.archiveTicketPhotoUrl(job.id,ar.driveUrl,adminPassword.settings);
-     if(!updRes.ok){
-       failed++;
-       errors.push(`${job.name||job.url}: ${updRes.error||'không cập nhật được link'} — KHÔNG xoá file gốc`);
-       continue; // giữ nguyên file gốc trên Supabase, không xoá
-     }
-     const path=storagePathFromUrl(job.url);
-     if(path) await sb.storage.from('ticket-attachments').remove([path]);
-     done++;
-   }
-   statusBox.className='period-notice'+(failed?' soon':'');
-   statusBox.textContent=`✅ Đã chuyển ${done}/${jobs.length} file sang Drive`
-     +(failed?`, ${failed} file lỗi — bấm lại nút để thử tiếp. Chi tiết: ${errors.slice(0,3).join(' | ')}`:'')+'.';
-   toast(`✅ Đã chuyển ${done} ảnh/PDF phiếu cũ sang Drive`);
-   fetchFullMgrData(true);
- }catch(err){
-   statusBox.className='period-notice overdue'; statusBox.textContent='Lỗi: '+err.message;
-   toast('⚠️ Có lỗi khi chuyển ảnh sang Drive',true);
- }
- btn.disabled=false;
-};
 
 // Cổng đăng nhập DÙNG CHUNG cho mọi nhóm (Cài đặt/AEON/Chấm công-CTP) — hiện
 // CẢ tên đăng nhập lẫn mật khẩu (trước đây requireAdminThen dùng prompt() gốc
@@ -5054,7 +4798,7 @@ function closeAdminGate(result){
 }
 $('#btnSettings').onclick=async()=>{
  const ok=await openAdminGate('settings');
- if(ok){ openSettingsModal(); renderManager(); renderHistory(); }
+ if(ok){ openSettingsModal(); renderManager()/*no history*/; }
 };
 $('#btnCloseAdminGate').onclick=()=>closeAdminGate(false);
 $('#btnToggleAdminPin').onclick=()=>{$('#admin_pin').classList.toggle('masked')};
@@ -5692,55 +5436,8 @@ registerAdminAction('chamcong-ctp',()=>{
  ccLoadList();
  ctpLoadAll();
  renderCcMonthAudit();
- maybeAutoBackupChamCongCtp(); // không chờ — không được làm chậm việc mở modal
 });
-
-/* ===== Auto-backup Chấm công & Công tác phí — 1 lần/ngày lúc 16:30, CHỈ khi
-   có dữ liệu mới (so sánh updated_at với lần backup gần nhất) =====
-   Không có cron server thật (app thuần frontend) nên đây là kiểu "cơ hội":
-   kiểm tra mỗi khi mở modal Chấm công/CTP (đã có mật khẩu nhóm này) VÀ định kỳ
-   vài phút/lần trong lúc tab đang mở, chỉ chạy khi đã qua 16:30 giờ VN hôm đó
-   và CHƯA backup ngày hôm đó. Không có gì mới → chỉ đánh dấu đã kiểm tra ngày
-   hôm đó, không gọi backup thật (đỡ tốn quota Sheet). */
-function ccCtpTodayStr(){
- return new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Ho_Chi_Minh'}); // 'YYYY-MM-DD' ổn định
-}
-function isPastDailyBackupTime(){
- const now=new Date();
- const h=Number(now.toLocaleString('en-US',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',hour12:false}));
- const m=Number(now.toLocaleString('en-US',{timeZone:'Asia/Ho_Chi_Minh',minute:'2-digit'}));
- return h>16 || (h===16 && m>=30);
-}
-async function maybeAutoBackupChamCongCtp(){
- return; // ĐÃ TẮT auto-backup sang Google Sheet (bỏ hẳn Sheet backup 2026-09-06) — dữ liệu chính ở Supabase, không cần chép sang Sheet nữa. Nhờ vậy có thể XÓA file "Report ELV - Backup" mà không lỗi.
- if(!adminPassword.chamcong_ctp) return; // chưa mở khoá nhóm này trong phiên thì thôi
- const todayStr=ccCtpTodayStr();
- if(localStorage.getItem('kt_cc_ctp_backup_date')===todayStr) return; // đã kiểm tra/backup hôm nay rồi
- if(!isPastDailyBackupTime()) return; // chưa tới 16:30
- const lastAt=localStorage.getItem('kt_cc_ctp_backup_at')||'1970-01-01T00:00:00Z';
- const [ccRes,ctpRes]=await Promise.all([
-   DB.listAttendance(null,null,null,adminPassword.chamcong_ctp),
-   DB.listExpenses(adminPassword.chamcong_ctp)
- ]);
- if(!ccRes.ok || !ctpRes.ok) return; // lỗi mạng/mật khẩu — thử lại lần kiểm tra sau, không đánh dấu ngày
- const ccNew=(ccRes.data||[]).filter(r=>r.updatedAt && r.updatedAt>lastAt);
- const ctpNew=(ctpRes.data||[]).filter(r=>r.updatedAt && r.updatedAt>lastAt);
- if(!ccNew.length && !ctpNew.length){
-   localStorage.setItem('kt_cc_ctp_backup_date', todayStr); // không có gì mới — không backup thật
-   return;
- }
- // Chỉ đánh dấu "đã backup hôm nay" nếu CẢ 2 lần ghi đều thành công — nếu
- // không, lần sau vẫn coi hôm nay CHƯA backup và thử ghi lại đúng các dòng
- // này (so lastAt cũ, không bị bỏ sót do đã lỡ nhích mốc thời gian).
- const ccOk = !ccNew.length || (await DB.backupAttendanceToSheet(ccNew, adminPassword.chamcong_ctp)).ok;
- const ctpOk = !ctpNew.length || (await DB.backupExpensesToSheet(ctpNew, adminPassword.chamcong_ctp)).ok;
- if(!ccOk || !ctpOk) return; // ghi lỗi 1 phần — không đánh dấu, thử lại ở lần kiểm tra sau
- localStorage.setItem('kt_cc_ctp_backup_date', todayStr);
- localStorage.setItem('kt_cc_ctp_backup_at', new Date().toISOString());
-}
-// Phòng khi không ai mở lại modal sau 16:30 — kiểm tra định kỳ trong lúc tab
-// còn mở (chỉ có tác dụng nếu mật khẩu chamcong_ctp đã được mở khoá từ trước).
-setInterval(()=>{ maybeAutoBackupChamCongCtp(); }, 10*60*1000);
+/* Đã xoá auto-backup Chấm công/CTP sang Google Sheet — data chỉ vào Supabase (yêu cầu 2026-09-12). */
 $('#btnCloseAdminTools').onclick=()=>$('#adminToolsModal').classList.remove('show');
 $('#adminToolsModal').onclick=e=>{if(e.target===$('#adminToolsModal'))$('#adminToolsModal').classList.remove('show')};
 $$('.admtab').forEach(b=>b.onclick=()=>{
