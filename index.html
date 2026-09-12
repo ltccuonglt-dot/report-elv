@@ -1754,6 +1754,41 @@ const EDIT_LIMIT=5;
  }catch(e){}
 })();
 const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get token(){return localStorage.getItem('kt_token')||DEFAULT_TOKEN},get store(){return localStorage.getItem('kt_store')||DEFAULT_STORE}};
+
+/* ===== Tự động cập nhật khi có bản deploy mới (không cần bấm "Làm mới trang"
+   tay nữa) — app định kỳ hỏi version.json (file nhỏ ở gốc repo, KHÔNG bị
+   trình duyệt cache lâu như index.html vì luôn gọi kèm cache:'no-store' +
+   query chống cache), so với APP_BUILD nhúng sẵn trong file này lúc build.
+   QUAN TRỌNG: mỗi lần deploy index.html sau này PHẢI cập nhật luôn giá trị
+   "build" trong version.json khớp với APP_BUILD dưới đây, nếu không app sẽ
+   không bao giờ biết có bản mới. Nếu phát hiện khác nhau: nếu không có modal
+   nào đang mở (không làm mất dữ liệu người dùng đang nhập dở) thì tự tải lại
+   trang; nếu đang mở form thì chờ, kiểm tra lại mỗi 15s tới khi đóng form. */
+const APP_BUILD='2026-09-12T06:35:00Z';
+let appUpdatePending=false, appReloadScheduled=false;
+function appIsSafeToReload(){ return !document.querySelector('.modal.show'); }
+function appDoAutoReload(){
+ if(appReloadScheduled) return;
+ appReloadScheduled=true;
+ toast('🔄 Đang tải bản cập nhật mới...');
+ setTimeout(()=>{ location.href=location.pathname+'?v='+Date.now(); },1200);
+}
+async function appCheckForUpdate(){
+ try{
+   const r=await fetch('version.json?_='+Date.now(),{cache:'no-store'});
+   if(!r.ok) return;
+   const j=await r.json();
+   if(j.build && j.build!==APP_BUILD) appUpdatePending=true;
+ }catch(err){ /* mất mạng — bỏ qua, thử lại lần sau */ }
+}
+setInterval(appCheckForUpdate,5*60*1000);
+setInterval(()=>{ if(appUpdatePending && appIsSafeToReload()) appDoAutoReload(); },15*1000);
+document.addEventListener('visibilitychange',async ()=>{
+ if(document.visibilityState!=='visible') return;
+ await appCheckForUpdate();
+ if(appUpdatePending && appIsSafeToReload()) appDoAutoReload();
+});
+setTimeout(appCheckForUpdate,20*1000);
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 
 /* ===== Supabase — backend CHÍNH cho phần Phiếu kỹ thuật (chấm công/công tác
