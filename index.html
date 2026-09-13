@@ -25,6 +25,31 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js" defer></script>
+<!-- Tailwind CDN: chỉ dùng làm lớp tiện ích CỘNG THÊM cho phần responsive/polish
+     mới (sidebar desktop, grid dashboard/quản lý...) — preflight tắt để không
+     reset margin/border của toàn bộ form/table/button đang có style riêng.
+     Màu alias thẳng vào biến CSS --x sẵn có nên tự đúng dark mode qua cơ chế
+     data-theme hiện tại, KHÔNG dùng dark: của Tailwind (tránh 2 hệ dark mode
+     song song). Đặt TRƯỚC <style> để CSS tay viết luôn thắng khi trùng
+     specificity với class Tailwind. -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    corePlugins: { preflight: false },
+    theme: { extend: {
+      colors: {
+        ground:'var(--ground)', surface:'var(--surface)', 'surface-2':'var(--surface-2)',
+        ink:'var(--ink)', muted:'var(--muted)', line:'var(--line)',
+        brand:'var(--brand)', 'brand-strong':'var(--brand-strong)', 'brand-soft':'var(--brand-soft)', 'brand-ink':'var(--brand-ink)',
+        ok:'var(--ok)', 'ok-soft':'var(--ok-soft)', warn:'var(--warn)', 'warn-soft':'var(--warn-soft)',
+        danger:'var(--danger)', 'danger-soft':'var(--danger-soft)', info:'var(--info)', 'info-soft':'var(--info-soft)',
+      },
+      borderRadius: { DEFAULT:'var(--radius)', sm:'var(--radius-sm)' },
+      boxShadow: { DEFAULT:'var(--shadow)' },
+      fontFamily: { sans:['var(--font)'] },
+    }}
+  };
+</script>
 <style>
 :root{
   --ground:#f2eef4; --surface:#ffffff; --surface-2:#f8f5fa;
@@ -165,6 +190,8 @@ body{background:var(--ground);color:var(--ink);font-family:var(--font);font-size
 .wh-card-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .wh-card-actions button{padding:6px 12px;border-radius:8px;font-size:12.5px;font-weight:600;border:1px solid var(--line);background:var(--surface);cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:4px}
 .wh-card-actions button:hover{background:var(--surface-2)}
+.wh-card-actions .wh-view{background:var(--info-soft);color:var(--info);border-color:var(--info-soft)}
+.wh-card-actions .wh-view:hover{filter:brightness(1.06)}
 .wh-card-actions .wh-edit{background:var(--brand);color:#fff;border-color:var(--brand)}
 .wh-card-actions .wh-edit:hover{filter:brightness(1.1)}
 .wh-card-actions .wh-del{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
@@ -632,6 +659,77 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 .status-dot{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600}
 .status-dot i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
 .status-dot.live i{background:var(--ok)} .status-dot.live{color:var(--ok)}
+
+/* ===== Bổ sung 2026-09-13: tối ưu responsive laptop/PC + đánh bóng UI
+   (dùng Tailwind CDN làm lớp tiện ích cộng thêm, xem đầu file) =====
+   Chỉ CỘNG THÊM rule mới ở đây — KHÔNG sửa/xoá bất kỳ rule nào phía trên. */
+
+/* Nút: thêm hiệu ứng chuyển động mượt hơn, giữ nguyên màu/hình dạng gốc. */
+.btn{transition:.15s ease;box-shadow:var(--shadow)}
+.btn:active{transform:scale(.97)}
+
+/* Modal thường (không phải .sheet-wide) hiện giữa màn ở desktop thay vì
+   bottom-sheet — KHÔNG đụng .sheet-wide/[data-display] (đã có cơ chế riêng). */
+@media (min-width:1300px){
+  .modal{align-items:center}
+  .sheet:not(.sheet-wide){border-radius:22px;margin-bottom:0}
+}
+
+/* Desktop rộng (≥1300px, mốc đã có sẵn ở .app{max-width:1800px} phía trên):
+   chuyển nav.tabs từ bottom-bar thành sidebar dọc bên trái, dùng CSS Grid đặt
+   vị trí theo grid-column/grid-row nên KHÔNG cần đổi thứ tự DOM/markup. Dưới
+   1300px mọi thứ giữ nguyên y hệt (rule này chỉ nằm trong @media này). */
+@media (min-width:1300px){
+  .app{display:grid;grid-template-columns:96px 1fr;grid-template-rows:auto auto 1fr}
+  .topbar{grid-column:2;grid-row:1}
+  #banner{grid-column:2;grid-row:2}
+  main{grid-column:2;grid-row:3;overflow-y:auto}
+  nav.tabs{grid-column:1;grid-row:1 / span 3;position:sticky;top:0;bottom:auto;height:100vh;
+    flex-direction:column;justify-content:flex-start;gap:10px;padding:28px 6px 8px;
+    border-top:none;border-right:1px solid var(--line)}
+  /* Giữ icon-trên/label-dưới (giống mobile) thay vì icon-trái/label-phải —
+     rail chỉ rộng 96px, xếp ngang sẽ làm chữ 2 từ (vd "Tạo phiếu") bị wrap
+     xuống dòng trông cập rợp; xếp dọc căn giữa vừa khít và gọn hơn hẳn. */
+  nav.tabs button{padding:10px 4px}
+
+  /* Dashboard/Quản lý: dùng hết chiều rộng thay vì xếp 1 cột dài, giống
+     pattern .wh-sec-grid đã dùng cho wizard Bảo hành.
+     LƯU Ý: phải viết #id.active (không phải chỉ #id) — vì specificity của
+     ID luôn thắng class, nếu chỉ ghi "#view-dashboard{display:grid}" thì nó
+     sẽ đè lên ".view{display:none}" ngay cả khi KHÔNG active, làm màn hình
+     này luôn hiện dù đang ở tab khác (phá vỡ cơ chế chuyển tab ở dòng 2400).
+     Mỗi section có nhiều khối con KHÁC LOẠI (bộ lọc, toolbar, thống kê, biểu
+     đồ, danh sách) — không thể display:grid mù lên toàn bộ children (sẽ xếp
+     lộn xộn theo auto-placement mặc định). Gán grid-column RÕ RÀNG theo đúng
+     id thật của từng khối con (đã kiểm tra markup thật, dòng 1103–1152):
+     bộ lọc/toolbar/thống kê trải full-width phía trên, biểu đồ + danh sách
+     xếp 2 cột song song bên dưới (CSS Grid auto-placement tự xếp 2 khối
+     cùng cột vào đúng hàng kế tiếp theo thứ tự DOM, không cần ghi grid-row
+     tay). #managerList thực chất chứa 1 bảng table.rpt (đã xác nhận ở dòng
+     4746) — KHÔNG phải danh sách thẻ .tk, nên không áp dụng grid-cols cho
+     nội bộ nó, chỉ đặt vị trí cột cho toàn khối. */
+  #view-dashboard.active{display:grid;grid-template-columns:1.4fr 1fr;gap:20px 24px;align-items:start}
+  #view-dashboard.active > #dashYMW{grid-column:1 / -1}
+  #view-dashboard.active > #dashStats{grid-column:1;min-width:0}
+  #view-dashboard.active > #dashDonuts{grid-column:2;min-width:0}
+
+  #view-manager.active{display:grid;grid-template-columns:1.4fr 1fr;gap:20px 24px;align-items:start}
+  #view-manager.active > #mgrYMW,
+  #view-manager.active > .filter-row,
+  #view-manager.active > .toolbar,
+  #view-manager.active > #mgrStats{grid-column:1 / -1}
+  #view-manager.active > #mgrSplit,
+  #view-manager.active > #mgrCharts{grid-column:1;min-width:0}
+  #view-manager.active > #mgrListTitle,
+  #view-manager.active > #managerList{grid-column:2;min-width:0}
+  /* Bảng table.rpt có nhiều cột nên min-content rất rộng — nếu không ép
+     min-width:0 lên item grid chứa nó, trình duyệt sẽ "nổ" cột phải rộng ra
+     hết cỡ để vừa nội dung bảng, phá vỡ tỷ lệ 1.4fr/1fr (đã gặp thật khi
+     test: cột trái co lại 179px, cột phải phình lên 1198px). Sau khi ép
+     min-width:0, bảng tự cuộn ngang bên trong .rpt-wrap như cơ chế cũ vốn
+     đã có sẵn (overflow-x:auto ở @media ≥860px, dòng ~458) — đúng hành vi
+     "Kéo ngang thanh cuộn" đã ghi sẵn trong giao diện. */
+}
 </style>
 </head>
 <body>
@@ -885,6 +983,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       </div>
       <div class="section-title" id="whListTitle">Danh sách phiếu bảo hành</div>
       <div id="warrantyList"></div>
+      <button type="button" class="fab-export" id="btnWhExport" title="Xuất Excel" aria-label="Xuất Excel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></button>
     </section>
 
     <!-- Modal form Nhan/Sua phieu bao hanh — redesigned -->
@@ -1115,6 +1214,20 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     <h2 id="photosModalTitle">Ảnh phiếu</h2>
     <div id="photosModalBody" style="max-height:60vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px"></div>
     <button class="btn btn-ghost" id="btnClosePhotos">Đóng</button>
+  </div>
+</div>
+
+<!-- Xem chi tiết phiếu bảo hành (chỉ đọc) — tách riêng khỏi form Sửa (whModal)
+     để bấm "Xem" không lỡ tay sửa dữ liệu; hiện đủ thông tin + ảnh (bấm mở to)
+     + video (trình phát xem lại), lấy thẳng từ whData đang có, không gọi lại API. -->
+<div class="modal" id="whViewModal">
+  <div class="sheet sheet-wide">
+    <h2 id="whViewTitle">Phiếu bảo hành</h2>
+    <div id="whViewBody" style="max-height:65vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button type="button" class="btn btn-ghost" id="btnCloseWhView" style="flex:1">Đóng</button>
+      <button type="button" class="btn btn-primary" id="btnWhViewToEdit" style="flex:1">✏️ Sửa phiếu này</button>
+    </div>
   </div>
 </div>
 
@@ -2402,6 +2515,7 @@ $$('nav.tabs button').forEach(btn=>btn.onclick=()=>{const tab=btn.dataset.tab;
  if(tab==='warranty'){loadWarranty();}
  if(tab==='manager'){if(!mgrData.length)loadManager();else renderManager();}
  if(tab==='dashboard'){if(!mgrData.length)loadManager();else renderDashboard();}
+ if(typeof updateInstallBtnVisibility==='function') updateInstallBtnVisibility();
 });
 
 /* segmented + selects */
@@ -3309,6 +3423,7 @@ async function startEdit(no,displayNo){
  submitBtnIdle();
  $$('nav.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab==='report'));
  $$('.view').forEach(v=>v.classList.remove('active'));$('#view-report').classList.add('active');
+ if(typeof updateInstallBtnVisibility==='function') updateInstallBtnVisibility();
  window.scrollTo({top:0,behavior:'smooth'});
 }
 function cancelEdit(){
@@ -3668,17 +3783,70 @@ function renderWarrantyList(){
           ${vids?`<span class="wh-tag">🎥 ${vids}</span>`:''}
         </div>
         <div style="flex:1"></div>
-        <button type="button" class="wh-edit" data-id="${r.id}">✏️ Xem / Sửa</button>
+        <button type="button" class="wh-view" data-id="${r.id}">👁 Xem</button>
+        <button type="button" class="wh-edit" data-id="${r.id}">✏️ Sửa</button>
         <button type="button" class="wh-pdf" data-id="${r.id}">📄 PDF</button>
         <button type="button" class="wh-del" data-id="${r.id}">🗑</button>
       </div>
     </div>`;
   }).join('');
+  $$('#warrantyList .wh-view').forEach(b => b.onclick = () => viewWarrantyDetail(Number(b.dataset.id)));
   $$('#warrantyList .wh-edit').forEach(b => b.onclick = () => openWarrantyForm(Number(b.dataset.id)));
   $$('#warrantyList .wh-pdf').forEach(b => b.onclick = () => exportWarrantyPdf(Number(b.dataset.id)));
   $$('#warrantyList .wh-del').forEach(b => b.onclick = () => deleteWarrantyPrompt(Number(b.dataset.id)));
   $$('#warrantyList .wh-advance').forEach(b => b.onclick = () => whAdvanceStage(Number(b.dataset.id), b.dataset.stage, b));
 }
+
+/* Xem chi tiết phiếu bảo hành — CHỈ ĐỌC, tách khỏi form Sửa (openWarrantyForm)
+   để bấm "Xem" không lỡ sửa dữ liệu. Lấy thẳng từ whData đang có sẵn (không
+   gọi lại API), hiện đủ thông tin giống bản PDF (exportWarrantyPdf) + ảnh
+   (bấm mở to ở tab mới) + video (trình phát xem lại) — cùng cách render như
+   renderWhPhotos/renderWhVideo trong form Sửa. */
+function viewWarrantyDetail(id){
+  const r = whData.find(x => x.id === id);
+  if (!r){ toast('Không tìm thấy phiếu', true); return; }
+  const s = whComputeStatus(r);
+  $('#whViewTitle').textContent = `${esc(r.receipt_no||('#'+r.id))} · ${esc(r.customer||'—')}`;
+
+  const row=(label,val)=> val==null||val===''?'':`<div style="display:flex;gap:8px;font-size:13.5px"><span style="min-width:120px;color:var(--muted);flex:none">${label}</span><span style="font-weight:600">${esc(String(val))}</span></div>`;
+  const section=(title)=>`<div class="section-title" style="margin:10px 0 2px">${title}</div>`;
+
+  const photosHtml=(photos,label)=>{
+    const arr=(photos||[]).filter(p=>p&&p.url);
+    if(!arr.length) return '';
+    return `<div><div class="hint" style="margin:4px 0">${label} (${arr.length})</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px">
+        ${arr.map(p=>`<a href="${esc(p.url)}" target="_blank" rel="noopener" style="border:1px solid var(--line);border-radius:8px;overflow:hidden;display:block">
+          <img src="${esc(p.url)}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block"></a>`).join('')}
+      </div></div>`;
+  };
+  const videoHtml=(url,label)=>{
+    if(!url) return '';
+    return `<div><div class="hint" style="margin:4px 0">${label}</div>
+      <video src="${esc(url)}" controls playsinline style="width:100%;max-width:320px;border-radius:8px;background:#000;display:block"></video></div>`;
+  };
+
+  const body=[
+    `<div>${whStatusPill(s)}</div>`,
+    section('① Thông tin nhận hàng'),
+    row('Ngày nhận', fmtDMYFull(r.receipt_date)), row('Người nhận', r.receiver_name),
+    row('Hệ thống', r.system), row('Tên thiết bị', r.device_name), row('Model', r.device_model),
+    row('Serial', r.device_serial), row('Số lượng', r.quantity), row('Mô tả lỗi', r.fault_description),
+    photosHtml(r.stage1_photos,'Ảnh nhận hàng'), videoHtml(r.stage1_video_url,'Video nhận hàng'),
+    section('② Gửi hãng & Trả về'),
+    row('Hãng bảo hành', r.vendor_name), row('Ngày gửi hãng', fmtDMYFull(r.sent_to_vendor_at)),
+    row('Ngày hãng trả', fmtDMYFull(r.returned_from_vendor_at)), row('Ghi chú hãng', r.vendor_note),
+    section('③ Trả khách'),
+    row('Ngày trả khách', fmtDMYFull(r.returned_to_customer_at)), row('Người trả', r.returned_by),
+    row('Khách ký nhận', r.customer_signer), row('Ghi chú', r.note),
+    photosHtml(r.stage2_photos,'Ảnh sau bảo hành'), videoHtml(r.stage2_video_url,'Video sau bảo hành'),
+  ].filter(Boolean).join('');
+  $('#whViewBody').innerHTML = body || '<p class="hint">Chưa có thông tin.</p>';
+  $('#btnWhViewToEdit').onclick = () => { $('#whViewModal').classList.remove('show'); openWarrantyForm(id); };
+  $('#whViewModal').classList.add('show');
+}
+$('#btnCloseWhView').onclick=()=>$('#whViewModal').classList.remove('show');
+$('#whViewModal').onclick=e=>{if(e.target===$('#whViewModal'))$('#whViewModal').classList.remove('show')};
 
 // Cot ngay + nhan tuong ung voi tung buoc chuyen tiep tiep theo
 const WH_NEXT_STAGE = {
@@ -4205,6 +4373,63 @@ async function exportWarrantyPdf(id){
   }
   doc.save(`Phieu-BaoHanh-${r.receipt_no||r.id}.pdf`);
 }
+
+/* Xuất Excel danh sách Bảo hành — cùng khớp bộ lọc/tìm kiếm đang áp dụng trên
+   màn hình (giống hệt cách #btnExport của Quản lý lọc theo mgrData), dùng lại
+   đúng style bảng (headerStyle/baseCellStyle) cho đồng bộ giao diện file xuất. */
+$('#btnWhExport').onclick=()=>{
+  const q=($('#whSearch').value||'').trim().toLowerCase();
+  const status=$('#whFilterStatus').value;
+  let data=whData.slice();
+  if(status) data=data.filter(r=>whComputeStatus(r)===status);
+  if(q) data=data.filter(r=>(
+    (r.receipt_no||'')+' '+(r.customer||'')+' '+(r.device_name||'')+' '+
+    (r.device_model||'')+' '+(r.device_serial||'')+' '+(r.fault_description||'')+' '+
+    (r.vendor_name||'')+' '+(r.note||'')
+  ).toLowerCase().includes(q));
+  if(!data.length){toast('Không có dữ liệu để xuất',true);return}
+  if(typeof XLSX==='undefined'){toast('Chưa tải được thư viện xuất Excel, thử lại sau',true);return}
+
+  const head=['No','Số phiếu','Ngày nhận','Khách hàng','Người nhận','Hệ thống','Thiết bị','Model','Serial','SL','Mô tả lỗi','Hãng bảo hành','Ngày gửi hãng','Ngày hãng trả','Ghi chú hãng','Ngày trả khách','Người trả','Khách ký nhận','Ghi chú','Trạng thái'];
+  const centerCols=[0,2,9,12,13,15,19]; // No, Ngày nhận, SL, Ngày gửi hãng, Ngày hãng trả, Ngày trả khách, Trạng thái
+  const rows=data.map((r,i)=>[
+    i+1, r.receipt_no||('#'+r.id), fmtDMYFull(r.receipt_date), r.customer||'', r.receiver_name||'',
+    r.system||'', r.device_name||'', r.device_model||'', r.device_serial||'', r.quantity||'',
+    r.fault_description||'', r.vendor_name||'', fmtDMYFull(r.sent_to_vendor_at), fmtDMYFull(r.returned_from_vendor_at),
+    r.vendor_note||'', fmtDMYFull(r.returned_to_customer_at), r.returned_by||'', r.customer_signer||'',
+    r.note||'', (WH_STATUS[whComputeStatus(r)]||{}).label||''
+  ]);
+
+  const aoa=[head, ...rows];
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  const thinBorder=(rgb)=>({top:{style:'thin',color:{rgb}},bottom:{style:'thin',color:{rgb}},left:{style:'thin',color:{rgb}},right:{style:'thin',color:{rgb}}});
+  const headerStyle={font:{name:'Times New Roman',sz:12,bold:true,color:{rgb:'FFFFFF'}},fill:{patternType:'solid',fgColor:{rgb:'1F4E78'}},alignment:{horizontal:'center',vertical:'center'},border:thinBorder('FFFFFF')};
+  const baseCellStyle={font:{name:'Times New Roman',sz:12},alignment:{vertical:'center',wrapText:true},border:thinBorder('D9D9D9')};
+
+  for(let c=0;c<head.length;c++){
+    const ref=XLSX.utils.encode_cell({r:0,c});
+    if(ws[ref]) ws[ref].s=headerStyle;
+  }
+  for(let r=1;r<=rows.length;r++){
+    for(let c=0;c<head.length;c++){
+      const ref=XLSX.utils.encode_cell({r,c});
+      if(!ws[ref]) continue;
+      const st=Object.assign({},baseCellStyle);
+      if(centerCols.includes(c)) st.alignment=Object.assign({},baseCellStyle.alignment,{horizontal:'center'});
+      ws[ref].s=st;
+    }
+  }
+  ws['!cols']=[{wch:5},{wch:14},{wch:11},{wch:16},{wch:14},{wch:12},{wch:16},{wch:14},{wch:14},{wch:5},{wch:30},{wch:14},{wch:11},{wch:11},{wch:22},{wch:11},{wch:14},{wch:14},{wch:24},{wch:14}];
+  ws['!rows']=[{hpt:22}];
+  ws['!freeze']={xSplit:0,ySplit:1};
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Bao hanh');
+  const fnameParts=[];
+  if(status) fnameParts.push(status);
+  XLSX.writeFile(wb,`bao-hanh-${fnameParts.join('-')||'tatca'}-${vnTodayIso()}.xlsx`,{bookSST:true});
+  toast(`✅ Đã xuất ${data.length} phiếu bảo hành`);
+};
 
 /* ===================== QR / Barcode scanner cho form Bao hanh =====================
    Uu tien BarcodeDetector API cua trinh duyet (nhieu format: QR, Code128, Code39,
@@ -5132,8 +5357,15 @@ const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.plat
 // sự kiện beforeinstallprompt, vì sự kiện này có thể tới trễ (Chrome cần vài
 // điều kiện mới bắn) hoặc không tới (Firefox/Safari desktop không hỗ trợ) —
 // bấm vào lúc đó vẫn có hướng dẫn tay thay vì không thấy nút đâu cả.
-if(!isStandalone()) btnInstall.style.display='grid';
-window.addEventListener('appinstalled',()=>{ btnInstall.style.display='none'; deferredInstallPrompt=null; });
+// CHỈ hiện ở tab Tạo phiếu (theo yêu cầu 2026-09-13) — các tab khác không có
+// nút này nữa, tránh chật/lẫn với nút Xuất Excel riêng của Quản lý/Bảo hành.
+let appInstalledThisSession=false;
+function updateInstallBtnVisibility(){
+ const onReportTab=$('#view-report').classList.contains('active');
+ btnInstall.style.display=(!appInstalledThisSession && !isStandalone() && onReportTab)?'grid':'none';
+}
+updateInstallBtnVisibility();
+window.addEventListener('appinstalled',()=>{ appInstalledThisSession=true; updateInstallBtnVisibility(); deferredInstallPrompt=null; });
 const installIconHTML=btnInstall.innerHTML;
 const installSpinnerHTML='<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
 btnInstall.onclick=async()=>{
