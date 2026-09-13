@@ -692,43 +692,6 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
      xuống dòng trông cập rợp; xếp dọc căn giữa vừa khít và gọn hơn hẳn. */
   nav.tabs button{padding:10px 4px}
 
-  /* Dashboard/Quản lý: dùng hết chiều rộng thay vì xếp 1 cột dài, giống
-     pattern .wh-sec-grid đã dùng cho wizard Bảo hành.
-     LƯU Ý: phải viết #id.active (không phải chỉ #id) — vì specificity của
-     ID luôn thắng class, nếu chỉ ghi "#view-dashboard{display:grid}" thì nó
-     sẽ đè lên ".view{display:none}" ngay cả khi KHÔNG active, làm màn hình
-     này luôn hiện dù đang ở tab khác (phá vỡ cơ chế chuyển tab ở dòng 2400).
-     Mỗi section có nhiều khối con KHÁC LOẠI (bộ lọc, toolbar, thống kê, biểu
-     đồ, danh sách) — không thể display:grid mù lên toàn bộ children (sẽ xếp
-     lộn xộn theo auto-placement mặc định). Gán grid-column RÕ RÀNG theo đúng
-     id thật của từng khối con (đã kiểm tra markup thật, dòng 1103–1152):
-     bộ lọc/toolbar/thống kê trải full-width phía trên, biểu đồ + danh sách
-     xếp 2 cột song song bên dưới (CSS Grid auto-placement tự xếp 2 khối
-     cùng cột vào đúng hàng kế tiếp theo thứ tự DOM, không cần ghi grid-row
-     tay). #managerList thực chất chứa 1 bảng table.rpt (đã xác nhận ở dòng
-     4746) — KHÔNG phải danh sách thẻ .tk, nên không áp dụng grid-cols cho
-     nội bộ nó, chỉ đặt vị trí cột cho toàn khối. */
-  #view-dashboard.active{display:grid;grid-template-columns:1.4fr 1fr;gap:20px 24px;align-items:start}
-  #view-dashboard.active > #dashYMW{grid-column:1 / -1}
-  #view-dashboard.active > #dashStats{grid-column:1;min-width:0}
-  #view-dashboard.active > #dashDonuts{grid-column:2;min-width:0}
-
-  #view-manager.active{display:grid;grid-template-columns:1.4fr 1fr;gap:20px 24px;align-items:start}
-  #view-manager.active > #mgrYMW,
-  #view-manager.active > .filter-row,
-  #view-manager.active > .toolbar,
-  #view-manager.active > #mgrStats{grid-column:1 / -1}
-  #view-manager.active > #mgrSplit,
-  #view-manager.active > #mgrCharts{grid-column:1;min-width:0}
-  #view-manager.active > #mgrListTitle,
-  #view-manager.active > #managerList{grid-column:2;min-width:0}
-  /* Bảng table.rpt có nhiều cột nên min-content rất rộng — nếu không ép
-     min-width:0 lên item grid chứa nó, trình duyệt sẽ "nổ" cột phải rộng ra
-     hết cỡ để vừa nội dung bảng, phá vỡ tỷ lệ 1.4fr/1fr (đã gặp thật khi
-     test: cột trái co lại 179px, cột phải phình lên 1198px). Sau khi ép
-     min-width:0, bảng tự cuộn ngang bên trong .rpt-wrap như cơ chế cũ vốn
-     đã có sẵn (overflow-x:auto ở @media ≥860px, dòng ~458) — đúng hành vi
-     "Kéo ngang thanh cuộn" đã ghi sẵn trong giao diện. */
 }
 </style>
 </head>
@@ -3785,14 +3748,12 @@ function renderWarrantyList(){
         <div style="flex:1"></div>
         <button type="button" class="wh-view" data-id="${r.id}">👁 Xem</button>
         <button type="button" class="wh-edit" data-id="${r.id}">✏️ Sửa</button>
-        <button type="button" class="wh-pdf" data-id="${r.id}">📄 PDF</button>
         <button type="button" class="wh-del" data-id="${r.id}">🗑</button>
       </div>
     </div>`;
   }).join('');
   $$('#warrantyList .wh-view').forEach(b => b.onclick = () => viewWarrantyDetail(Number(b.dataset.id)));
   $$('#warrantyList .wh-edit').forEach(b => b.onclick = () => openWarrantyForm(Number(b.dataset.id)));
-  $$('#warrantyList .wh-pdf').forEach(b => b.onclick = () => exportWarrantyPdf(Number(b.dataset.id)));
   $$('#warrantyList .wh-del').forEach(b => b.onclick = () => deleteWarrantyPrompt(Number(b.dataset.id)));
   $$('#warrantyList .wh-advance').forEach(b => b.onclick = () => whAdvanceStage(Number(b.dataset.id), b.dataset.stage, b));
 }
