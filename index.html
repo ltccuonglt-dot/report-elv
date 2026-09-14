@@ -746,7 +746,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
   <main>
     <!-- ===== TẠO PHIẾU ===== -->
-    <section id="view-report" class="view active">
+    <section id="view-report" class="view">
       <div class="banner" id="editBanner" style="display:none;margin-bottom:14px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
         <span id="editBannerText">Đang sửa phiếu</span>
@@ -934,16 +934,10 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
     </section>
 
     <!-- ===== NHẬN CA (tiếp nhận case báo lỗi qua Zalo) ===== -->
-    <section id="view-cases" class="view">
-      <p class="hint" style="margin:0 0 10px">📥 Tiếp nhận phiếu báo lỗi qua Zalo → theo dõi xử lý → bấm Hoàn tất để tạo phiếu kỹ thuật thật (1 case = 1 phiếu, nhiều lỗi thì ghi gộp vào mô tả).</p>
+    <section id="view-cases" class="view active">
+      <p class="hint" style="margin:0 0 10px">📥 Tiếp nhận phiếu báo lỗi qua Zalo → bấm "Nhận xử lý", chọn kỹ sư → tự tạo phiếu kỹ thuật thật, hiện ngay ở Quản lý (1 case = 1 phiếu, nhiều lỗi thì ghi gộp vào mô tả).</p>
       <div class="toolbar" style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
         <button type="button" class="btn" id="btnCaseNew" style="background:var(--brand);color:#fff">+ Tiếp nhận phiếu mới</button>
-        <select id="caseFilterStatus" class="mini-date" style="min-width:140px">
-          <option value="">Tất cả trạng thái</option>
-          <option value="received">🆕 Mới nhận</option>
-          <option value="in_progress">⏳ Đang xử lý</option>
-          <option value="done">✅ Hoàn tất</option>
-        </select>
         <input type="text" id="caseSearch" placeholder="🔍 Khách hàng, mô tả lỗi, kỹ sư..." style="flex:1;min-width:200px" />
       </div>
       <div class="section-title" id="caseListTitle">Danh sách phiếu</div>
@@ -1204,8 +1198,8 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
   </main>
 
   <nav class="tabs">
-    <button data-tab="cases"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span>Tiếp nhận</button>
-    <button data-tab="report" class="on"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span>Tạo phiếu</button>
+    <button data-tab="cases" class="on"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span>Tiếp nhận</button>
+    <button data-tab="report"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span>Tạo phiếu</button>
     <button data-tab="warranty"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span>Bảo hành</button>
     <button data-tab="dashboard"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 12V3a9 9 0 0 1 9 9h-9z"/></svg></span>Dashboard</button>
     <button data-tab="manager"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="7"/><rect x="12" y="6" width="3" height="11"/><rect x="17" y="13" width="3" height="4"/></svg></span>Quản lý</button>
@@ -1893,7 +1887,7 @@ const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get tok
    không bao giờ biết có bản mới. Nếu phát hiện khác nhau: nếu không có modal
    nào đang mở (không làm mất dữ liệu người dùng đang nhập dở) thì tự tải lại
    trang; nếu đang mở form thì chờ, kiểm tra lại mỗi 15s tới khi đóng form. */
-const APP_BUILD='2026-09-14T18:10:00Z';
+const APP_BUILD='2026-09-14T18:40:00Z';
 let appUpdatePending=false, appReloadScheduled=false;
 function appIsSafeToReload(){ return !document.querySelector('.modal.show'); }
 function appDoAutoReload(){
@@ -2230,11 +2224,12 @@ const DB={
      return await res.json();
    }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
  },
- // Tiếp nhận phiếu — tiếp nhận case báo lỗi qua Zalo, theo dõi tới khi Hoàn tất (tạo phiếu
- // thật — 1 case = 1 phiếu; nếu case có 2 lỗi thì ghi gộp vào mô tả/ghi chú của cùng 1 case).
+ // Tiếp nhận phiếu — ghi nhận case báo lỗi qua Zalo. Bấm "Nhận xử lý" (chọn kỹ sư)
+ // là tạo LUÔN phiếu thật bên "tickets" — 1 case = 1 phiếu; case có 2 lỗi thì ghi
+ // gộp vào mô tả/ghi chú của cùng 1 case.
  async listMaintenanceCases(){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
-   const {data,error}=await sb.from('maintenance_cases').select('*').order('received_at',{ascending:false});
+   const {data,error}=await sb.from('maintenance_cases').select('*').order('id',{ascending:true});
    return error?{ok:false,error:error.message}:{ok:true,data:data||[]};
  },
  async createMaintenanceCase(fields){
@@ -3640,19 +3635,6 @@ $('#tkForm').onsubmit=async e=>{
      } else if(j.ok){
        relayNewTicketFilesToR2(isEdit?no:j.no,payload,[]);
      }
-     // Neu form nay dang mo DE hoan tat 1 phieu tiep nhan (tu tab "Tiep nhan") thi
-     // danh dau case do hoan tat + gan dung id phieu vua tao, roi nhay sang Quan ly.
-     if(!isEdit && j.ok && pendingCompleteCaseId){
-       const completingId=pendingCompleteCaseId; pendingCompleteCaseId=null;
-       try{
-         const cj=await DB.completeMaintenanceCase(completingId,j.no);
-         if(cj.ok){
-           toast(`✅ Đã hoàn tất phiếu tiếp nhận & tạo phiếu #${j.no}`);
-           caseData=caseData.filter(c=>String(c.id)!==String(completingId));
-           const mgrBtn=$('nav.tabs button[data-tab="manager"]'); if(mgrBtn) mgrBtn.click();
-         } else toast('⚠️ Phiếu đã tạo nhưng chưa đánh dấu hoàn tất được ở Tiếp nhận: '+(cj.error||''),true);
-       }catch(e){ toast('⚠️ Phiếu đã tạo nhưng lỗi mạng khi đánh dấu hoàn tất',true); }
-     }
      // không cần tự làm mới danh sách phiếu — Realtime sẽ tự đẩy thay đổi về mgrData
    }catch(err){
      toast(`⚠️ Không gửi được phiếu${isEdit?` #${displayNo}`:''} (mất mạng) — thử gửi lại`,true);
@@ -4044,20 +4026,21 @@ document.addEventListener('click', e => {
   }
 });
 
-/* ===================== NHẬN PHIẾU — tiếp nhận case báo lỗi qua Zalo =====================
+/* ===================== TIẾP NHẬN — tiếp nhận case báo lỗi qua Zalo =====================
    Tiếp nhận nhanh case báo lỗi (ngày GIỜ chính xác, khác mọi bảng khác trong app chỉ có
-   ngày) → theo dõi tiến độ (Mới nhận/Đang xử lý) → bấm "Hoàn tất" sẽ mở sẵn form "Tạo
-   phiếu" điền trước dữ liệu case, kỹ sư bổ sung hướng xử lý rồi gửi phiếu như bình thường —
-   không xây form tạo phiếu riêng thứ 2 (xem hook trong handler submit #f_issue phía trên). */
+   ngày). Bấm "▶ Nhận xử lý" bắt buộc chọn kỹ sư (assigned_engineer) ngay tại thẻ, rồi
+   TỰ TẠO LUÔN 1 phiếu thật bên "tickets" (trạng thái "In Progress", hiện ngay ở Quản lý) —
+   CHỈ 1 BƯỚC DUY NHẤT, không còn bước "Hoàn tất"/mở lại form Tạo phiếu riêng như bản đầu
+   (đã bỏ theo yêu cầu người dùng: "khi có người nhận phiếu thì phiếu đó sẽ nhảy qua đang
+   xử lý ở quản lý, không cần tạo lại phiếu nữa. và người nhận phiếu sẽ là người xử lý"). */
 let caseData = [];
 let caseCurrentId = null; // null = đang tạo mới, có giá trị = đang sửa case đó
 let caseEngineerValue = ''; // kỹ sư đang chọn trong modal (single-select)
-let pendingCompleteCaseId = null; // != null khi form Tạo phiếu đang mở ĐỂ hoàn tất case này
 
+// Case da xu ly xong bi XOA HAN khoi bang (khong con giu trang thai "done" —
+// xem caseAdvance), nen trang thai duy nhat con hien o day la "received".
 const CASE_STATUS = {
-  received:    {label:'🆕 Mới nhận',   color:'#0369a1', bg:'#e0f2fe'},
-  in_progress: {label:'⏳ Đang xử lý', color:'#a16207', bg:'#fef3c7'},
-  done:        {label:'✅ Hoàn tất',   color:'#166534', bg:'#dcfce7'}
+  received: {label:'🆕 Mới nhận', color:'#0369a1', bg:'#e0f2fe'}
 };
 function caseStatusPill(s){
   const st = CASE_STATUS[s] || {label:s||'?', color:'#334155', bg:'#e2e8f0'};
@@ -4091,34 +4074,37 @@ async function loadCases(){
   renderCaseList();
 }
 function renderCaseList(){
+  // Tiep nhan la HANG DOI viec CHUA xu ly — case da xu ly xong bi XOA HAN khoi
+  // bang (xem caseAdvance), nen khong con can loc theo trang thai nua, moi
+  // dong dang hien deu la "chua xu ly".
   const q = ($('#caseSearch').value||'').trim().toLowerCase();
-  const status = $('#caseFilterStatus').value;
   let list = caseData.slice();
-  if (status) list = list.filter(c => c.status === status);
   if (q) list = list.filter(c => (
     (c.customer||'')+' '+(c.issue||'')+' '+(c.engineer||'')+' '+(c.assigned_engineer||'')+' '+(c.reporter||'')+' '+(c.system||'')
   ).toLowerCase().includes(q));
   $('#caseListTitle').textContent = `Danh sách phiếu (${list.length})`;
   if (!list.length){
-    $('#caseList').innerHTML = emptyState(q||status?'Không tìm thấy':'Chưa có phiếu nào',
-      q||status?'Không có phiếu khớp bộ lọc/tìm kiếm.':'Bấm nút "+ Tiếp nhận phiếu mới" phía trên để ghi nhận case đầu tiên.');
+    $('#caseList').innerHTML = emptyState(q?'Không tìm thấy':'Chưa có phiếu nào',
+      q?'Không có phiếu khớp tìm kiếm.':'Bấm nút "+ Tiếp nhận phiếu mới" phía trên để ghi nhận case đầu tiên.');
     return;
   }
   $('#caseList').innerHTML = list.map(c => {
     // "Nhan xu ly" phai chon LUON ky su di thuc hien (assigned_engineer) —
     // khac voi "Nguoi tiep nhan" (c.engineer, ghi nhan tu luc tao case) — nen
-    // hien 1 select ngay canh nut, bat buoc chon truoc khi xac nhan.
-    const assignRow = c.status==='received' ? `
+    // hien 1 select ngay canh nut, bat buoc chon truoc khi xac nhan. Dung
+    // status!=='done' (khong chi 'received') de tuong thich nguoc voi case cu
+    // con dang o trang thai 'in_progress' tu ban truoc khi bo buoc Hoan tat rieng.
+    const assignRow = c.status!=='done' ? `
       <div style="display:flex;gap:8px;margin-top:8px">
         <select class="case-assign-eng" data-id="${c.id}" style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface-2);font:inherit;font-size:12.5px;color:var(--ink)">
           <option value="">— Chọn kỹ sư xử lý —</option>
-          ${(engineerList||[]).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')}
+          ${(engineerList||[]).map(n=>`<option value="${esc(n)}" ${n===c.assigned_engineer?'selected':''}>${esc(n)}</option>`).join('')}
         </select>
       </div>` : '';
-    const nextBtn = c.status==='received'
+    // Chi con 1 buoc duy nhat: "Nhan xu ly" (chon ky su) la tao LUON phieu that,
+    // khong con trang thai in_progress rieng/nut Hoan tat nua (xem caseAdvance).
+    const nextBtn = c.status!=='done'
       ? `<button type="button" class="case-advance" data-id="${c.id}" data-action="progress">▶ Nhận xử lý</button>`
-      : c.status==='in_progress'
-      ? `<button type="button" class="case-advance" data-id="${c.id}" data-action="complete">✅ Hoàn tất</button>`
       : '';
     return `<div class="wh-card" data-id="${c.id}">
       <div class="wh-card-head">
@@ -4135,7 +4121,6 @@ function renderCaseList(){
       </div>
       <div class="wh-card-fault"><b>Lỗi:</b> ${esc(c.issue||'')}</div>
       ${c.note?`<div class="wh-card-meta" style="margin-top:4px">📝 ${esc(c.note)}</div>`:''}
-      ${c.linked_ticket_id?`<div class="wh-card-meta" style="margin-top:4px">🔗 Đã tạo phiếu #${c.linked_ticket_id}</div>`:''}
       ${assignRow}
       <div class="wh-card-actions">
         ${nextBtn}
@@ -4207,7 +4192,6 @@ $('#btnCaseNew').onclick = () => openCaseForm(null);
 $('#btnCaseClose').onclick = $('#btnCaseCancel').onclick = () => $('#caseModal').classList.remove('show');
 $('#caseModal').onclick = e => { if (e.target === $('#caseModal')) $('#caseModal').classList.remove('show'); };
 $('#caseSearch').oninput = renderCaseList;
-$('#caseFilterStatus').onchange = renderCaseList;
 
 $('#btnCaseSave').onclick = async () => {
   const customerSel = $('#case_customer').value;
@@ -4243,35 +4227,34 @@ async function caseAdvance(id, action){
   const r = caseData.find(c => String(c.id)===String(id)); if (!r) return;
   if (action === 'progress'){
     // Bat buoc chon "ky su di thuc hien" (assigned_engineer) ngay luc nhan xu ly —
-    // khac voi "Nguoi tiep nhan" (r.engineer, ghi nhan tu luc tao case).
+    // khac voi "Nguoi tiep nhan" (r.engineer, ghi nhan tu luc tao case). Nguoi
+    // duoc chon o day CHINH LA nguoi xu ly — bam 1 phat la tao LUON phieu that
+    // ben "tickets" (trang thai Dang xu ly, hien ngay trong Quan ly), KHONG can
+    // qua buoc "Hoan tat" rieng/mo lai form Tao phieu nua (theo yeu cau user).
     const sel = document.querySelector(`.case-assign-eng[data-id="${id}"]`);
     const assignedEngineer = sel ? sel.value : '';
     if (!assignedEngineer){ toast('Chọn kỹ sư xử lý trước khi bấm Nhận xử lý', true); return; }
+    const btn = document.querySelector(`.case-advance[data-id="${id}"][data-action="progress"]`);
+    if (btn) btn.disabled = true;
     try{
-      const j = await DB.updateMaintenanceCase(id, {status:'in_progress', assigned_engineer:assignedEngineer});
-      if (!j.ok){ toast(j.error||'Cập nhật thất bại', true); return; }
-      r.status = 'in_progress'; r.assigned_engineer = assignedEngineer;
-      toast('▶ Đã phân công '+assignedEngineer+' xử lý');
+      const payload = {
+        date: vnTodayIso(), customer: r.customer, system: r.system||'', issue: r.issue||'',
+        priority: r.priority||'Medium', engineer: assignedEngineer,
+        support: 'Online', workType: 'Bảo trì', status: 'In Progress', remark: r.note||''
+      };
+      const tj = await DB.createTicket(payload);
+      if (!tj.ok){ toast(tj.error||'Tạo phiếu thất bại', true); if (btn) btn.disabled=false; return; }
+      // "Tiếp nhận" là HÀNG ĐỢI việc chưa xử lý — đã nhận xong (tạo phiếu thật rồi)
+      // thì XOÁ HẲN khỏi hàng đợi (dữ liệu không mất, đã nằm trong "tickets"), để
+      // phiếu kế tiếp lên đầu danh sách, không giữ lại trạng thái "Đã xử lý" nữa.
+      const cj = await DB.completeMaintenanceCase(id, tj.no);
+      if (!cj.ok) toast('Phiếu #'+tj.no+' đã tạo nhưng chưa xoá được khỏi Tiếp nhận: '+(cj.error||''), true);
+      else toast(`✅ Đã phân công ${assignedEngineer} — phiếu #${tj.no} đang xử lý ở Quản lý`);
+      caseData = caseData.filter(c => String(c.id)!==String(id));
       renderCaseList();
-    }catch(err){ toast('Lỗi khi cập nhật: '+err.message, true); }
+      const mgrBtn = $('nav.tabs button[data-tab="manager"]'); if (mgrBtn) mgrBtn.click();
+    }catch(err){ toast('Lỗi: '+err.message, true); if (btn) btn.disabled=false; }
     return;
-  }
-  if (action === 'complete'){
-    // Mo san form Tao phieu, dien theo case. Dien san ky su bang assigned_engineer
-    // (ky su da duoc phan cong luc "Nhan xu ly" — dung nguoi se di thuc hien that su),
-    // KHONG dung r.engineer (do la "Nguoi tiep nhan", ghi nhan tu luc tao case, co the
-    // la nguoi khac) — van cho chon lai thoai mai o form Tao phieu neu can doi.
-    pendingCompleteCaseId = id;
-    $('nav.tabs button[data-tab="report"]').click();
-    setFieldOrOther('f_customer','wrap_customer_other','f_customer_other', r.customer||'');
-    if (r.system){
-      const sel = $('#f_system');
-      if ([...sel.options].some(o=>o.value===r.system)) sel.value = r.system;
-    }
-    $('#f_issue').value = r.issue||'';
-    segSet('f_priority', r.priority||'Medium');
-    if (r.assigned_engineer) setEngineerValue(r.assigned_engineer);
-    toast('📋 Đã điền sẵn từ phiếu tiếp nhận — bổ sung hướng xử lý rồi Gửi phiếu để hoàn tất');
   }
 }
 async function deleteCasePrompt(id){
@@ -7622,6 +7605,7 @@ if($('#ctp_f_pjcode')) $('#ctp_f_pjcode').addEventListener('change',ctpCodeAutof
 // tạo trùng phiếu (so sánh mgrData khi gửi phiếu) luôn có dữ liệu mà so
 // sánh ngay từ phiếu đầu tiên, không phải đợi người dùng mở màn khác trước.
 loadManager();
+loadCases(); // "Tiếp nhận" giờ là tab mặc định lúc mở app, tải sẵn ngay từ đầu
 });
 </script>
 <div id="pcPickerModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);align-items:flex-start;justify-content:center;padding:24px 12px">
