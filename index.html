@@ -24,7 +24,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js" defer></script>
 <!-- Tailwind CDN: chỉ dùng làm lớp tiện ích CỘNG THÊM cho phần responsive/polish
      mới (sidebar desktop, grid dashboard/quản lý...) — preflight tắt để không
      reset margin/border của toàn bộ form/table/button đang có style riêng.
@@ -163,11 +162,6 @@ body{background:var(--ground);color:var(--ink);font-family:var(--font);font-size
 .wh-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px 12px}
 .wh-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
 @media(max-width:600px){.wh-grid-2{grid-template-columns:1fr}}
-.wh-input-with-btn{position:relative}
-.wh-input-with-btn input{padding-right:44px}
-.wh-scan-btn{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:8px;width:34px;height:34px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:.15s}
-.wh-scan-btn:hover{transform:translateY(-50%) scale(1.05)}
-.wh-scan-btn svg{width:18px;height:18px}
 .wh-media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
 .wh-media-tile{position:relative;aspect-ratio:1;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface-2)}
 .wh-media-tile img{width:100%;height:100%;object-fit:cover;display:block}
@@ -214,16 +208,6 @@ body{background:var(--ground);color:var(--ink);font-family:var(--font);font-size
 .wh-advance{margin:0 auto 6px;display:flex;align-items:center;gap:5px;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;border:none;cursor:pointer;background:linear-gradient(135deg,var(--brand),#7c3aed);color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.15);transition:.2s}
 .wh-advance:hover{filter:brightness(1.12);transform:translateY(-1px)}
 .wh-advance:disabled{opacity:.55;cursor:not-allowed;transform:none;filter:none}
-/* Scanner overlay */
-.qr-scan-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
-.qr-scan-modal.show{display:flex}
-.qr-scan-inner{background:var(--surface);border-radius:14px;padding:16px;max-width:440px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;gap:10px}
-.qr-scan-video-wrap{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:1}
-.qr-scan-video-wrap video{width:100%;height:100%;object-fit:cover;display:block}
-.qr-scan-frame{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at center,transparent 0,transparent 130px,rgba(0,0,0,.4) 200px)}
-.qr-scan-frame::after{content:'';position:absolute;left:50%;top:50%;width:220px;height:220px;transform:translate(-50%,-50%);border:3px solid #22c55e;border-radius:12px;box-shadow:0 0 0 200vmax rgba(0,0,0,.5)}
-.qr-scan-hint{color:var(--muted);font-size:13px;text-align:center;padding:4px 8px;background:var(--surface-2);border-radius:8px}
-.qr-scan-actions{display:flex;gap:8px;justify-content:space-between}
 /* ===== Cai dat: giao dien nang cap ===== */
 .settings-hero{background:linear-gradient(135deg,var(--brand),#7c3aed);color:#fff;padding:16px 20px;border-radius:14px;margin-bottom:16px;box-shadow:0 6px 20px rgba(124,58,237,.22)}
 .settings-hero h3{margin:0 0 4px;font-size:17px;font-weight:700}
@@ -995,28 +979,13 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
               </label>
               <label class="field" id="wh_system_other_wrap" style="display:none"><span class="lab">Nhập tên hệ thống</span><input type="text" id="wh_system_other" placeholder="VD: Thang máy, Hệ thống nước..."></label>
               <label class="field"><span class="lab">Tên thiết bị</span>
-                <div class="wh-input-with-btn">
-                  <input type="text" id="wh_device_name" placeholder="VD: Camera IP Dome 4MP">
-                  <button type="button" class="wh-scan-btn" data-target="wh_device_name" title="Quét QR để điền" aria-label="Quét QR">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="4" height="4"/><rect x="13" y="7" width="4" height="4"/><rect x="7" y="13" width="4" height="4"/><path d="M13 13h4v4h-4z"/></svg>
-                  </button>
-                </div>
+                <input type="text" id="wh_device_name" placeholder="VD: Camera IP Dome 4MP">
               </label>
               <label class="field"><span class="lab">Model</span>
-                <div class="wh-input-with-btn">
-                  <input type="text" id="wh_device_model" placeholder="VD: DS-2CD2043G2">
-                  <button type="button" class="wh-scan-btn" data-target="wh_device_model" title="Quét QR để điền" aria-label="Quét QR">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="4" height="4"/><rect x="13" y="7" width="4" height="4"/><rect x="7" y="13" width="4" height="4"/><path d="M13 13h4v4h-4z"/></svg>
-                  </button>
-                </div>
+                <input type="text" id="wh_device_model" placeholder="VD: DS-2CD2043G2">
               </label>
               <label class="field"><span class="lab">Serial / S/N</span>
-                <div class="wh-input-with-btn">
-                  <input type="text" id="wh_device_serial" placeholder="Số serial trên thân máy">
-                  <button type="button" class="wh-scan-btn" data-target="wh_device_serial" title="Quét QR để điền" aria-label="Quét QR">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="4" height="4"/><rect x="13" y="7" width="4" height="4"/><rect x="7" y="13" width="4" height="4"/><path d="M13 13h4v4h-4z"/></svg>
-                  </button>
-                </div>
+                <input type="text" id="wh_device_serial" placeholder="Số serial trên thân máy">
               </label>
               <label class="field"><span class="lab">Số lượng</span><input type="number" id="wh_quantity" value="1" min="1"></label>
             </div>
@@ -1072,26 +1041,6 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         <div class="wh-modal-foot">
           <button type="button" class="btn btn-ghost" id="btnWhCancel">Đóng</button>
           <button type="button" class="btn" id="btnWhSave" style="background:linear-gradient(135deg,var(--brand),#7c3aed);color:#fff;box-shadow:0 2px 8px rgba(124,58,237,.3)">💾 Lưu phiếu</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- QR Scanner modal -->
-    <div class="qr-scan-modal" id="qrScanModal" role="dialog" aria-modal="true">
-      <div class="qr-scan-inner">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-weight:700;color:var(--brand)">📷 Quét mã QR / Barcode</div>
-          <button type="button" class="mini-btn" id="btnQrClose">✕</button>
-        </div>
-        <div class="qr-scan-video-wrap">
-          <video id="qrVideo" playsinline muted autoplay></video>
-          <div class="qr-scan-frame"></div>
-        </div>
-        <div class="qr-scan-hint" id="qrScanHint">Đưa mã vào giữa khung xanh — sẽ tự nhận diện</div>
-        <div class="qr-scan-actions">
-          <button type="button" class="btn btn-ghost" id="btnQrPickImage">🖼 Chọn ảnh</button>
-          <input type="file" id="qrPickFile" accept="image/*" hidden>
-          <button type="button" class="btn" id="btnQrCancel" style="background:#e5e7eb">Hủy</button>
         </div>
       </div>
     </div>
@@ -1840,7 +1789,7 @@ const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get tok
    không bao giờ biết có bản mới. Nếu phát hiện khác nhau: nếu không có modal
    nào đang mở (không làm mất dữ liệu người dùng đang nhập dở) thì tự tải lại
    trang; nếu đang mở form thì chờ, kiểm tra lại mỗi 15s tới khi đóng form. */
-const APP_BUILD='2026-09-14T09:50:00Z';
+const APP_BUILD='2026-09-14T10:05:00Z';
 let appUpdatePending=false, appReloadScheduled=false;
 function appIsSafeToReload(){ return !document.querySelector('.modal.show'); }
 function appDoAutoReload(){
@@ -4414,139 +4363,6 @@ $('#btnWhExport').onclick=()=>{
   toast(`✅ Đã xuất ${data.length} phiếu bảo hành`);
 };
 
-/* ===================== QR / Barcode scanner cho form Bao hanh =====================
-   Uu tien BarcodeDetector API cua trinh duyet (nhieu format: QR, Code128, Code39,
-   EAN...), fallback jsQR chi cho QR khi API chua co. Tra ket qua bang cach dien
-   thang vao 1 field da chi dinh (data-target) tren nut da bam. */
-let qrStream = null, qrScanRAF = 0, qrTargetId = null;
-async function openQrScanner(targetId){
-  qrTargetId = targetId;
-  $('#qrScanHint').textContent = 'Đang mở camera...';
-  $('#qrScanModal').classList.add('show');
-  try{
-    qrStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false});
-    const v = $('#qrVideo');
-    v.srcObject = qrStream;
-    await v.play();
-    $('#qrScanHint').textContent = 'Đưa mã vào giữa khung xanh — sẽ tự nhận diện';
-    scanQrLoop();
-  }catch(err){
-    $('#qrScanHint').textContent = '⚠️ Không mở được camera: '+(err.message||err)+'. Bấm "Chọn ảnh" để quét từ ảnh.';
-  }
-}
-function closeQrScanner(){
-  cancelAnimationFrame(qrScanRAF); qrScanRAF = 0;
-  if (qrStream){ qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
-  const v = $('#qrVideo'); if (v) v.srcObject = null;
-  $('#qrScanModal').classList.remove('show');
-  qrTargetId = null;
-}
-function fillQrResultToTarget(text){
-  if (!text || !qrTargetId) return;
-  // Neu QR chua JSON co san field mapping, tu dien vao dung o
-  let mapped = false;
-  try{
-    const obj = JSON.parse(text);
-    if (obj && typeof obj === 'object'){
-      const setIf = (k, ids) => { if (obj[k]!=null){ for(const id of ids){ const el=$('#'+id); if(el){ el.value = String(obj[k]); mapped = true; break; } } } };
-      setIf('sn', ['wh_device_serial']); setIf('serial', ['wh_device_serial']); setIf('SN', ['wh_device_serial']);
-      setIf('model', ['wh_device_model']); setIf('Model', ['wh_device_model']);
-      setIf('name', ['wh_device_name']); setIf('device', ['wh_device_name']);
-    }
-  }catch{}
-  // Fallback: key-value ngan cach ; hoac \n (SN:xxx;MODEL:yyy)
-  if (!mapped && /[:=]/.test(text) && /[;\n]/.test(text)){
-    text.split(/[;\n]/).forEach(part => {
-      const m = part.match(/^\s*(SN|Serial|MODEL|Model|NAME|Name|Device)\s*[:=]\s*(.+)$/i);
-      if (m){
-        const key = m[1].toLowerCase(), val = m[2].trim();
-        const id = (key==='sn'||key==='serial') ? 'wh_device_serial'
-                 : (key==='model') ? 'wh_device_model'
-                 : 'wh_device_name';
-        const el = $('#'+id); if (el){ el.value = val; mapped = true; }
-      }
-    });
-  }
-  if (!mapped){
-    // Truong hop don gian: dien nguyen chuoi vao target da chi dinh
-    const el = $('#'+qrTargetId); if (el) el.value = text.trim();
-  }
-  toast('✅ Đã quét: '+text.slice(0,60));
-  closeQrScanner();
-}
-async function scanQrLoop(){
-  const v = $('#qrVideo');
-  if (!v || v.readyState < 2){ qrScanRAF = requestAnimationFrame(scanQrLoop); return; }
-  // Thu BarcodeDetector cua browser TRUOC — nhung mot so may Android CO API
-  // nay (feature-detect ra 'BarcodeDetector' in window) nhung ban than model
-  // nhan dien (ML Kit cua Google Play Services) chua tai/loi, khien detect()
-  // luon nem loi hoac tra ve rong VINH VIEN — truoc day code chi chay jsQR o
-  // nhanh "else if" nen se KHONG BAO GIO thu jsQR trong truong hop nay, dan
-  // toi hien tuong "khung xanh thay ro ma nhung khong bao gio nhan duoc".
-  // Sua: LUON du phong jsQR o cung 1 khung hinh khi BarcodeDetector chua tim
-  // ra (du la do loi hay do that su chua thay ma), khong cho phep phu thuoc
-  // hoan toan vao 1 co che duy nhat.
-  let found = null;
-  if ('BarcodeDetector' in window){
-    try{
-      const det = new BarcodeDetector({formats:['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e','data_matrix','pdf417']});
-      const codes = await det.detect(v);
-      if (codes && codes.length) found = codes[0].rawValue;
-    }catch{}
-  }
-  if (!found && window.jsQR){
-    const canvas = document.createElement('canvas');
-    canvas.width = v.videoWidth; canvas.height = v.videoHeight;
-    if (canvas.width && canvas.height){
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(v, 0, 0);
-      try{
-        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imgData.data, imgData.width, imgData.height, {inversionAttempts:'dontInvert'});
-        if (code && code.data) found = code.data;
-      }catch{}
-    }
-  }
-  if (found){ fillQrResultToTarget(found); return; }
-  qrScanRAF = requestAnimationFrame(scanQrLoop);
-}
-// Wire scan buttons + close
-document.addEventListener('click', e => {
-  const scanBtn = e.target.closest('.wh-scan-btn');
-  if (scanBtn){ openQrScanner(scanBtn.dataset.target); }
-});
-$('#btnQrClose').onclick = closeQrScanner;
-$('#btnQrCancel').onclick = closeQrScanner;
-$('#qrScanModal').onclick = e => { if (e.target === $('#qrScanModal')) closeQrScanner(); };
-// Fallback: chon anh QR tu thu vien (khi camera loi)
-$('#btnQrPickImage').onclick = () => $('#qrPickFile').click();
-$('#qrPickFile').onchange = async e => {
-  const f = e.target.files[0]; e.target.value = '';
-  if (!f) return;
-  const img = new Image();
-  img.onload = async () => {
-    URL.revokeObjectURL(img.src);
-    if ('BarcodeDetector' in window){
-      try{
-        const det = new BarcodeDetector({formats:['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e','data_matrix','pdf417']});
-        const codes = await det.detect(img);
-        if (codes && codes.length){ fillQrResultToTarget(codes[0].rawValue); return; }
-      }catch{}
-    }
-    if (window.jsQR){
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
-      try{
-        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imgData.data, imgData.width, imgData.height);
-        if (code && code.data){ fillQrResultToTarget(code.data); return; }
-      }catch{}
-    }
-    toast('⚠️ Không nhận diện được mã trong ảnh', true);
-  };
-  img.src = URL.createObjectURL(f);
-};
 
 /* manager */
 let mgrData=[];
