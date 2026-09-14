@@ -1840,7 +1840,7 @@ const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get tok
    không bao giờ biết có bản mới. Nếu phát hiện khác nhau: nếu không có modal
    nào đang mở (không làm mất dữ liệu người dùng đang nhập dở) thì tự tải lại
    trang; nếu đang mở form thì chờ, kiểm tra lại mỗi 15s tới khi đóng form. */
-const APP_BUILD='2026-09-12T06:35:00Z';
+const APP_BUILD='2026-09-14T09:50:00Z';
 let appUpdatePending=false, appReloadScheduled=false;
 function appIsSafeToReload(){ return !document.querySelector('.modal.show'); }
 function appDoAutoReload(){
@@ -1875,7 +1875,29 @@ const DEFAULT_SB_URL='https://vlhwagmqpnbsijkzztvi.supabase.co';
 const DEFAULT_SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsaHdhZ21xcG5ic2lqa3p6dHZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MjkxMjksImV4cCI6MjEwNDEwNTEyOX0.nEu_LcTdx8-Lic37B_YYARZQARQ_UO7RCwdkfMp7JtE';
 CFG.sbUrl=localStorage.getItem('kt_sb_url')||DEFAULT_SB_URL;
 CFG.sbKey=localStorage.getItem('kt_sb_key')||DEFAULT_SB_KEY;
-const sb=(window.supabase && CFG.sbUrl && CFG.sbKey)?window.supabase.createClient(CFG.sbUrl,CFG.sbKey):null;
+let sb=(window.supabase && CFG.sbUrl && CFG.sbKey)?window.supabase.createClient(CFG.sbUrl,CFG.sbKey):null;
+// Tu phuc hoi neu thu vien supabase-js (CDN, tai kieu defer) load loi luc mo
+// app (mang chap chon, hay gap tren di dong) — DOMContentLoaded da chay toi
+// day nghia la the <script defer> chac chan da xong (thanh cong hoac loi han,
+// khong phai dang cham), nen neu sb van null thi CHAC CHAN CDN da loi. Truoc
+// day sb=null se GIU NGUYEN vinh vien cho toi khi F5 tay trang — nguoi dung
+// dien xong ca phieu Bao hanh 3 buoc roi bam Luu moi phat hien "Chua ket noi
+// Supabase", mat het du lieu vua nhap. Tu chen lai script + thu tao lai client,
+// khong bat nguoi dung phai tu F5.
+if (!sb && CFG.sbUrl && CFG.sbKey){
+  const sbInjectRetryScript=(qs)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js'+(qs?('?retry='+qs):'');
+    s.onload=()=>{ if(window.supabase && !sb) sb=window.supabase.createClient(CFG.sbUrl,CFG.sbKey); };
+    document.head.appendChild(s);
+  };
+  sbInjectRetryScript();
+  let sbRetryLeft=5;
+  const sbRetryTimer=setInterval(()=>{
+    if (sb || --sbRetryLeft<=0){ clearInterval(sbRetryTimer); return; }
+    sbInjectRetryScript(Date.now());
+  },8000);
+}
 
 function mapTicket(row){
  return {no:row.id, date:row.ticket_date, customer:row.customer, system:row.system, issue:row.issue,
@@ -4455,15 +4477,24 @@ function fillQrResultToTarget(text){
 async function scanQrLoop(){
   const v = $('#qrVideo');
   if (!v || v.readyState < 2){ qrScanRAF = requestAnimationFrame(scanQrLoop); return; }
-  // Uu tien BarcodeDetector cua browser
+  // Thu BarcodeDetector cua browser TRUOC — nhung mot so may Android CO API
+  // nay (feature-detect ra 'BarcodeDetector' in window) nhung ban than model
+  // nhan dien (ML Kit cua Google Play Services) chua tai/loi, khien detect()
+  // luon nem loi hoac tra ve rong VINH VIEN — truoc day code chi chay jsQR o
+  // nhanh "else if" nen se KHONG BAO GIO thu jsQR trong truong hop nay, dan
+  // toi hien tuong "khung xanh thay ro ma nhung khong bao gio nhan duoc".
+  // Sua: LUON du phong jsQR o cung 1 khung hinh khi BarcodeDetector chua tim
+  // ra (du la do loi hay do that su chua thay ma), khong cho phep phu thuoc
+  // hoan toan vao 1 co che duy nhat.
+  let found = null;
   if ('BarcodeDetector' in window){
     try{
       const det = new BarcodeDetector({formats:['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e','data_matrix','pdf417']});
       const codes = await det.detect(v);
-      if (codes && codes.length){ fillQrResultToTarget(codes[0].rawValue); return; }
+      if (codes && codes.length) found = codes[0].rawValue;
     }catch{}
-  } else if (window.jsQR){
-    // Fallback QR-only qua jsQR
+  }
+  if (!found && window.jsQR){
     const canvas = document.createElement('canvas');
     canvas.width = v.videoWidth; canvas.height = v.videoHeight;
     if (canvas.width && canvas.height){
@@ -4472,10 +4503,11 @@ async function scanQrLoop(){
       try{
         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const code = jsQR(imgData.data, imgData.width, imgData.height, {inversionAttempts:'dontInvert'});
-        if (code && code.data){ fillQrResultToTarget(code.data); return; }
+        if (code && code.data) found = code.data;
       }catch{}
     }
   }
+  if (found){ fillQrResultToTarget(found); return; }
   qrScanRAF = requestAnimationFrame(scanQrLoop);
 }
 // Wire scan buttons + close
