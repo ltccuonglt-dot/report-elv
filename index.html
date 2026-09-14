@@ -1011,6 +1011,19 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       </div>
     </div>
 
+    <!-- Modal chọn kỹ sư xử lý (nhiều người) lúc bấm "Nhận xử lý" -->
+    <div class="modal" id="caseAssignModal" role="dialog" aria-modal="true">
+      <div class="sheet" style="max-width:420px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <h2 style="margin:0">👷 Chọn kỹ sư xử lý</h2>
+          <button type="button" class="mini-btn" id="btnCaseAssignClose" aria-label="Đóng">✕</button>
+        </div>
+        <p class="desc" style="margin-top:-4px">Chọn 1 hoặc nhiều kỹ sư sẽ trực tiếp đi xử lý phiếu này.</p>
+        <div class="msel-list" id="caseAssignList" style="max-height:280px;overflow-y:auto"></div>
+        <button type="button" class="btn btn-primary" id="btnCaseAssignConfirm" style="margin-top:14px;width:100%">✅ Xác nhận & Nhận xử lý</button>
+      </div>
+    </div>
+
     <!-- ===== LỊCH SỬ ===== -->
     <section id="view-warranty" class="view">
       <p class="hint" style="margin:0 0 10px">🛠️ Nhận hàng bảo hành: check lỗi → gửi hãng → hãng trả về → trả khách. Kèm ảnh, video (≤45s) và xuất PDF.</p>
@@ -1887,7 +1900,7 @@ const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get tok
    không bao giờ biết có bản mới. Nếu phát hiện khác nhau: nếu không có modal
    nào đang mở (không làm mất dữ liệu người dùng đang nhập dở) thì tự tải lại
    trang; nếu đang mở form thì chờ, kiểm tra lại mỗi 15s tới khi đóng form. */
-const APP_BUILD='2026-09-14T18:40:00Z';
+const APP_BUILD='2026-09-14T19:00:00Z';
 let appUpdatePending=false, appReloadScheduled=false;
 function appIsSafeToReload(){ return !document.querySelector('.modal.show'); }
 function appDoAutoReload(){
@@ -4090,19 +4103,12 @@ function renderCaseList(){
   }
   $('#caseList').innerHTML = list.map(c => {
     // "Nhan xu ly" phai chon LUON ky su di thuc hien (assigned_engineer) —
-    // khac voi "Nguoi tiep nhan" (c.engineer, ghi nhan tu luc tao case) — nen
-    // hien 1 select ngay canh nut, bat buoc chon truoc khi xac nhan. Dung
-    // status!=='done' (khong chi 'received') de tuong thich nguoc voi case cu
-    // con dang o trang thai 'in_progress' tu ban truoc khi bo buoc Hoan tat rieng.
-    const assignRow = c.status!=='done' ? `
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <select class="case-assign-eng" data-id="${c.id}" style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface-2);font:inherit;font-size:12.5px;color:var(--ink)">
-          <option value="">— Chọn kỹ sư xử lý —</option>
-          ${(engineerList||[]).map(n=>`<option value="${esc(n)}" ${n===c.assigned_engineer?'selected':''}>${esc(n)}</option>`).join('')}
-        </select>
-      </div>` : '';
-    // Chi con 1 buoc duy nhat: "Nhan xu ly" (chon ky su) la tao LUON phieu that,
-    // khong con trang thai in_progress rieng/nut Hoan tat nua (xem caseAdvance).
+    // khac voi "Nguoi tiep nhan" (c.engineer, ghi nhan tu luc tao case). Chon
+    // qua modal rieng (#caseAssignModal) vi cho phep chon NHIEU ky su cung
+    // luc (giong het kieu chon nhieu ky su o form Tao phieu) — 1 select
+    // thuong khong lam duoc multi-select gon gang tren the danh sach.
+    // Dung status!=='done' (khong chi 'received') de tuong thich nguoc voi
+    // case cu con dang o trang thai 'in_progress' tu ban truoc.
     const nextBtn = c.status!=='done'
       ? `<button type="button" class="case-advance" data-id="${c.id}" data-action="progress">▶ Nhận xử lý</button>`
       : '';
@@ -4121,7 +4127,6 @@ function renderCaseList(){
       </div>
       <div class="wh-card-fault"><b>Lỗi:</b> ${esc(c.issue||'')}</div>
       ${c.note?`<div class="wh-card-meta" style="margin-top:4px">📝 ${esc(c.note)}</div>`:''}
-      ${assignRow}
       <div class="wh-card-actions">
         ${nextBtn}
         <div style="flex:1"></div>
@@ -4223,40 +4228,53 @@ $('#btnCaseSave').onclick = async () => {
   finally{ btn.disabled=false; btn.textContent='💾 Lưu phiếu'; }
 };
 
-async function caseAdvance(id, action){
+// "Nhan xu ly" bat buoc chon "ky su di thuc hien" (assigned_engineer) — khac voi
+// "Nguoi tiep nhan" (r.engineer, ghi nhan tu luc tao case). Cho phep chon NHIEU
+// ky su cung luc (giong kieu chon nhieu o form Tao phieu) nen dung modal rieng
+// #caseAssignModal thay vi 1 <select> don. Chon xong la tao LUON phieu that ben
+// "tickets" (trang thai Dang xu ly, hien ngay trong Quan ly), KHONG can qua buoc
+// "Hoan tat" rieng/mo lai form Tao phieu nua (theo yeu cau user).
+let caseAssignTargetId = null;
+function caseAdvance(id, action){
+  if (action !== 'progress') return;
   const r = caseData.find(c => String(c.id)===String(id)); if (!r) return;
-  if (action === 'progress'){
-    // Bat buoc chon "ky su di thuc hien" (assigned_engineer) ngay luc nhan xu ly —
-    // khac voi "Nguoi tiep nhan" (r.engineer, ghi nhan tu luc tao case). Nguoi
-    // duoc chon o day CHINH LA nguoi xu ly — bam 1 phat la tao LUON phieu that
-    // ben "tickets" (trang thai Dang xu ly, hien ngay trong Quan ly), KHONG can
-    // qua buoc "Hoan tat" rieng/mo lai form Tao phieu nua (theo yeu cau user).
-    const sel = document.querySelector(`.case-assign-eng[data-id="${id}"]`);
-    const assignedEngineer = sel ? sel.value : '';
-    if (!assignedEngineer){ toast('Chọn kỹ sư xử lý trước khi bấm Nhận xử lý', true); return; }
-    const btn = document.querySelector(`.case-advance[data-id="${id}"][data-action="progress"]`);
-    if (btn) btn.disabled = true;
-    try{
-      const payload = {
-        date: vnTodayIso(), customer: r.customer, system: r.system||'', issue: r.issue||'',
-        priority: r.priority||'Medium', engineer: assignedEngineer,
-        support: 'Online', workType: 'Bảo trì', status: 'In Progress', remark: r.note||''
-      };
-      const tj = await DB.createTicket(payload);
-      if (!tj.ok){ toast(tj.error||'Tạo phiếu thất bại', true); if (btn) btn.disabled=false; return; }
-      // "Tiếp nhận" là HÀNG ĐỢI việc chưa xử lý — đã nhận xong (tạo phiếu thật rồi)
-      // thì XOÁ HẲN khỏi hàng đợi (dữ liệu không mất, đã nằm trong "tickets"), để
-      // phiếu kế tiếp lên đầu danh sách, không giữ lại trạng thái "Đã xử lý" nữa.
-      const cj = await DB.completeMaintenanceCase(id, tj.no);
-      if (!cj.ok) toast('Phiếu #'+tj.no+' đã tạo nhưng chưa xoá được khỏi Tiếp nhận: '+(cj.error||''), true);
-      else toast(`✅ Đã phân công ${assignedEngineer} — phiếu #${tj.no} đang xử lý ở Quản lý`);
-      caseData = caseData.filter(c => String(c.id)!==String(id));
-      renderCaseList();
-      const mgrBtn = $('nav.tabs button[data-tab="manager"]'); if (mgrBtn) mgrBtn.click();
-    }catch(err){ toast('Lỗi: '+err.message, true); if (btn) btn.disabled=false; }
-    return;
-  }
+  caseAssignTargetId = id;
+  const preset = (r.assigned_engineer||'').split(' - ').map(s=>s.trim()).filter(Boolean);
+  $('#caseAssignList').innerHTML = (engineerList||[]).map(n =>
+    `<label class="msel-opt"><input type="checkbox" value="${esc(n)}" ${preset.includes(n)?'checked':''}><span>${esc(n)}</span></label>`
+  ).join('');
+  $('#caseAssignModal').classList.add('show');
 }
+$('#btnCaseAssignClose').onclick = () => $('#caseAssignModal').classList.remove('show');
+$('#caseAssignModal').onclick = e => { if (e.target === $('#caseAssignModal')) $('#caseAssignModal').classList.remove('show'); };
+$('#btnCaseAssignConfirm').onclick = async () => {
+  const names = $$('#caseAssignList input:checked').map(cb => cb.value);
+  if (!names.length){ toast('Chọn ít nhất 1 kỹ sư xử lý', true); return; }
+  const id = caseAssignTargetId;
+  const r = caseData.find(c => String(c.id)===String(id)); if (!r) return;
+  const assignedEngineer = names.join(' - ');
+  const btn = $('#btnCaseAssignConfirm'); btn.disabled = true;
+  try{
+    const payload = {
+      date: vnTodayIso(), customer: r.customer, system: r.system||'', issue: r.issue||'',
+      priority: r.priority||'Medium', engineer: assignedEngineer,
+      support: 'Online', workType: 'Bảo trì', status: 'In Progress', remark: r.note||''
+    };
+    const tj = await DB.createTicket(payload);
+    if (!tj.ok){ toast(tj.error||'Tạo phiếu thất bại', true); btn.disabled=false; return; }
+    $('#caseAssignModal').classList.remove('show');
+    // "Tiếp nhận" là HÀNG ĐỢI việc chưa xử lý — đã nhận xong (tạo phiếu thật rồi)
+    // thì XOÁ HẲN khỏi hàng đợi (dữ liệu không mất, đã nằm trong "tickets"), để
+    // phiếu kế tiếp lên đầu danh sách, không giữ lại trạng thái "Đã xử lý" nữa.
+    const cj = await DB.completeMaintenanceCase(id, tj.no);
+    if (!cj.ok) toast('Phiếu #'+tj.no+' đã tạo nhưng chưa xoá được khỏi Tiếp nhận: '+(cj.error||''), true);
+    else toast(`✅ Đã phân công ${assignedEngineer} — phiếu #${tj.no} đang xử lý ở Quản lý`);
+    caseData = caseData.filter(c => String(c.id)!==String(id));
+    renderCaseList();
+    const mgrBtn = $('nav.tabs button[data-tab="manager"]'); if (mgrBtn) mgrBtn.click();
+  }catch(err){ toast('Lỗi: '+err.message, true); }
+  finally{ btn.disabled = false; }
+};
 async function deleteCasePrompt(id){
   const pin = prompt('Nhập mật khẩu Administrator để xoá phiếu tiếp nhận này:');
   if (pin == null) return;
