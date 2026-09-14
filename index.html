@@ -161,6 +161,20 @@ body{background:var(--ground);color:var(--ink);font-family:var(--font);font-size
 .wh-section-title .n{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--brand);color:#fff;font-size:12px;font-weight:800}
 /* Modal "Tiếp nhận phiếu" — header gradient bo tràn viền .sheet (bù margin âm) */
 .case-sheet{padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:92vh}
+/* Laptop/PC: modal nay bi khoa 480px tu .sheet, trong lot thom giua man rong
+   (giong het van de tung gap voi #tkForm truoc khi them max-width:720px cho
+   no) — no rong ra vua du cho luoi 2 cot, khong can rong het co nhu Bao hanh
+   (khong co anh/video can nhieu cho). */
+@media (min-width:640px){ .sheet.case-sheet{max-width:640px} }
+@media (min-width:860px){
+  .sheet.case-sheet{max-width:820px}
+  .case-head{padding:22px 26px}
+  .case-head-title{font-size:19px}
+  .case-body{padding:22px 26px calc(env(safe-area-inset-bottom) + 22px);font-size:15px}
+  .case-sheet .wh-grid-2{gap:14px 18px}
+  .case-sheet .field input,.case-sheet .field select,.case-sheet .field textarea,.case-sheet .msel-btn{padding:12px 14px;font-size:15px}
+  .case-sheet .seg button{padding:7px 4px;font-size:15px}
+}
 .case-head{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:18px 18px;background:linear-gradient(135deg,var(--brand),#7c3aed);color:#fff}
 .case-head-title{font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px}
 .case-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 18px calc(env(safe-area-inset-bottom) + 18px)}
@@ -972,7 +986,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         <div class="wh-section">
           <div class="wh-section-title"><span class="n">2</span>Nội dung & xử lý</div>
           <div class="wh-grid-2">
-            <label class="field"><span class="lab">👤 Kỹ sư tạo phiếu</span>
+            <label class="field"><span class="lab">👤 Người tiếp nhận</span>
               <div class="msel" id="case_engineer_dd">
                 <button type="button" class="msel-btn placeholder" id="case_engineer_btn">— Chưa chọn —</button>
                 <div class="msel-panel" id="case_engineer_panel" hidden>
@@ -1876,7 +1890,7 @@ const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get tok
    không bao giờ biết có bản mới. Nếu phát hiện khác nhau: nếu không có modal
    nào đang mở (không làm mất dữ liệu người dùng đang nhập dở) thì tự tải lại
    trang; nếu đang mở form thì chờ, kiểm tra lại mỗi 15s tới khi đóng form. */
-const APP_BUILD='2026-09-14T17:15:00Z';
+const APP_BUILD='2026-09-14T17:45:00Z';
 let appUpdatePending=false, appReloadScheduled=false;
 function appIsSafeToReload(){ return !document.querySelector('.modal.show'); }
 function appDoAutoReload(){
@@ -4220,6 +4234,10 @@ async function caseAdvance(id, action){
   }
   if (action === 'complete'){
     // Mo san form Tao phieu, dien theo case, kỹ sư bo sung huong xu ly roi tu Gui phieu.
+    // CO Y khong dien san kỹ sư — "Nguoi tiep nhan" (r.engineer, nguoi ghi nhan case luc
+    // dau) va "kỹ sư xu ly" (chon o day) co the la 2 nguoi KHAC NHAU, de trong cho ky su
+    // that su di xu ly tu chon lai o form Tao phieu (van chon duoc nhieu nguoi nhu binh
+    // thuong, khong bi khoa).
     pendingCompleteCaseId = id;
     $('nav.tabs button[data-tab="report"]').click();
     setFieldOrOther('f_customer','wrap_customer_other','f_customer_other', r.customer||'');
@@ -4229,8 +4247,7 @@ async function caseAdvance(id, action){
     }
     $('#f_issue').value = r.issue||'';
     segSet('f_priority', r.priority||'Medium');
-    if (r.engineer) setEngineerValue(r.engineer);
-    toast('📋 Đã điền sẵn từ phiếu tiếp nhận — bổ sung hướng xử lý rồi Gửi phiếu để hoàn tất');
+    toast('📋 Đã điền sẵn từ phiếu tiếp nhận — chọn kỹ sư xử lý & bổ sung hướng xử lý rồi Gửi phiếu để hoàn tất');
   }
 }
 async function deleteCasePrompt(id){
