@@ -1694,7 +1694,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       <h2 style="flex:1;margin:0">🔁 Kiểm tra & Đồng bộ Sheet AEON (mỗi cơ sở 1 file)</h2>
       <a id="aeonSyncSheetLink" href="#" target="_blank" rel="noopener" class="btn-mini" style="text-decoration:none">Mở Sheet ↗</a>
     </div>
-    <p class="desc" style="margin-top:2px">Mỗi cơ sở 1 file riêng (share cho đúng đội của cơ sở đó). Đối chiếu file từng cơ sở với dữ liệu tool. <b>Không bao giờ tự xoá</b> — bạn xem khác biệt, xử lý dòng lệch, rồi bấm Áp dụng.</p>
+    <p class="desc" style="margin-top:2px">Mỗi cơ sở 1 file riêng (share cho đúng đội của cơ sở đó). Đối chiếu file từng cơ sở với dữ liệu tool. <b>Không bao giờ tự xoá</b> — phiếu lệch mặc định giữ <b>bản tool</b> (nguồn chính), bạn có thể đổi lại từng dòng nếu muốn giữ bản Sheet, rồi bấm Áp dụng.</p>
     <div id="aeonSyncBody" style="overflow:auto;flex:1;margin-top:4px"></div>
     <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
       <button type="button" class="btn btn-primary" id="btnAeonSyncApply" disabled><span>Áp dụng đồng bộ</span></button>
@@ -1789,7 +1789,7 @@ const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get tok
    không bao giờ biết có bản mới. Nếu phát hiện khác nhau: nếu không có modal
    nào đang mở (không làm mất dữ liệu người dùng đang nhập dở) thì tự tải lại
    trang; nếu đang mở form thì chờ, kiểm tra lại mỗi 15s tới khi đóng form. */
-const APP_BUILD='2026-09-14T10:05:00Z';
+const APP_BUILD='2026-09-14T10:20:00Z';
 let appUpdatePending=false, appReloadScheduled=false;
 function appIsSafeToReload(){ return !document.querySelector('.modal.show'); }
 function appDoAutoReload(){
@@ -5631,7 +5631,7 @@ function buildAeonSyncPlan(supaRows,sheetRows,sheetId,siteName){
    if(!supa){ stale.push({sheetId, site:siteName, id, row:sr.row, sheet:f}); return; }
    const p=aeonPickFields(supa,false); p.customer=siteName;
    const diffs=AEON_SYNC_FIELDS.filter(x=>!aeonFieldEq(x,f[x],p[x]));
-   if(diffs.length) conflicts.push({sheetId, site:siteName, id, row:sr.row, sheet:f, supa:p, diffs, choice:null});
+   if(diffs.length) conflicts.push({sheetId, site:siteName, id, row:sr.row, sheet:f, supa:p, diffs, choice:'tool'});
  });
  const supaOnly=supaRows.filter(r=>!sheetIds.has(String(r.no))).map(r=>{ const pf=aeonPickFields(r,false); pf.customer=siteName; return {sheetId, site:siteName, id:String(r.no), fields:pf}; });
  return {inserts,conflicts,supaOnly,stale};
@@ -5690,8 +5690,8 @@ function aeonConflictHtml(c,i){
      <tr style="color:var(--muted)"><th style="text-align:left;padding:2px 8px">Trường</th><th style="text-align:left;padding:2px 8px">📄 Bản Sheet</th><th style="text-align:left;padding:2px 8px">🛠️ Bản tool</th></tr>
      ${rowsHtml}</table></div>
    <div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">
-     <label style="display:flex;gap:5px;align-items:center"><input type="radio" class="aeon-conf-choice" name="aeonconf${i}" data-i="${i}" value="sheet"> Giữ bản <b>Sheet</b> (ghi đè tool)</label>
-     <label style="display:flex;gap:5px;align-items:center"><input type="radio" class="aeon-conf-choice" name="aeonconf${i}" data-i="${i}" value="tool"> Giữ bản <b>tool</b> (ghi đè Sheet)</label>
+     <label style="display:flex;gap:5px;align-items:center"><input type="radio" class="aeon-conf-choice" name="aeonconf${i}" data-i="${i}" value="sheet" ${c.choice==='sheet'?'checked':''}> Giữ bản <b>Sheet</b> (ghi đè tool)</label>
+     <label style="display:flex;gap:5px;align-items:center"><input type="radio" class="aeon-conf-choice" name="aeonconf${i}" data-i="${i}" value="tool" ${c.choice==='tool'?'checked':''}> Giữ bản <b>tool</b> (ghi đè Sheet) — mặc định</label>
    </div>
  </div>`;
 }
