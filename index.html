@@ -914,6 +914,77 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
       </form>
     </section>
 
+    <!-- ===== NHẬN CA (tiếp nhận case báo lỗi qua Zalo) ===== -->
+    <section id="view-cases" class="view">
+      <p class="hint" style="margin:0 0 10px">📥 Tiếp nhận phiếu báo lỗi qua Zalo → theo dõi xử lý → bấm Hoàn tất để tạo phiếu kỹ thuật thật (1 case = 1 phiếu, nhiều lỗi thì ghi gộp vào mô tả).</p>
+      <div class="toolbar" style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn" id="btnCaseNew" style="background:var(--brand);color:#fff">+ Tiếp nhận phiếu mới</button>
+        <select id="caseFilterStatus" class="mini-date" style="min-width:140px">
+          <option value="">Tất cả trạng thái</option>
+          <option value="received">🆕 Mới nhận</option>
+          <option value="in_progress">⏳ Đang xử lý</option>
+          <option value="done">✅ Hoàn tất</option>
+        </select>
+        <input type="text" id="caseSearch" placeholder="🔍 Khách hàng, mô tả lỗi, kỹ sư..." style="flex:1;min-width:200px" />
+      </div>
+      <div class="section-title" id="caseListTitle">Danh sách phiếu</div>
+      <div id="caseList"></div>
+    </section>
+
+    <!-- Modal tạo/sửa case -->
+    <div class="modal" id="caseModal" role="dialog" aria-modal="true">
+      <div class="sheet">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <h2 id="caseModalTitle" style="margin:0">📥 Tiếp nhận phiếu mới</h2>
+          <button type="button" class="mini-btn" id="btnCaseClose" aria-label="Đóng">✕</button>
+        </div>
+        <input type="hidden" id="case_id" />
+        <div class="wh-grid-2">
+          <label class="field"><span class="lab">Ngày giờ nhận <span class="req">*</span></span><input type="datetime-local" id="case_received_at"></label>
+          <label class="field"><span class="lab">Người báo (Zalo)</span><input type="text" id="case_reporter" placeholder="Tên / SĐT người báo"></label>
+          <label class="field"><span class="lab">Khách hàng <span class="req">*</span></span>
+            <select id="case_customer">
+              <option value="AEON Mall Huế">AEON Mall Huế</option>
+              <option value="AEON Mall Thanh Khê">AEON Mall Thanh Khê</option>
+              <option value="__other">Khác…</option>
+            </select>
+          </label>
+          <label class="field" id="case_customer_other_wrap" style="display:none"><span class="lab">Nhập tên khách hàng</span><input type="text" id="case_customer_other" placeholder="Tên khách hàng / cửa hàng"></label>
+          <label class="field"><span class="lab">Hệ thống</span>
+            <select id="case_system">
+              <option value="">— Không rõ —</option>
+              <option>IT Helpdesk</option><option>IT Network</option>
+              <option>CCTV</option><option>ACS</option><option>PA</option><option>BMS</option>
+              <option>Car Parking</option><option>Intercom</option><option>Print</option>
+              <option>Scan</option><option>ELV</option>
+            </select>
+          </label>
+          <label class="field"><span class="lab">Kỹ sư phụ trách</span>
+            <div class="msel" id="case_engineer_dd">
+              <button type="button" class="msel-btn placeholder" id="case_engineer_btn">— Chưa gán —</button>
+              <div class="msel-panel" id="case_engineer_panel" hidden>
+                <input type="text" class="msel-search" id="case_engineer_search" placeholder="🔍 Tìm kỹ sư..." />
+                <div class="msel-list" id="case_engineer_list"></div>
+              </div>
+            </div>
+          </label>
+          <label class="field"><span class="lab">Mức ưu tiên</span>
+            <div class="seg" id="case_priority">
+              <button type="button" data-v="Low">🟢 Low</button>
+              <button type="button" data-v="Medium" class="on">🟡 Medium</button>
+              <button type="button" data-v="High">🔴 High</button>
+            </div>
+          </label>
+        </div>
+        <label class="field" style="margin-top:10px"><span class="lab">Mô tả lỗi <span class="req">*</span></span><textarea id="case_issue" rows="3" placeholder="Nội dung lỗi nhận được qua Zalo..."></textarea></label>
+        <label class="field"><span class="lab">Ghi chú</span><textarea id="case_note" rows="2" placeholder="Ghi chú thêm nếu có..."></textarea></label>
+        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+          <button type="button" class="btn btn-primary" id="btnCaseSave">💾 Lưu phiếu</button>
+          <button type="button" class="btn btn-ghost" id="btnCaseCancel">Đóng</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ===== LỊCH SỬ ===== -->
     <section id="view-warranty" class="view">
       <p class="hint" style="margin:0 0 10px">🛠️ Nhận hàng bảo hành: check lỗi → gửi hãng → hãng trả về → trả khách. Kèm ảnh, video (≤45s) và xuất PDF.</p>
@@ -1101,6 +1172,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
   </main>
 
   <nav class="tabs">
+    <button data-tab="cases"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span>Tiếp nhận</button>
     <button data-tab="report" class="on"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span>Tạo phiếu</button>
     <button data-tab="warranty"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span>Bảo hành</button>
     <button data-tab="dashboard"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 12V3a9 9 0 0 1 9 9h-9z"/></svg></span>Dashboard</button>
@@ -1789,7 +1861,7 @@ const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get tok
    không bao giờ biết có bản mới. Nếu phát hiện khác nhau: nếu không có modal
    nào đang mở (không làm mất dữ liệu người dùng đang nhập dở) thì tự tải lại
    trang; nếu đang mở form thì chờ, kiểm tra lại mỗi 15s tới khi đóng form. */
-const APP_BUILD='2026-09-14T10:20:00Z';
+const APP_BUILD='2026-09-14T16:55:00Z';
 let appUpdatePending=false, appReloadScheduled=false;
 function appIsSafeToReload(){ return !document.querySelector('.modal.show'); }
 function appDoAutoReload(){
@@ -2126,6 +2198,33 @@ const DB={
      return await res.json();
    }catch(err){ return {ok:false,error:'Không kết nối được Apps Script'}; }
  },
+ // Tiếp nhận phiếu — tiếp nhận case báo lỗi qua Zalo, theo dõi tới khi Hoàn tất (tạo phiếu
+ // thật — 1 case = 1 phiếu; nếu case có 2 lỗi thì ghi gộp vào mô tả/ghi chú của cùng 1 case).
+ async listMaintenanceCases(){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.from('maintenance_cases').select('*').order('received_at',{ascending:false});
+   return error?{ok:false,error:error.message}:{ok:true,data:data||[]};
+ },
+ async createMaintenanceCase(fields){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('create_maintenance_case',{p_fields:fields});
+   return error?{ok:false,error:error.message}:{ok:true,data};
+ },
+ async updateMaintenanceCase(id,fields){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('update_maintenance_case',{p_id:Number(id),p_fields:fields});
+   return error?{ok:false,error:error.message}:{ok:true,data};
+ },
+ async completeMaintenanceCase(id,ticketId){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {data,error}=await sb.rpc('complete_maintenance_case',{p_id:Number(id),p_ticket_id:Number(ticketId)});
+   return error?{ok:false,error:error.message}:{ok:true,data};
+ },
+ async deleteMaintenanceCase(id,adminPassword){
+   if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
+   const {error}=await sb.rpc('delete_maintenance_case',{p_id:Number(id),p_admin_password:adminPassword});
+   return error?{ok:false,error:error.message}:{ok:true};
+ },
  // Dung lượng data hiện tại (số bản ghi + bytes = đúng cỡ file backup) — hiện ở mục Backup.
  async dataStats(adminPassword){
    if(!sb) return {ok:false,error:'Chưa kết nối Supabase'};
@@ -2446,6 +2545,7 @@ function refreshBanner(){const b=$('#banner'),t=$('#bannerText');
 $$('nav.tabs button').forEach(btn=>btn.onclick=()=>{const tab=btn.dataset.tab;
  $$('nav.tabs button').forEach(b=>b.classList.toggle('on',b===btn));
  $$('.view').forEach(v=>v.classList.remove('active'));$('#view-'+tab).classList.add('active');
+ if(tab==='cases'){loadCases();}
  if(tab==='warranty'){loadWarranty();}
  if(tab==='manager'){if(!mgrData.length)loadManager();else renderManager();}
  if(tab==='dashboard'){if(!mgrData.length)loadManager();else renderDashboard();}
@@ -3508,6 +3608,19 @@ $('#tkForm').onsubmit=async e=>{
      } else if(j.ok){
        relayNewTicketFilesToR2(isEdit?no:j.no,payload,[]);
      }
+     // Neu form nay dang mo DE hoan tat 1 phieu tiep nhan (tu tab "Tiep nhan") thi
+     // danh dau case do hoan tat + gan dung id phieu vua tao, roi nhay sang Quan ly.
+     if(!isEdit && j.ok && pendingCompleteCaseId){
+       const completingId=pendingCompleteCaseId; pendingCompleteCaseId=null;
+       try{
+         const cj=await DB.completeMaintenanceCase(completingId,j.no);
+         if(cj.ok){
+           toast(`✅ Đã hoàn tất phiếu tiếp nhận & tạo phiếu #${j.no}`);
+           caseData=caseData.filter(c=>String(c.id)!==String(completingId));
+           const mgrBtn=$('nav.tabs button[data-tab="manager"]'); if(mgrBtn) mgrBtn.click();
+         } else toast('⚠️ Phiếu đã tạo nhưng chưa đánh dấu hoàn tất được ở Tiếp nhận: '+(cj.error||''),true);
+       }catch(e){ toast('⚠️ Phiếu đã tạo nhưng lỗi mạng khi đánh dấu hoàn tất',true); }
+     }
      // không cần tự làm mới danh sách phiếu — Realtime sẽ tự đẩy thay đổi về mgrData
    }catch(err){
      toast(`⚠️ Không gửi được phiếu${isEdit?` #${displayNo}`:''} (mất mạng) — thử gửi lại`,true);
@@ -3898,6 +4011,223 @@ document.addEventListener('click', e => {
     dd.classList.remove('open');
   }
 });
+
+/* ===================== NHẬN PHIẾU — tiếp nhận case báo lỗi qua Zalo =====================
+   Tiếp nhận nhanh case báo lỗi (ngày GIỜ chính xác, khác mọi bảng khác trong app chỉ có
+   ngày) → theo dõi tiến độ (Mới nhận/Đang xử lý) → bấm "Hoàn tất" sẽ mở sẵn form "Tạo
+   phiếu" điền trước dữ liệu case, kỹ sư bổ sung hướng xử lý rồi gửi phiếu như bình thường —
+   không xây form tạo phiếu riêng thứ 2 (xem hook trong handler submit #f_issue phía trên). */
+let caseData = [];
+let caseCurrentId = null; // null = đang tạo mới, có giá trị = đang sửa case đó
+let caseEngineerValue = ''; // kỹ sư đang chọn trong modal (single-select)
+let pendingCompleteCaseId = null; // != null khi form Tạo phiếu đang mở ĐỂ hoàn tất case này
+
+const CASE_STATUS = {
+  received:    {label:'🆕 Mới nhận',   color:'#0369a1', bg:'#e0f2fe'},
+  in_progress: {label:'⏳ Đang xử lý', color:'#a16207', bg:'#fef3c7'},
+  done:        {label:'✅ Hoàn tất',   color:'#166534', bg:'#dcfce7'}
+};
+function caseStatusPill(s){
+  const st = CASE_STATUS[s] || {label:s||'?', color:'#334155', bg:'#e2e8f0'};
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;color:${st.color};background:${st.bg}">${st.label}</span>`;
+}
+// datetime-local <-> ISO có offset VN (+07:00), tránh Postgres hiểu nhầm theo giờ UTC session.
+function vnNowDatetimeLocal(){
+  const d = vnNow();
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+function isoToVnDatetimeLocal(iso){
+  if (!iso) return '';
+  const vn = new Date(new Date(iso).toLocaleString('en-US',{timeZone:'Asia/Ho_Chi_Minh'}));
+  return `${vn.getFullYear()}-${pad2(vn.getMonth()+1)}-${pad2(vn.getDate())}T${pad2(vn.getHours())}:${pad2(vn.getMinutes())}`;
+}
+function vnDatetimeLocalToIso(val){ return val ? val+':00+07:00' : null; }
+function fmtDMYHM(iso){
+  if (!iso) return '';
+  const vn = new Date(new Date(iso).toLocaleString('en-US',{timeZone:'Asia/Ho_Chi_Minh'}));
+  return `${pad2(vn.getDate())}/${pad2(vn.getMonth()+1)}/${vn.getFullYear()} ${pad2(vn.getHours())}:${pad2(vn.getMinutes())}`;
+}
+
+async function loadCases(){
+  if (!$('#caseList')) return;
+  $('#caseList').innerHTML = '<div class="empty"><div class="t">Đang tải danh sách phiếu tiếp nhận...</div></div>';
+  try{
+    const j = await DB.listMaintenanceCases();
+    caseData = j.ok ? j.data : [];
+    if (!j.ok) toast(j.error||'Không tải được danh sách', true);
+  }catch(err){ caseData = []; toast('Lỗi tải danh sách tiếp nhận', true); }
+  renderCaseList();
+}
+function renderCaseList(){
+  const q = ($('#caseSearch').value||'').trim().toLowerCase();
+  const status = $('#caseFilterStatus').value;
+  let list = caseData.slice();
+  if (status) list = list.filter(c => c.status === status);
+  if (q) list = list.filter(c => (
+    (c.customer||'')+' '+(c.issue||'')+' '+(c.engineer||'')+' '+(c.reporter||'')+' '+(c.system||'')
+  ).toLowerCase().includes(q));
+  $('#caseListTitle').textContent = `Danh sách phiếu (${list.length})`;
+  if (!list.length){
+    $('#caseList').innerHTML = emptyState(q||status?'Không tìm thấy':'Chưa có phiếu nào',
+      q||status?'Không có phiếu khớp bộ lọc/tìm kiếm.':'Bấm nút "+ Tiếp nhận phiếu mới" phía trên để ghi nhận case đầu tiên.');
+    return;
+  }
+  $('#caseList').innerHTML = list.map(c => {
+    const nextBtn = c.status==='received'
+      ? `<button type="button" class="case-advance" data-id="${c.id}" data-action="progress">▶ Nhận xử lý</button>`
+      : c.status==='in_progress'
+      ? `<button type="button" class="case-advance" data-id="${c.id}" data-action="complete">✅ Hoàn tất</button>`
+      : '';
+    return `<div class="wh-card" data-id="${c.id}">
+      <div class="wh-card-head">
+        <div class="wh-card-no">#${c.id} · ${esc(c.customer||'—')}</div>
+        ${caseStatusPill(c.status)}
+      </div>
+      <div class="wh-card-meta">
+        <span class="m-item">🕐 ${fmtDMYHM(c.received_at)}</span>
+        ${c.system?`<span class="m-item">⚙️ ${esc(c.system)}</span>`:''}
+        ${c.reporter?`<span class="m-item">💬 ${esc(c.reporter)}</span>`:''}
+        ${c.engineer?`<span class="m-item">👤 ${esc(c.engineer)}</span>`:''}
+        <span class="m-item">${esc(c.priority||'')}</span>
+      </div>
+      <div class="wh-card-fault"><b>Lỗi:</b> ${esc(c.issue||'')}</div>
+      ${c.note?`<div class="wh-card-meta" style="margin-top:4px">📝 ${esc(c.note)}</div>`:''}
+      ${c.linked_ticket_id?`<div class="wh-card-meta" style="margin-top:4px">🔗 Đã tạo phiếu #${c.linked_ticket_id}</div>`:''}
+      <div class="wh-card-actions">
+        ${nextBtn}
+        <div style="flex:1"></div>
+        <button type="button" class="wh-edit case-edit" data-id="${c.id}">✏️ Sửa</button>
+        <button type="button" class="wh-del case-del" data-id="${c.id}">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+  $$('#caseList .case-advance').forEach(b => b.onclick = () => caseAdvance(Number(b.dataset.id), b.dataset.action));
+  $$('#caseList .case-edit').forEach(b => b.onclick = () => openCaseForm(Number(b.dataset.id)));
+  $$('#caseList .case-del').forEach(b => b.onclick = () => deleteCasePrompt(Number(b.dataset.id)));
+}
+
+function renderCaseEngineerList(filter){
+  const q = (filter||'').toLowerCase();
+  const items = (engineerList||[]).filter(n => n.toLowerCase().includes(q));
+  const html = `<label class="msel-opt" style="font-weight:700"><input type="radio" name="case_eng_radio" value="" ${!caseEngineerValue?'checked':''}><span>— Chưa gán —</span></label>` +
+    items.map(n => `<label class="msel-opt"><input type="radio" name="case_eng_radio" value="${esc(n)}" ${n===caseEngineerValue?'checked':''}><span>${esc(n)}</span></label>`).join('');
+  $('#case_engineer_list').innerHTML = html;
+  $$('#case_engineer_list input[type=radio]').forEach(r => r.onchange = () => {
+    caseEngineerValue = r.value;
+    updateCaseEngineerLabel();
+    $('#case_engineer_panel').hidden = true;
+    $('#case_engineer_dd').classList.remove('open');
+  });
+}
+function updateCaseEngineerLabel(){
+  const btn = $('#case_engineer_btn');
+  if (caseEngineerValue){ btn.textContent = caseEngineerValue; btn.classList.remove('placeholder'); }
+  else { btn.textContent = '— Chưa gán —'; btn.classList.add('placeholder'); }
+}
+$('#case_engineer_btn').onclick = () => {
+  const panel = $('#case_engineer_panel'), dd = $('#case_engineer_dd');
+  const willOpen = panel.hidden;
+  panel.hidden = !willOpen;
+  dd.classList.toggle('open', willOpen);
+  if (willOpen){ renderCaseEngineerList(''); $('#case_engineer_search').value=''; $('#case_engineer_search').focus(); }
+};
+$('#case_engineer_search').oninput = e => renderCaseEngineerList(e.target.value);
+document.addEventListener('click', e => {
+  const dd = $('#case_engineer_dd');
+  if (dd && !dd.contains(e.target)){ $('#case_engineer_panel').hidden = true; dd.classList.remove('open'); }
+});
+$('#case_customer').onchange = e => $('#case_customer_other_wrap').style.display = e.target.value==='__other'?'block':'none';
+
+function openCaseForm(id){
+  caseCurrentId = id;
+  const r = id ? caseData.find(c => String(c.id)===String(id)) : null;
+  $('#caseModalTitle').textContent = r ? `✏️ Sửa phiếu #${r.id}` : '📥 Tiếp nhận phiếu mới';
+  $('#case_id').value = id || '';
+  $('#case_received_at').value = r ? isoToVnDatetimeLocal(r.received_at) : vnNowDatetimeLocal();
+  if (r) setFieldOrOther('case_customer','case_customer_other_wrap','case_customer_other', r.customer||'');
+  else { $('#case_customer').value = 'AEON Mall Huế'; $('#case_customer_other_wrap').style.display = 'none'; $('#case_customer_other').value=''; }
+  $('#case_system').value = r ? (r.system||'') : '';
+  $('#case_reporter').value = r ? (r.reporter||'') : '';
+  $('#case_issue').value = r ? (r.issue||'') : '';
+  $('#case_note').value = r ? (r.note||'') : '';
+  segSet('case_priority', r ? (r.priority||'Medium') : 'Medium');
+  caseEngineerValue = r ? (r.engineer||'') : '';
+  updateCaseEngineerLabel();
+  $('#caseModal').classList.add('show');
+}
+$('#btnCaseNew').onclick = () => openCaseForm(null);
+$('#btnCaseClose').onclick = $('#btnCaseCancel').onclick = () => $('#caseModal').classList.remove('show');
+$('#caseModal').onclick = e => { if (e.target === $('#caseModal')) $('#caseModal').classList.remove('show'); };
+$('#caseSearch').oninput = renderCaseList;
+$('#caseFilterStatus').onchange = renderCaseList;
+
+$('#btnCaseSave').onclick = async () => {
+  const customerSel = $('#case_customer').value;
+  const customer = customerSel==='__other' ? $('#case_customer_other').value.trim() : customerSel;
+  const receivedAtLocal = $('#case_received_at').value;
+  const issue = $('#case_issue').value.trim();
+  if (!receivedAtLocal){ toast('Chọn ngày giờ nhận', true); return; }
+  if (!customer){ toast('Nhập/chọn khách hàng', true); return; }
+  if (!issue){ toast('Nhập mô tả lỗi', true); return; }
+  const fields = {
+    received_at: vnDatetimeLocalToIso(receivedAtLocal),
+    customer, system: $('#case_system').value||null, issue,
+    reporter: $('#case_reporter').value.trim()||null,
+    engineer: caseEngineerValue||null,
+    priority: segVal('case_priority'),
+    note: $('#case_note').value.trim()||null
+  };
+  const btn = $('#btnCaseSave'); btn.disabled = true; btn.textContent = '⏳ Đang lưu...';
+  try{
+    const j = caseCurrentId
+      ? await DB.updateMaintenanceCase(caseCurrentId, fields)
+      : await DB.createMaintenanceCase(fields);
+    if (!j.ok){ toast(j.error||'Lưu thất bại', true); return; }
+    toast(caseCurrentId ? '✅ Đã cập nhật phiếu' : '✅ Đã ghi nhận phiếu mới');
+    $('#caseModal').classList.remove('show');
+    loadCases();
+  }catch(err){ toast('Lỗi khi lưu: '+err.message, true); }
+  finally{ btn.disabled=false; btn.textContent='💾 Lưu phiếu'; }
+};
+
+async function caseAdvance(id, action){
+  const r = caseData.find(c => String(c.id)===String(id)); if (!r) return;
+  if (action === 'progress'){
+    try{
+      const j = await DB.updateMaintenanceCase(id, {status:'in_progress'});
+      if (!j.ok){ toast(j.error||'Cập nhật thất bại', true); return; }
+      r.status = 'in_progress';
+      toast('▶ Đã nhận xử lý');
+      renderCaseList();
+    }catch(err){ toast('Lỗi khi cập nhật: '+err.message, true); }
+    return;
+  }
+  if (action === 'complete'){
+    // Mo san form Tao phieu, dien theo case, kỹ sư bo sung huong xu ly roi tu Gui phieu.
+    pendingCompleteCaseId = id;
+    $('nav.tabs button[data-tab="report"]').click();
+    setFieldOrOther('f_customer','wrap_customer_other','f_customer_other', r.customer||'');
+    if (r.system){
+      const sel = $('#f_system');
+      if ([...sel.options].some(o=>o.value===r.system)) sel.value = r.system;
+    }
+    $('#f_issue').value = r.issue||'';
+    segSet('f_priority', r.priority||'Medium');
+    if (r.engineer) setEngineerValue(r.engineer);
+    toast('📋 Đã điền sẵn từ phiếu tiếp nhận — bổ sung hướng xử lý rồi Gửi phiếu để hoàn tất');
+  }
+}
+async function deleteCasePrompt(id){
+  const pin = prompt('Nhập mật khẩu Administrator để xoá phiếu tiếp nhận này:');
+  if (pin == null) return;
+  try{
+    const j = await DB.deleteMaintenanceCase(id, pin);
+    if (!j.ok){ toast(j.error||'Sai mật khẩu hoặc lỗi xoá', true); return; }
+    toast('🗑️ Đã xoá phiếu');
+    caseData = caseData.filter(c => String(c.id)!==String(id));
+    renderCaseList();
+  }catch(err){ toast('Lỗi khi xoá: '+err.message, true); }
+}
 
 // He thong: hien field "Khac" khi chon __other
 $('#wh_system').onchange = e => {
