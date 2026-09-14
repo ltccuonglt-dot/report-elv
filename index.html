@@ -995,6 +995,9 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
                 </div>
               </div>
             </label>
+            <label class="field"><span class="lab">🔧 Kỹ sư xử lý</span>
+              <select id="case_assigned_engineer"><option value="">— Chưa phân công —</option></select>
+            </label>
             <label class="field"><span class="lab">🚦 Mức ưu tiên</span>
               <div class="seg" id="case_priority">
                 <button type="button" data-v="Low">🟢 Low</button>
@@ -1890,7 +1893,7 @@ const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get tok
    không bao giờ biết có bản mới. Nếu phát hiện khác nhau: nếu không có modal
    nào đang mở (không làm mất dữ liệu người dùng đang nhập dở) thì tự tải lại
    trang; nếu đang mở form thì chờ, kiểm tra lại mỗi 15s tới khi đóng form. */
-const APP_BUILD='2026-09-14T17:45:00Z';
+const APP_BUILD='2026-09-14T18:10:00Z';
 let appUpdatePending=false, appReloadScheduled=false;
 function appIsSafeToReload(){ return !document.querySelector('.modal.show'); }
 function appDoAutoReload(){
@@ -4093,7 +4096,7 @@ function renderCaseList(){
   let list = caseData.slice();
   if (status) list = list.filter(c => c.status === status);
   if (q) list = list.filter(c => (
-    (c.customer||'')+' '+(c.issue||'')+' '+(c.engineer||'')+' '+(c.reporter||'')+' '+(c.system||'')
+    (c.customer||'')+' '+(c.issue||'')+' '+(c.engineer||'')+' '+(c.assigned_engineer||'')+' '+(c.reporter||'')+' '+(c.system||'')
   ).toLowerCase().includes(q));
   $('#caseListTitle').textContent = `Danh sách phiếu (${list.length})`;
   if (!list.length){
@@ -4102,6 +4105,16 @@ function renderCaseList(){
     return;
   }
   $('#caseList').innerHTML = list.map(c => {
+    // "Nhan xu ly" phai chon LUON ky su di thuc hien (assigned_engineer) —
+    // khac voi "Nguoi tiep nhan" (c.engineer, ghi nhan tu luc tao case) — nen
+    // hien 1 select ngay canh nut, bat buoc chon truoc khi xac nhan.
+    const assignRow = c.status==='received' ? `
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <select class="case-assign-eng" data-id="${c.id}" style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface-2);font:inherit;font-size:12.5px;color:var(--ink)">
+          <option value="">— Chọn kỹ sư xử lý —</option>
+          ${(engineerList||[]).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')}
+        </select>
+      </div>` : '';
     const nextBtn = c.status==='received'
       ? `<button type="button" class="case-advance" data-id="${c.id}" data-action="progress">▶ Nhận xử lý</button>`
       : c.status==='in_progress'
@@ -4117,11 +4130,13 @@ function renderCaseList(){
         ${c.system?`<span class="m-item">⚙️ ${esc(c.system)}</span>`:''}
         ${c.reporter?`<span class="m-item">💬 ${esc(c.reporter)}</span>`:''}
         ${c.engineer?`<span class="m-item">👤 ${esc(c.engineer)}</span>`:''}
+        ${c.assigned_engineer?`<span class="m-item">🔧 ${esc(c.assigned_engineer)}</span>`:''}
         <span class="m-item">${esc(c.priority||'')}</span>
       </div>
       <div class="wh-card-fault"><b>Lỗi:</b> ${esc(c.issue||'')}</div>
       ${c.note?`<div class="wh-card-meta" style="margin-top:4px">📝 ${esc(c.note)}</div>`:''}
       ${c.linked_ticket_id?`<div class="wh-card-meta" style="margin-top:4px">🔗 Đã tạo phiếu #${c.linked_ticket_id}</div>`:''}
+      ${assignRow}
       <div class="wh-card-actions">
         ${nextBtn}
         <div style="flex:1"></div>
@@ -4183,6 +4198,9 @@ function openCaseForm(id){
   segSet('case_priority', r ? (r.priority||'Medium') : 'Medium');
   caseEngineerValue = r ? (r.engineer||'') : '';
   updateCaseEngineerLabel();
+  const assignedSel = $('#case_assigned_engineer');
+  assignedSel.innerHTML = '<option value="">— Chưa phân công —</option>' + (engineerList||[]).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  assignedSel.value = r ? (r.assigned_engineer||'') : '';
   $('#caseModal').classList.add('show');
 }
 $('#btnCaseNew').onclick = () => openCaseForm(null);
@@ -4204,6 +4222,7 @@ $('#btnCaseSave').onclick = async () => {
     customer, system: $('#case_system').value||null, issue,
     reporter: $('#case_reporter').value.trim()||null,
     engineer: caseEngineerValue||null,
+    assigned_engineer: $('#case_assigned_engineer').value||null,
     priority: segVal('case_priority'),
     note: $('#case_note').value.trim()||null
   };
@@ -4223,21 +4242,25 @@ $('#btnCaseSave').onclick = async () => {
 async function caseAdvance(id, action){
   const r = caseData.find(c => String(c.id)===String(id)); if (!r) return;
   if (action === 'progress'){
+    // Bat buoc chon "ky su di thuc hien" (assigned_engineer) ngay luc nhan xu ly —
+    // khac voi "Nguoi tiep nhan" (r.engineer, ghi nhan tu luc tao case).
+    const sel = document.querySelector(`.case-assign-eng[data-id="${id}"]`);
+    const assignedEngineer = sel ? sel.value : '';
+    if (!assignedEngineer){ toast('Chọn kỹ sư xử lý trước khi bấm Nhận xử lý', true); return; }
     try{
-      const j = await DB.updateMaintenanceCase(id, {status:'in_progress'});
+      const j = await DB.updateMaintenanceCase(id, {status:'in_progress', assigned_engineer:assignedEngineer});
       if (!j.ok){ toast(j.error||'Cập nhật thất bại', true); return; }
-      r.status = 'in_progress';
-      toast('▶ Đã nhận xử lý');
+      r.status = 'in_progress'; r.assigned_engineer = assignedEngineer;
+      toast('▶ Đã phân công '+assignedEngineer+' xử lý');
       renderCaseList();
     }catch(err){ toast('Lỗi khi cập nhật: '+err.message, true); }
     return;
   }
   if (action === 'complete'){
-    // Mo san form Tao phieu, dien theo case, kỹ sư bo sung huong xu ly roi tu Gui phieu.
-    // CO Y khong dien san kỹ sư — "Nguoi tiep nhan" (r.engineer, nguoi ghi nhan case luc
-    // dau) va "kỹ sư xu ly" (chon o day) co the la 2 nguoi KHAC NHAU, de trong cho ky su
-    // that su di xu ly tu chon lai o form Tao phieu (van chon duoc nhieu nguoi nhu binh
-    // thuong, khong bi khoa).
+    // Mo san form Tao phieu, dien theo case. Dien san ky su bang assigned_engineer
+    // (ky su da duoc phan cong luc "Nhan xu ly" — dung nguoi se di thuc hien that su),
+    // KHONG dung r.engineer (do la "Nguoi tiep nhan", ghi nhan tu luc tao case, co the
+    // la nguoi khac) — van cho chon lai thoai mai o form Tao phieu neu can doi.
     pendingCompleteCaseId = id;
     $('nav.tabs button[data-tab="report"]').click();
     setFieldOrOther('f_customer','wrap_customer_other','f_customer_other', r.customer||'');
@@ -4247,7 +4270,8 @@ async function caseAdvance(id, action){
     }
     $('#f_issue').value = r.issue||'';
     segSet('f_priority', r.priority||'Medium');
-    toast('📋 Đã điền sẵn từ phiếu tiếp nhận — chọn kỹ sư xử lý & bổ sung hướng xử lý rồi Gửi phiếu để hoàn tất');
+    if (r.assigned_engineer) setEngineerValue(r.assigned_engineer);
+    toast('📋 Đã điền sẵn từ phiếu tiếp nhận — bổ sung hướng xử lý rồi Gửi phiếu để hoàn tất');
   }
 }
 async function deleteCasePrompt(id){
