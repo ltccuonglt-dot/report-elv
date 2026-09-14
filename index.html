@@ -159,6 +159,11 @@ body{background:var(--ground);color:var(--ink);font-family:var(--font);font-size
 .wh-section{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
 .wh-section-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--brand);margin:0 0 12px}
 .wh-section-title .n{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--brand);color:#fff;font-size:12px;font-weight:800}
+/* Modal "Tiếp nhận phiếu" — header gradient bo tràn viền .sheet (bù margin âm) */
+.case-sheet{padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:92vh}
+.case-head{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:18px 18px;background:linear-gradient(135deg,var(--brand),#7c3aed);color:#fff}
+.case-head-title{font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px}
+.case-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 18px calc(env(safe-area-inset-bottom) + 18px)}
 .wh-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px 12px}
 .wh-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
 @media(max-width:600px){.wh-grid-2{grid-template-columns:1fr}}
@@ -933,54 +938,64 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
     <!-- Modal tạo/sửa case -->
     <div class="modal" id="caseModal" role="dialog" aria-modal="true">
-      <div class="sheet">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <h2 id="caseModalTitle" style="margin:0">📥 Tiếp nhận phiếu mới</h2>
-          <button type="button" class="mini-btn" id="btnCaseClose" aria-label="Đóng">✕</button>
+      <div class="sheet case-sheet">
+        <div class="case-head">
+          <div class="case-head-title"><span id="caseModalIcon">📥</span> <span id="caseModalTitle">Tiếp nhận phiếu mới</span></div>
+          <button type="button" class="mini-btn" id="btnCaseClose" aria-label="Đóng" style="background:rgba(255,255,255,.22);color:#fff">✕</button>
         </div>
+        <div class="case-body">
         <input type="hidden" id="case_id" />
-        <div class="wh-grid-2">
-          <label class="field"><span class="lab">Ngày giờ nhận <span class="req">*</span></span><input type="datetime-local" id="case_received_at"></label>
-          <label class="field"><span class="lab">Người báo (Zalo)</span><input type="text" id="case_reporter" placeholder="Tên / SĐT người báo"></label>
-          <label class="field"><span class="lab">Khách hàng <span class="req">*</span></span>
-            <select id="case_customer">
-              <option value="AEON Mall Huế">AEON Mall Huế</option>
-              <option value="AEON Mall Thanh Khê">AEON Mall Thanh Khê</option>
-              <option value="__other">Khác…</option>
-            </select>
-          </label>
-          <label class="field" id="case_customer_other_wrap" style="display:none"><span class="lab">Nhập tên khách hàng</span><input type="text" id="case_customer_other" placeholder="Tên khách hàng / cửa hàng"></label>
-          <label class="field"><span class="lab">Hệ thống</span>
-            <select id="case_system">
-              <option value="">— Không rõ —</option>
-              <option>IT Helpdesk</option><option>IT Network</option>
-              <option>CCTV</option><option>ACS</option><option>PA</option><option>BMS</option>
-              <option>Car Parking</option><option>Intercom</option><option>Print</option>
-              <option>Scan</option><option>ELV</option>
-            </select>
-          </label>
-          <label class="field"><span class="lab">Kỹ sư phụ trách</span>
-            <div class="msel" id="case_engineer_dd">
-              <button type="button" class="msel-btn placeholder" id="case_engineer_btn">— Chưa gán —</button>
-              <div class="msel-panel" id="case_engineer_panel" hidden>
-                <input type="text" class="msel-search" id="case_engineer_search" placeholder="🔍 Tìm kỹ sư..." />
-                <div class="msel-list" id="case_engineer_list"></div>
-              </div>
-            </div>
-          </label>
-          <label class="field"><span class="lab">Mức ưu tiên</span>
-            <div class="seg" id="case_priority">
-              <button type="button" data-v="Low">🟢 Low</button>
-              <button type="button" data-v="Medium" class="on">🟡 Medium</button>
-              <button type="button" data-v="High">🔴 High</button>
-            </div>
-          </label>
+        <div class="wh-section">
+          <div class="wh-section-title"><span class="n">1</span>Thông tin tiếp nhận</div>
+          <div class="wh-grid-2">
+            <label class="field"><span class="lab">🕐 Ngày giờ nhận <span class="req">*</span></span><input type="datetime-local" id="case_received_at"></label>
+            <label class="field"><span class="lab">💬 Người báo (Zalo)</span><input type="text" id="case_reporter" placeholder="Tên / SĐT người báo"></label>
+            <label class="field"><span class="lab">🏢 Khách hàng <span class="req">*</span></span>
+              <select id="case_customer">
+                <option value="AEON Mall Huế">AEON Mall Huế</option>
+                <option value="AEON Mall Thanh Khê">AEON Mall Thanh Khê</option>
+                <option value="__other">Khác…</option>
+              </select>
+            </label>
+            <label class="field" id="case_customer_other_wrap" style="display:none"><span class="lab">Nhập tên khách hàng</span><input type="text" id="case_customer_other" placeholder="Tên khách hàng / cửa hàng"></label>
+            <label class="field"><span class="lab">⚙️ Hệ thống</span>
+              <select id="case_system">
+                <option value="">— Không rõ —</option>
+                <option>IT Helpdesk</option><option>IT Network</option>
+                <option>CCTV</option><option>ACS</option><option>PA</option><option>BMS</option>
+                <option>Car Parking</option><option>Intercom</option><option>Print</option>
+                <option>Scan</option><option>ELV</option>
+              </select>
+            </label>
+          </div>
         </div>
-        <label class="field" style="margin-top:10px"><span class="lab">Mô tả lỗi <span class="req">*</span></span><textarea id="case_issue" rows="3" placeholder="Nội dung lỗi nhận được qua Zalo..."></textarea></label>
-        <label class="field"><span class="lab">Ghi chú</span><textarea id="case_note" rows="2" placeholder="Ghi chú thêm nếu có..."></textarea></label>
-        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+        <div class="wh-section">
+          <div class="wh-section-title"><span class="n">2</span>Nội dung & xử lý</div>
+          <div class="wh-grid-2">
+            <label class="field"><span class="lab">👤 Kỹ sư tạo phiếu</span>
+              <div class="msel" id="case_engineer_dd">
+                <button type="button" class="msel-btn placeholder" id="case_engineer_btn">— Chưa chọn —</button>
+                <div class="msel-panel" id="case_engineer_panel" hidden>
+                  <input type="text" class="msel-search" id="case_engineer_search" placeholder="🔍 Tìm kỹ sư..." />
+                  <div class="msel-list" id="case_engineer_list"></div>
+                </div>
+              </div>
+            </label>
+            <label class="field"><span class="lab">🚦 Mức ưu tiên</span>
+              <div class="seg" id="case_priority">
+                <button type="button" data-v="Low">🟢 Low</button>
+                <button type="button" data-v="Medium" class="on">🟡 Medium</button>
+                <button type="button" data-v="High">🔴 High</button>
+              </div>
+            </label>
+          </div>
+          <label class="field" style="margin-top:10px"><span class="lab">📝 Mô tả lỗi <span class="req">*</span></span><textarea id="case_issue" rows="3" placeholder="Nội dung lỗi nhận được qua Zalo..."></textarea></label>
+          <label class="field"><span class="lab">🗒️ Ghi chú</span><textarea id="case_note" rows="2" placeholder="Ghi chú thêm nếu có..."></textarea></label>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button type="button" class="btn btn-primary" id="btnCaseSave">💾 Lưu phiếu</button>
           <button type="button" class="btn btn-ghost" id="btnCaseCancel">Đóng</button>
+        </div>
         </div>
       </div>
     </div>
@@ -1861,7 +1876,7 @@ const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get tok
    không bao giờ biết có bản mới. Nếu phát hiện khác nhau: nếu không có modal
    nào đang mở (không làm mất dữ liệu người dùng đang nhập dở) thì tự tải lại
    trang; nếu đang mở form thì chờ, kiểm tra lại mỗi 15s tới khi đóng form. */
-const APP_BUILD='2026-09-14T16:55:00Z';
+const APP_BUILD='2026-09-14T17:15:00Z';
 let appUpdatePending=false, appReloadScheduled=false;
 function appIsSafeToReload(){ return !document.querySelector('.modal.show'); }
 function appDoAutoReload(){
@@ -4109,7 +4124,7 @@ function renderCaseList(){
 function renderCaseEngineerList(filter){
   const q = (filter||'').toLowerCase();
   const items = (engineerList||[]).filter(n => n.toLowerCase().includes(q));
-  const html = `<label class="msel-opt" style="font-weight:700"><input type="radio" name="case_eng_radio" value="" ${!caseEngineerValue?'checked':''}><span>— Chưa gán —</span></label>` +
+  const html = `<label class="msel-opt" style="font-weight:700"><input type="radio" name="case_eng_radio" value="" ${!caseEngineerValue?'checked':''}><span>— Chưa chọn —</span></label>` +
     items.map(n => `<label class="msel-opt"><input type="radio" name="case_eng_radio" value="${esc(n)}" ${n===caseEngineerValue?'checked':''}><span>${esc(n)}</span></label>`).join('');
   $('#case_engineer_list').innerHTML = html;
   $$('#case_engineer_list input[type=radio]').forEach(r => r.onchange = () => {
@@ -4122,7 +4137,7 @@ function renderCaseEngineerList(filter){
 function updateCaseEngineerLabel(){
   const btn = $('#case_engineer_btn');
   if (caseEngineerValue){ btn.textContent = caseEngineerValue; btn.classList.remove('placeholder'); }
-  else { btn.textContent = '— Chưa gán —'; btn.classList.add('placeholder'); }
+  else { btn.textContent = '— Chưa chọn —'; btn.classList.add('placeholder'); }
 }
 $('#case_engineer_btn').onclick = () => {
   const panel = $('#case_engineer_panel'), dd = $('#case_engineer_dd');
@@ -4141,7 +4156,8 @@ $('#case_customer').onchange = e => $('#case_customer_other_wrap').style.display
 function openCaseForm(id){
   caseCurrentId = id;
   const r = id ? caseData.find(c => String(c.id)===String(id)) : null;
-  $('#caseModalTitle').textContent = r ? `✏️ Sửa phiếu #${r.id}` : '📥 Tiếp nhận phiếu mới';
+  $('#caseModalIcon').textContent = r ? '✏️' : '📥';
+  $('#caseModalTitle').textContent = r ? `Sửa phiếu #${r.id}` : 'Tiếp nhận phiếu mới';
   $('#case_id').value = id || '';
   $('#case_received_at').value = r ? isoToVnDatetimeLocal(r.received_at) : vnNowDatetimeLocal();
   if (r) setFieldOrOther('case_customer','case_customer_other_wrap','case_customer_other', r.customer||'');
