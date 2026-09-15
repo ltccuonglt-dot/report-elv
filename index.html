@@ -383,6 +383,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 /* Online = xanh dương, On-Site = tím — khớp màu đã dùng ở bảng/thống kê, để phân biệt rõ ngay trên nút chọn */
 #f_support button[data-v="Online"].on{background:var(--info);box-shadow:0 2px 8px -2px var(--info)}
 #f_support button[data-v="On-Site"].on{background:var(--brand-ink);box-shadow:0 2px 8px -2px var(--brand-ink)}
+#caseAssignSupport button[data-v="Online"].on{background:var(--info);box-shadow:0 2px 8px -2px var(--info)}
+#caseAssignSupport button[data-v="On-Site"].on{background:var(--brand-ink);box-shadow:0 2px 8px -2px var(--brand-ink)}
 .seg.sm button{font-size:12.5px;padding:8px 4px}
 
 .chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -1020,6 +1022,13 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
         </div>
         <p class="desc" style="margin-top:-4px">Chọn 1 hoặc nhiều kỹ sư sẽ trực tiếp đi xử lý phiếu này.</p>
         <div class="msel-list" id="caseAssignList" style="max-height:280px;overflow-y:auto"></div>
+        <label class="field" style="margin-top:12px">
+          <span class="lab">Hình thức hỗ trợ</span>
+          <div class="seg" id="caseAssignSupport">
+            <button type="button" data-v="Online" class="on">💻 Online</button>
+            <button type="button" data-v="On-Site">🚗 On-Site</button>
+          </div>
+        </label>
         <button type="button" class="btn btn-primary" id="btnCaseAssignConfirm" style="margin-top:14px;width:100%">✅ Xác nhận & Nhận xử lý</button>
       </div>
     </div>
@@ -1900,7 +1909,7 @@ const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get tok
    không bao giờ biết có bản mới. Nếu phát hiện khác nhau: nếu không có modal
    nào đang mở (không làm mất dữ liệu người dùng đang nhập dở) thì tự tải lại
    trang; nếu đang mở form thì chờ, kiểm tra lại mỗi 15s tới khi đóng form. */
-const APP_BUILD='2026-09-15T07:15:00Z';
+const APP_BUILD='2026-09-15T08:30:00Z';
 let appUpdatePending=false, appReloadScheduled=false;
 function appIsSafeToReload(){ return !document.querySelector('.modal.show'); }
 function appDoAutoReload(){
@@ -4255,6 +4264,7 @@ function caseAdvance(id, action){
   $('#caseAssignList').innerHTML = (engineerList||[]).map(n =>
     `<label class="msel-opt"><input type="checkbox" value="${esc(n)}" ${preset.includes(n)?'checked':''}><span>${esc(n)}</span></label>`
   ).join('');
+  segSet('caseAssignSupport','Online');
   $('#caseAssignModal').classList.add('show');
 }
 $('#btnCaseAssignClose').onclick = () => $('#caseAssignModal').classList.remove('show');
@@ -4270,7 +4280,7 @@ $('#btnCaseAssignConfirm').onclick = async () => {
     const payload = {
       date: vnTodayIso(), customer: r.customer, system: r.system||'', issue: r.issue||'',
       priority: r.priority||'Medium', engineer: assignedEngineer,
-      support: 'Online', workType: 'Bảo trì', status: 'In Progress', remark: r.note||''
+      support: segVal('caseAssignSupport'), workType: 'Bảo trì', status: 'In Progress', remark: r.note||''
     };
     const tj = await DB.createTicket(payload);
     if (!tj.ok){ toast(tj.error||'Tạo phiếu thất bại', true); btn.disabled=false; return; }
