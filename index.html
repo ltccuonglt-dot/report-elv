@@ -1026,7 +1026,7 @@ nav.tabs .ico{width:46px;height:30px;border-radius:10px;display:grid;place-items
 
     <!-- ===== LỊCH SỬ ===== -->
     <section id="view-warranty" class="view">
-      <p class="hint" style="margin:0 0 10px">🛠️ Nhận hàng bảo hành: check lỗi → gửi hãng → hãng trả về → trả khách. Kèm ảnh, video (≤45s) và xuất PDF.</p>
+      <p class="hint" style="margin:0 0 10px">🛠️ Nhận hàng bảo hành: check lỗi → gửi hãng → hãng trả về → trả khách. Kèm ảnh, video (≤45s) và xuất PDF. Mặc định chỉ hiện phiếu 30 ngày gần nhất — gõ tìm kiếm để xem phiếu cũ hơn.</p>
       <div class="toolbar" style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
         <button type="button" class="btn" id="btnWhNew" style="background:var(--brand);color:#fff">+ Nhận hàng bảo hành mới</button>
         <select id="whFilterStatus" class="mini-date" style="min-width:140px">
@@ -1900,7 +1900,7 @@ const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get tok
    không bao giờ biết có bản mới. Nếu phát hiện khác nhau: nếu không có modal
    nào đang mở (không làm mất dữ liệu người dùng đang nhập dở) thì tự tải lại
    trang; nếu đang mở form thì chờ, kiểm tra lại mỗi 15s tới khi đóng form. */
-const APP_BUILD='2026-09-14T19:00:00Z';
+const APP_BUILD='2026-09-15T07:15:00Z';
 let appUpdatePending=false, appReloadScheduled=false;
 function appIsSafeToReload(){ return !document.querySelector('.modal.show'); }
 function appDoAutoReload(){
@@ -2624,6 +2624,7 @@ $$('.seg').forEach(seg=>seg.querySelectorAll('button').forEach(b=>b.onclick=()=>
 // vnTodayIso() tiện dùng thẳng cho các input[type=date] mặc định "hôm nay".
 function vnNow(){ return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Ho_Chi_Minh'})); }
 function vnTodayIso(){ const d=vnNow(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function vnDateMinusDays(days){ const d=vnNow(); d.setDate(d.getDate()-days); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
 function pad2(n){return String(n).padStart(2,'0')}
 function daysInMonth(year,month){ return new Date(Number(year),Number(month),0).getDate(); } // month: 1-12
 function isoDow(year,month,day){ const d=new Date(Number(year),Number(month)-1,day).getDay(); return d===0?7:d; } // 1=Thứ 2 ... 7=CN
@@ -3808,15 +3809,26 @@ function renderWarrantyList(){
   const status = $('#whFilterStatus').value;
   let list = whData.slice();
   if (status) list = list.filter(r => whComputeStatus(r) === status);
-  if (q) list = list.filter(r => (
-    (r.receipt_no||'') + ' ' + (r.customer||'') + ' ' + (r.device_name||'') + ' ' +
-    (r.device_model||'') + ' ' + (r.device_serial||'') + ' ' + (r.fault_description||'') + ' ' +
-    (r.vendor_name||'') + ' ' + (r.note||'')
-  ).toLowerCase().includes(q));
-  $('#whListTitle').textContent = `Danh sách phiếu bảo hành (${list.length})`;
+  // Mac dinh CHI hien phieu trong 30 ngay gan nhat (theo ngay nhan) — danh
+  // sach do khong bi day dai theo thoi gian. Go TIM KIEM thi BO QUA gioi han
+  // nay hoan toan, tim ca lich su cu hon (khong ap dung khi dang loc theo q).
+  let hiddenOld = 0;
+  if (q){
+    list = list.filter(r => (
+      (r.receipt_no||'') + ' ' + (r.customer||'') + ' ' + (r.device_name||'') + ' ' +
+      (r.device_model||'') + ' ' + (r.device_serial||'') + ' ' + (r.fault_description||'') + ' ' +
+      (r.vendor_name||'') + ' ' + (r.note||'')
+    ).toLowerCase().includes(q));
+  } else {
+    const cutoff = vnDateMinusDays(30);
+    const beforeCount = list.length;
+    list = list.filter(r => !r.receipt_date || r.receipt_date >= cutoff);
+    hiddenOld = beforeCount - list.length;
+  }
+  $('#whListTitle').textContent = `Danh sách phiếu bảo hành (${list.length}${hiddenOld?` · ${hiddenOld} phiếu cũ hơn 30 ngày, gõ tìm kiếm để xem`:''})`;
   if (!list.length){
-    $('#warrantyList').innerHTML = emptyState(q||status?'Không tìm thấy':'Chưa có phiếu bảo hành',
-      q||status?'Không có phiếu khớp bộ lọc/tìm kiếm.':'Bấm nút "+ Nhận hàng bảo hành mới" phía trên để tạo phiếu đầu tiên.');
+    $('#warrantyList').innerHTML = emptyState(q||status?'Không tìm thấy':'Chưa có phiếu bảo hành gần đây',
+      q||status?'Không có phiếu khớp bộ lọc/tìm kiếm.':(hiddenOld?`Có ${hiddenOld} phiếu cũ hơn 30 ngày — gõ vào ô tìm kiếm để xem.`:'Bấm nút "+ Nhận hàng bảo hành mới" phía trên để tạo phiếu đầu tiên.'));
     return;
   }
   $('#warrantyList').innerHTML = list.map(r => {
