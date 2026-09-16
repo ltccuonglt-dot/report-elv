@@ -1909,7 +1909,7 @@ const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get tok
    không bao giờ biết có bản mới. Nếu phát hiện khác nhau: nếu không có modal
    nào đang mở (không làm mất dữ liệu người dùng đang nhập dở) thì tự tải lại
    trang; nếu đang mở form thì chờ, kiểm tra lại mỗi 15s tới khi đóng form. */
-const APP_BUILD='2026-09-15T08:30:00Z';
+const APP_BUILD='2026-09-16T01:00:00Z';
 let appUpdatePending=false, appReloadScheduled=false;
 function appIsSafeToReload(){ return !document.querySelector('.modal.show'); }
 function appDoAutoReload(){
@@ -4152,13 +4152,11 @@ function renderCaseList(){
         ${nextBtn}
         <div style="flex:1"></div>
         <button type="button" class="wh-edit case-edit" data-id="${c.id}">✏️ Sửa</button>
-        <button type="button" class="wh-del case-del" data-id="${c.id}">🗑</button>
       </div>
     </div>`;
   }).join('');
   $$('#caseList .case-advance').forEach(b => b.onclick = () => caseAdvance(Number(b.dataset.id), b.dataset.action));
   $$('#caseList .case-edit').forEach(b => b.onclick = () => openCaseForm(Number(b.dataset.id)));
-  $$('#caseList .case-del').forEach(b => b.onclick = () => deleteCasePrompt(Number(b.dataset.id)));
 }
 
 function renderCaseEngineerList(filter){
@@ -4297,18 +4295,6 @@ $('#btnCaseAssignConfirm').onclick = async () => {
   }catch(err){ toast('Lỗi: '+err.message, true); }
   finally{ btn.disabled = false; }
 };
-async function deleteCasePrompt(id){
-  const pin = prompt('Nhập mật khẩu Administrator để xoá phiếu tiếp nhận này:');
-  if (pin == null) return;
-  try{
-    const j = await DB.deleteMaintenanceCase(id, pin);
-    if (!j.ok){ toast(j.error||'Sai mật khẩu hoặc lỗi xoá', true); return; }
-    toast('🗑️ Đã xoá phiếu');
-    caseData = caseData.filter(c => String(c.id)!==String(id));
-    renderCaseList();
-  }catch(err){ toast('Lỗi khi xoá: '+err.message, true); }
-}
-
 // He thong: hien field "Khac" khi chon __other
 $('#wh_system').onchange = e => {
   $('#wh_system_other_wrap').style.display = e.target.value === '__other' ? 'block' : 'none';
