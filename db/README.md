@@ -2,10 +2,15 @@
 
 ## Trạng thái
 
-- **001_indexes.sql** — ✅ **Đã apply ngày 2026-09-25** (add 1 index cho FK
+- **001_indexes.sql** — ✅ **Đã apply 2026-09-25** (add 1 index cho FK
   `maintenance_cases.linked_ticket_id` mà advisor flag). Rollback bằng
   `DROP INDEX IF EXISTS idx_maintenance_cases_linked_ticket_id` — không mất
   data.
+- **002_harden_trigger_search_path.sql** — ✅ **Đã apply 2026-09-25**
+  (`SET search_path=''` cho 2 hàm trigger `set_updated_at` +
+  `warranty_touch_updated_at`, sửa advisor WARN
+  `function_search_path_mutable`). Rollback: `CREATE OR REPLACE FUNCTION`
+  lại bỏ dòng `SET search_path`. KHÔNG đổi hành vi.
 
 ## Cách chạy migration mới (khi thêm file kế tiếp)
 
@@ -30,10 +35,11 @@ psql client-side.
 
 ## Advisor Supabase còn lại (WARN, không blocking)
 
-- `function_search_path_mutable` × 2: 2 trigger function chưa `SET
-  search_path` — hardening tương lai, không ảnh hưởng chạy.
-- `extension_in_public` × 1: `unaccent` nằm ở schema public — nhắc di dời,
-  không ảnh hưởng chạy.
+- ~~`function_search_path_mutable` × 2~~ — ✅ đã fix ở 002.
+- `extension_in_public` × 1: `unaccent` nằm ở schema public. Đã kiểm: 3
+  function trong `public.*` gọi `unaccent(...)` không schema-qualified →
+  di dời `unaccent` sang schema riêng sẽ vỡ 3 hàm đó. Để nguyên vì WARN
+  không blocking, chỉ khuyến nghị hardening.
 - `anon_security_definer_function_executable` × 66 (và `authenticated`
   × 66): 66 RPC function là SECURITY DEFINER, gọi được từ anon key. Đây
   là **thiết kế cố ý** của app (RPC check admin password bên trong
