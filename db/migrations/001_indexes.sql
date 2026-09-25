@@ -1,0 +1,42 @@
+-- ============================================================================
+-- 001_indexes.sql — Đã APPLY vào project vlhwagmqpnbsijkzztvi ngày 2026-09-25.
+-- ============================================================================
+-- Bối cảnh: sau khi audit qua Supabase advisor + `pg_indexes`, HẦU HẾT các
+-- index quan trọng đã tồn tại từ trước:
+--   • tickets_date_idx           (public.tickets)
+--   • ticket_photos_ticket_idx   (public.ticket_photos.ticket_id)
+--   • attendance_emp_date_idx    (public.attendance)
+--   • expense_lines_trip_idx     (public.expense_lines.trip_id)
+--   • aeon_tickets_date_idx      (public.aeon_tickets.ticket_date)
+--   • idx_maintenance_cases_status, idx_maintenance_cases_received_at
+--   • warranty: idx_warranty_customer/receipt_date/serial/status
+--
+-- CHỈ THIẾU 1 index: FK linked_ticket_id trên maintenance_cases (Postgres
+-- không tự tạo index cho FK, và Supabase advisor đã cảnh báo). Data hiện 0
+-- dòng nhưng khi user bấm "Hoàn tất" một case sẽ update linked_ticket_id
+-- rồi JOIN/lookup — sẽ chậm khi data tăng. Đây là điều DUY NHẤT cần fix.
+--
+-- Rollback: DROP INDEX IF EXISTS idx_maintenance_cases_linked_ticket_id;
+-- KHÔNG mất dữ liệu.
+--
+-- Idempotent — chạy lại nhiều lần đều ok.
+-- ============================================================================
+
+CREATE INDEX IF NOT EXISTS idx_maintenance_cases_linked_ticket_id
+  ON public.maintenance_cases (linked_ticket_id);
+
+-- ============================================================================
+-- Các đề xuất KHÔNG chạy vì dư thừa (đã có index tương đương) hoặc quá sớm
+-- so với volume hiện tại (project_codes 1216 rows là bảng lớn nhất — Postgres
+-- vẫn seq-scan nhanh hơn index bên dưới vài chục nghìn dòng). Nếu data lớn
+-- hẳn về sau thì mới cân nhắc thêm:
+--   CREATE INDEX IF NOT EXISTS idx_tickets_engineer ON public.tickets (engineer);
+--   CREATE INDEX IF NOT EXISTS idx_tickets_customer ON public.tickets (customer);
+--   CREATE INDEX IF NOT EXISTS idx_tickets_status   ON public.tickets (status);
+--   CREATE EXTENSION IF NOT EXISTS pg_trgm;
+--   CREATE INDEX IF NOT EXISTS idx_project_codes_code_trgm
+--     ON public.project_codes USING gin (code gin_trgm_ops);
+--
+-- Kiểm tra sau khi chạy:
+-- SELECT indexname, tablename FROM pg_indexes
+--   WHERE schemaname='public' ORDER BY tablename, indexname;
