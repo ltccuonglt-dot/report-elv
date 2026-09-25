@@ -1905,7 +1905,7 @@ const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get tok
    không bao giờ biết có bản mới. Nếu phát hiện khác nhau: nếu không có modal
    nào đang mở (không làm mất dữ liệu người dùng đang nhập dở) thì tự tải lại
    trang; nếu đang mở form thì chờ, kiểm tra lại mỗi 15s tới khi đóng form. */
-const APP_BUILD='2026-09-25T01:00:00Z';
+const APP_BUILD='2026-09-25T02:00:00Z';
 let appUpdatePending=false, appReloadScheduled=false;
 function appIsSafeToReload(){ return !document.querySelector('.modal.show'); }
 function appDoAutoReload(){
@@ -7523,6 +7523,20 @@ $('#btnCtpExportExcel').onclick=async ()=>{
  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`Cong-tac-phi-${safe}-${vnTodayIso()}.xlsx`;
  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
  toast(`✅ Đã xuất Excel công tác phí — ${lines.length} dòng`);
+ // Công tác phí là hồ sơ dùng 1 lần: sau khi xuất Excel thành công thì tự
+ // xoá HẲN đợt vừa xuất (cả trip + toàn bộ dòng chi phí) khỏi Supabase để
+ // lần sau tạo đợt mới sạch, không phải bấm nút xoá riêng nữa. Có confirm
+ // trước khi xoá + phải đúng mật khẩu quản trị (dùng chung nhóm 'settings')
+ // để tránh mất dữ liệu nếu bấm nhầm.
+ const tripToDelete=currentTripId;
+ const linesCount=lines.length;
+ if(!tripToDelete) return;
+ if(!confirm(`Đã xuất Excel xong. Xoá HẲN đợt công tác vừa xuất khỏi hệ thống (${linesCount} dòng)?\nCông tác phí là hồ sơ dùng 1 lần — sau khi xuất Excel không cần giữ lại.\nKhông thể hoàn tác.`)) return;
+ requireAdminThen('settings', async()=>{
+   const j=await DB.deleteTrip(tripToDelete, adminPassword.settings);
+   if(j.ok){ toast(`✅ Đã xoá đợt vừa xuất (${j.deletedLines||linesCount} dòng)`); await ctpLoadAll(); }
+   else toast(j.error||'Lỗi xoá đợt sau khi xuất Excel',true);
+ });
 };
 
 $('#btnCtpPrintMap').onclick=()=>{
