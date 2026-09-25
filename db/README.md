@@ -1,44 +1,45 @@
-# DB migrations — cách chạy an toàn
+# DB migrations — Supabase project `vlhwagmqpnbsijkzztvi`
 
-Thư mục này chứa các câu SQL đề xuất chạy trên Supabase để **tăng tốc query**
-mà app phía client hiện đang gọi. Chúng chỉ tạo INDEX — **không thêm/sửa/xoá
-dữ liệu**, không đổi schema, hoàn toàn có thể `DROP INDEX` để rollback nếu
-cần. Dù vậy, **luôn backup trước** khi chạy bất kỳ migration nào.
+## Trạng thái
 
-## Bước bắt buộc TRƯỚC khi chạy
+- **001_indexes.sql** — ✅ **Đã apply ngày 2026-09-25** (add 1 index cho FK
+  `maintenance_cases.linked_ticket_id` mà advisor flag). Rollback bằng
+  `DROP INDEX IF EXISTS idx_maintenance_cases_linked_ticket_id` — không mất
+  data.
 
-1. Mở app → ⚙️ Cài đặt → nhập mật khẩu quản trị nhóm "settings"
-2. Bấm **"Sao lưu Supabase → Drive"** (function `DB.backupSupabaseToDrive`
-   trong client, chạy qua Apps Script, ghi 1 file JSON toàn bộ Supabase
-   vào Drive folder `Report ELV - Anh Phieu Luu Tru`).
-3. Đợi toast báo ✅ hoàn tất. Kiểm tra file mới có xuất hiện trong Drive.
-4. **Ngoài ra** vào Supabase Dashboard → Project → Database → Backups →
-   "Take a manual backup" (backup mức Postgres, đầy đủ hơn JSON dump).
+## Cách chạy migration mới (khi thêm file kế tiếp)
 
-Xong 2 bước backup → sang chạy migration.
+1. **Backup Supabase (bắt buộc)** — 2 cách chồng lên nhau cho chắc:
+   - App: ⚙️ Cài đặt → "Sao lưu Supabase → Drive" (JSON toàn bộ bảng)
+   - Supabase Dashboard → Database → Backups → "Take manual backup" (native
+     Postgres backup, restore được nhanh nhất)
+2. Mở Supabase Dashboard → SQL Editor
+3. Copy toàn bộ file `.sql` cần chạy, paste, bấm Run
+4. Đọc kỹ output. Mọi migration ở đây phải dùng `IF NOT EXISTS` /
+   `IF EXISTS` để chạy lại nhiều lần đều an toàn.
 
-## Cách chạy trên Supabase
+## Backup dữ liệu hiện tại
 
-1. Mở Supabase Dashboard → Project → SQL Editor
-2. Copy toàn bộ file `.sql` bên dưới, paste vào editor
-3. Bấm "Run"
-4. Đọc kỹ output — mọi câu đều dùng `IF NOT EXISTS` nên chạy lại nhiều lần
-   là an toàn (idempotent).
+Xem file `supabase-backup-2026-09-25.json` được gửi cho anh (601 KB JSON,
+14 bảng, 1469 dòng, ảnh R2/Supabase Storage giữ nguyên URL — restore lại
+là toàn bộ ticket + ảnh về đúng chỗ).
 
-## Rollback nếu cần
+Restore từ backup JSON: bulk-insert vào từng bảng qua Supabase Dashboard
+Table Editor → Insert → "Import data from CSV/JSON", hoặc chạy 1 script
+psql client-side.
 
-Xoá index đã tạo cực đơn giản (không mất data):
-```sql
-DROP INDEX IF EXISTS idx_tickets_ticket_date;
-DROP INDEX IF EXISTS idx_tickets_engineer;
-DROP INDEX IF EXISTS idx_tickets_customer;
-DROP INDEX IF EXISTS idx_tickets_status;
--- ... tương tự các index khác
-```
+## Advisor Supabase còn lại (WARN, không blocking)
 
-Query sẽ trở lại tốc độ như cũ, dữ liệu KHÔNG thay đổi.
-
-## Danh sách migration
-
-- [`001_indexes.sql`](./migrations/001_indexes.sql) — index cho tickets,
-  maintenance_cases, aeon_tickets, warranty, attendance, expense_lines
+- `function_search_path_mutable` × 2: 2 trigger function chưa `SET
+  search_path` — hardening tương lai, không ảnh hưởng chạy.
+- `extension_in_public` × 1: `unaccent` nằm ở schema public — nhắc di dời,
+  không ảnh hưởng chạy.
+- `anon_security_definer_function_executable` × 66 (và `authenticated`
+  × 66): 66 RPC function là SECURITY DEFINER, gọi được từ anon key. Đây
+  là **thiết kế cố ý** của app (RPC check admin password bên trong
+  function), không phải lỗ hổng. Bỏ qua.
+- `rls_enabled_no_policy` × 5: 5 bảng bật RLS mà không có policy → không
+  bảng nào truy cập trực tiếp qua REST được, chỉ đi qua RPC. Đúng thiết kế.
+- `unused_index` × 4: 4 index có sẵn (`idx_warranty_*` và index mới thêm)
+  chưa có query nào chạy đến. Sẽ dùng khi warranty scale lên hoặc user
+  hoàn tất maintenance case đầu tiên.
