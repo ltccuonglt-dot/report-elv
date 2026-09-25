@@ -13,6 +13,11 @@
 <link rel="manifest" href="./manifest.json" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<!-- Preconnect Supabase (backend chính) + CDN thư viện — mở sẵn DNS+TCP+TLS
+     trước khi cần dùng, rút ngắn round-trip đầu tiên tới máy chủ 1-2 khung. -->
+<link rel="preconnect" href="https://vlhwagmqpnbsijkzztvi.supabase.co" crossorigin />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
 <!-- Supabase là backend chính, cần sẵn sàng NGAY khi vào app (createClient chạy
      ở top-level script). Giữ defer để tải song song lúc trình duyệt còn phân
@@ -1905,7 +1910,7 @@ const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get tok
    không bao giờ biết có bản mới. Nếu phát hiện khác nhau: nếu không có modal
    nào đang mở (không làm mất dữ liệu người dùng đang nhập dở) thì tự tải lại
    trang; nếu đang mở form thì chờ, kiểm tra lại mỗi 15s tới khi đóng form. */
-const APP_BUILD='2026-09-25T02:00:00Z';
+const APP_BUILD='2026-09-25T03:00:00Z';
 let appUpdatePending=false, appReloadScheduled=false;
 function appIsSafeToReload(){ return !document.querySelector('.modal.show'); }
 function appDoAutoReload(){
@@ -1922,7 +1927,11 @@ async function appCheckForUpdate(){
    if(j.build && j.build!==APP_BUILD) appUpdatePending=true;
  }catch(err){ /* mất mạng — bỏ qua, thử lại lần sau */ }
 }
-setInterval(appCheckForUpdate,5*60*1000);
+// Chỉ poll version.json khi tab đang hiển thị — tab bị ẩn (chuyển tab khác,
+// khóa máy, để trong background) thì không cần check bản mới, tiết kiệm băng
+// thông + tránh chạy nền vô ích trên điện thoại. Khi user quay lại tab thì
+// visibilitychange bên dưới đã check ngay 1 lần.
+setInterval(()=>{ if(document.visibilityState==='visible') appCheckForUpdate(); },5*60*1000);
 setInterval(()=>{ if(appUpdatePending && appIsSafeToReload()) appDoAutoReload(); },15*1000);
 document.addEventListener('visibilitychange',async ()=>{
  if(document.visibilityState!=='visible') return;
@@ -1931,6 +1940,11 @@ document.addEventListener('visibilitychange',async ()=>{
 });
 setTimeout(appCheckForUpdate,20*1000);
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+// debounce: gọi fn tối đa 1 lần mỗi `wait` ms — tránh chạy renderManager mỗi
+// keystroke khi gõ tìm kiếm (mgrData có thể hàng nghìn dòng, mỗi lần render
+// filter+innerHTML lại toàn bộ). 180ms đủ ngắn để cảm giác "tức thì" nhưng
+// gộp được các phím gõ nhanh liền nhau.
+const debounce=(fn,wait=180)=>{ let t; return function(...a){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,a),wait); }; };
 
 /* ===== Supabase — backend CHÍNH cho phần Phiếu kỹ thuật (chấm công/công tác
    phí vẫn tạm dùng Google Apps Script ở trên cho tới khi tới lượt chuyển) =====
@@ -3992,7 +4006,7 @@ async function whAdvanceStage(id, stage, btn){
   finally{ if (btn){ btn.disabled = false; } }
 }
 
-$('#whSearch').oninput = renderWarrantyList;
+$('#whSearch').oninput = debounce(renderWarrantyList, 180);
 $('#whFilterStatus').onchange = renderWarrantyList;
 $('#btnWhNew').onclick = () => openWarrantyForm(null);
 $('#btnWhClose').onclick = $('#btnWhCancel').onclick = () => $('#whModal').classList.remove('show');
@@ -4715,7 +4729,6 @@ $('#btnWhExport').onclick=async ()=>{
     (r.vendor_name||'')+' '+(r.note||'')
   ).toLowerCase().includes(q));
   if(!data.length){toast('Không có dữ liệu để xuất',true);return}
-  if(typeof XLSX==='undefined'){toast('Chưa tải được thư viện xuất Excel, thử lại sau',true);return}
 
   const head=['No','Số phiếu','Ngày nhận','Khách hàng','Người nhận','Hệ thống','Thiết bị','Model','Serial','SL','Mô tả lỗi','Hãng bảo hành','Ngày gửi hãng','Ngày hãng trả','Ghi chú hãng','Ngày trả khách','Người trả','Khách ký nhận','Ghi chú','Trạng thái'];
   const centerCols=[0,2,9,12,13,15,19]; // No, Ngày nhận, SL, Ngày gửi hãng, Ngày hãng trả, Ngày trả khách, Trạng thái
@@ -5179,7 +5192,7 @@ async function deleteTicket(no,displayNo){
    } else toast(j.error||'Lỗi xóa phiếu',true);
  }catch(err){ toast('Không xóa được. Kiểm tra mạng.',true); }
 }
-$('#mgrSearch').oninput=renderManager;
+$('#mgrSearch').oninput=debounce(renderManager, 180);
 wireYMW('mgr',renderManager);
 wireYMW('dash',renderDashboard);
 $('#mgrCustomer').onchange=renderManager;
@@ -5204,7 +5217,6 @@ $('#btnExport').onclick=async ()=>{
  if(mgrEngineerFilter)data=data.filter(r=>(r.engineer||'').includes(mgrEngineerFilter));
  if(q) data=data.filter(r=>((r.issue||'')+(r.engineer||'')+(r.customer||'')+(r.priority||'')+(r.workType||'')+' '+slabel(r.status)+' '+(r.status||'')).toLowerCase().includes(q));
  if(!data.length){toast('Không có dữ liệu để xuất',true);return}
- if(typeof XLSX==='undefined'){toast('Chưa tải được thư viện xuất Excel, thử lại sau',true);return}
 
  const cols=['no','date','customer','system','workType','issue','priority','engineer','support','status','remark'];
  const head=['No','Date','Customer','System','Work Type','Issue','Priority','Engineer','Support','Status','Remark'];
@@ -7549,86 +7561,6 @@ $('#btnCtpPrintMap').onclick=()=>{
    w.document.close();
    return;
  }
- /* ===== (Bên dưới là code cũ của nút "Xem trước & In" — KHÔNG còn dùng, giữ lại vô hại) ===== */
- const lines=ctpCurrentLines();
- if(!lines.length){ toast('Chưa có dòng chi phí nào để in',true); return; }
- const total=lines.reduce((s,r)=>s+(Number(r.amount)||0),0);
- const F='font-family:\'Times New Roman\',serif';
- const tdS=`padding:4px 6px;border:1px solid #999;font-size:11px;${F}`;
- // Header xanh nhạt chữ navy (khớp mẫu/Excel mới, KHÔNG phải navy trắng cũ).
- const thS=`padding:4px 6px;border:1px solid #8faac6;font-size:11px;font-weight:700;text-align:center;background:#8DB4E2;color:#1F3864;${F}`;
- const q2=v=>Number(v)?Number(v).toFixed(2):'';
- const rowsHtml=lines.map((r,i)=>`<tr>
-   <td style="${tdS};text-align:center">${i+1}</td>
-   <td style="${tdS}">${esc(r.requesterName)}</td>
-   <td style="${tdS};text-align:center">${esc(r.dept||'TECH')}</td>
-   <td style="${tdS}">${esc(r.expenseType)}</td>
-   <td style="${tdS}">${esc(r.description)}</td>
-   <td style="${tdS};text-align:center">${r.lineFromDate?fmtDMYFull(r.lineFromDate):''}</td>
-   <td style="${tdS};text-align:center">${r.lineToDate?fmtDMYFull(r.lineToDate):''}</td>
-   <td style="${tdS};text-align:center">${r.km||''}</td>
-   <td style="${tdS};text-align:center">${q2(r.quantity)}</td>
-   <td style="${tdS};text-align:right">${(r.rate||0).toLocaleString('vi-VN')}</td>
-   <td style="${tdS};text-align:right">${(r.amount||0).toLocaleString('vi-VN')}</td>
-   <td style="${tdS};text-align:center">${esc(r.projectCode)}</td>
-   <td style="${tdS}">${esc(r.projectName)}</td>
-   <td style="${tdS};text-align:center">${esc(r.serviceType)}</td>
-   <td style="${tdS}">${esc(r.note)}</td>
- </tr>`).join('');
- const mapSrc = ctpUploadedMapDataUrl || (($('#ctp_mapSelect').value)?mapSrcFor($('#ctp_mapSelect').value):'');
- const first=lines[0]||{};
- const hdr=ctpTripHeader(); // Ngày/Địa điểm/Từ-đến lấy từ FORM (tránh trống)
- // Dòng đầu phiếu "Họ tên người đề nghị" gộp TẤT CẢ người có mặt trong đợt
- // (mỗi người 1 dòng riêng trong bảng) — không chỉ lấy tên ở dòng đầu tiên.
- // Người đề nghị = người LÀM PHIẾU = dòng đầu (KHÔNG gộp nhiều tên); bảng chi tiết vẫn nhiều người.
- const allNamesForPrint=(lines[0]&&lines[0].requesterName)||'';
- // 4 ô vuông loại dịch vụ đầu phiếu — đúng mẫu thật, tick đúng ô khớp
- // serviceType của cả đợt (mọi dòng trong 1 đợt luôn cùng 1 loại dịch vụ).
- const svcBoxesOrder=['Lắp mới','Khảo sát','Bảo trì','Bảo hành'];
- // Ô loại dịch vụ RỖNG (không tick sẵn) + chữ xanh đậm — để đánh dấu tay khi ký.
- const svcBoxesHtml=svcBoxesOrder.map(v=>`<span style="display:inline-block;margin-right:34px">
-    <span style="display:inline-block;width:14px;height:14px;border:1.6px solid #2E5B9C;vertical-align:middle"></span>
-    <span style="vertical-align:middle;color:#2E5B9C;font-weight:700"> ${esc(v)}</span></span>`).join('');
- const th2=(vi,en)=>`<th style="${thS}">${esc(vi)}<br><span style="font-weight:400;font-style:italic;font-size:9.5px">${esc(en)}</span></th>`;
- $('#ctpPrintArea').innerHTML=`
-  <div style="padding:24px;${F}">
-   <div style="position:relative;min-height:56px;margin-bottom:12px">
-    <img src="${CTP_LOGO_DATAURL}" style="height:50px;position:absolute;left:0;top:0">
-    <div style="text-align:center;padding-top:2px">
-     <div style="font-weight:700;font-size:17px;color:#1F3864">GIẤY ĐỀ NGHỊ THANH TOÁN CHI PHÍ CÔNG TÁC</div>
-     <div style="font-weight:700;font-style:italic;color:#2E5B9C;font-size:13px">PAYMENT REQUEST FOR COST OF WORK</div>
-    </div>
-   </div>
-   <p style="text-align:center">Ngày/ Date: …………${hdr.requestDate?fmtDMYFull(hdr.requestDate):''}…………………….………</p>
-   <p style="font-weight:700">Kính gởi/ To: Ban Giám Đốc Cty Cổ Phần TMDV Sao Nam An (Soeco's Mgt Board)</p>
-   <p>Họ tên người đề nghị thanh toán/ Requester Name: <b>${esc(allNamesForPrint)}</b></p>
-   <p>Bộ phận/ Dept: TECH</p>
-   <p>Địa điểm công tác/ Working Place: ${esc(hdr.workingPlace||'')}</p>
-   <p>Thời gian công tác/ Working days: Từ …………${hdr.fromDate?fmtDMYFull(hdr.fromDate):''}……………. đến: ………${hdr.toDate?fmtDMYFull(hdr.toDate):''}…………….. </p>
-   <p>Mã vụ việc/PJ code: ${esc(first.projectCode||'')}</p>
-   <p style="margin:10px 0">${svcBoxesHtml}</p>
-   <table style="border-collapse:collapse;width:100%;margin-top:10px">
-    <thead><tr>
-     ${th2('STT','No.')}${th2('Tên nhân viên','Full name')}${th2('Bộ phận','Dept')}${th2('Nội dung chi phí','Expenses')}
-     ${th2('Diễn giải thanh toán','Content of payment')}${th2('Từ Ngày','')}${th2('Đến Ngày','')}${th2('Km','')}
-     ${th2('Số lượng','lít xăng; ngày công')}${th2('Định mức','Quota')}${th2('Thành tiền','Amount (VND)')}${th2('Mã vụ việc','PJ code')}
-     ${th2('Tên DA','PJ name')}${th2('Loại dịch vụ thực hiện','')}${th2('Ghi chú','Remark')}
-    </tr></thead>
-    <tbody>${rowsHtml}
-     <tr><td colspan="10" style="${tdS};background:#FFF200;text-align:right;font-weight:700;color:#C00000">TỔNG CỘNG</td><td style="${tdS};background:#FFF200;text-align:right;font-weight:700;color:#C00000">${total.toLocaleString('vi-VN')}</td><td colspan="4" style="${tdS};background:#FFF200"></td></tr>
-    </tbody>
-   </table>
-   <p style="margin-top:0;font-style:italic;background:#D9D9D9;padding:5px 8px">Bằng chữ : ${soThanhChu(total)}</p>
-   <table style="width:100%;margin-top:40px;border:none"><tr>
-    <td style="border:none;text-align:center;font-weight:700;width:50%">Người đề nghị<br><br><br><br>${esc(allNamesForPrint)}</td>
-    <td style="border:none;text-align:center;font-weight:700;width:50%">Phụ trách bộ phận</td>
-   </tr></table>
-   ${mapSrc?`<div style="page-break-before:always;padding-top:10px"><h3>Bản đồ khoảng cách di chuyển</h3><img src="${mapSrc}" style="max-width:100%;max-height:180mm;display:block;margin:0 auto"></div>`:''}
-  </div>`;
- // Đổ cùng nội dung vào cả vùng in thật (#ctpPrintArea, chỉ hiện khi in) lẫn
- // khung xem trước trên màn hình — xem đúng những gì sắp in trước khi bấm in.
- $('#ctpPreviewBody').innerHTML=$('#ctpPrintArea').innerHTML;
- $('#ctpPreviewModal').classList.add('show');
 };
 $('#btnCtpDoPrint').onclick=()=>window.print();
 $('#btnCloseCtpPreview').onclick=()=>$('#ctpPreviewModal').classList.remove('show');
