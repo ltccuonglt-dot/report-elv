@@ -16,21 +16,29 @@
 // ⚠️ ĐỔI mã bảo mật này thành mã của riêng bạn (nhập giống trong app ⚙️)
 var TOKEN = 'AEON-KT-2026';
 
-// Mật khẩu quản trị MẶC ĐỊNH (chỉ dùng lần đầu, trước khi ai đổi qua app).
-// Dùng để: (1) mở khóa màn Cài đặt trên app, (2) cho phép sửa phiếu KHÔNG giới hạn
-// số lần (người dùng thường chỉ được sửa tối đa EDIT_LIMIT lần / phiếu).
-// App KHÔNG còn tự lưu sẵn mật khẩu này nữa — luôn hỏi server (qua action
-// 'verifyAdmin') để kiểm tra, nên đổi mật khẩu qua app (⚙️ → Đổi mật khẩu
-// quản trị) là có hiệu lực ngay, không cần sửa code này/index.html nữa.
-var ADMIN_PASSWORD = 'Cuongok09';
+// KHÔNG hardcode mật khẩu quản trị trong file này nữa — trước đây có
+// 'Cuongok09' lộ trên public git history. Giờ đọc từ Script Properties:
+//   - Vào Apps Script editor → ⚙ Project Settings → Script Properties
+//   - Bấm "Add script property" → Property: ADMIN_PASSWORD_OVERRIDE, Value:
+//     <mật khẩu mới của bạn>. Bấm Save. Có hiệu lực ngay, KHÔNG cần deploy lại.
+// (Nếu đã từng bấm "Đổi mật khẩu quản trị" trong app thì property này đã có
+// sẵn — chỉ setup lần đầu mới cần bước trên.)
+// Fallback ADMIN_PASSWORD_INITIAL: cho phép seed thêm 1 property khác cho lần
+// setup đầu tiên (giữ tách biệt với override do người dùng đổi). Nếu cả 2
+// đều rỗng thì mọi thao tác admin sẽ bị chặn (fail-secure) — không dùng
+// được cho tới khi admin set property, tránh trạng thái "ai cũng đăng nhập được".
 var EDIT_LIMIT = 5;
 
-/* Mật khẩu quản trị THẬT ĐANG DÙNG — nếu đã từng đổi qua app thì lấy bản mới
-   nhất lưu trong Script Properties, chưa đổi lần nào thì dùng ADMIN_PASSWORD
-   mặc định ở trên. */
+/* Mật khẩu quản trị THẬT ĐANG DÙNG. Ưu tiên:
+   1) ADMIN_PASSWORD_OVERRIDE (do người dùng đổi qua app hoặc set tay)
+   2) ADMIN_PASSWORD_INITIAL (seed cho lần setup đầu tiên)
+   3) '' rỗng → fail-secure, không ai đăng nhập được cho tới khi set property.
+*/
 function getAdminPassword(){
-  var v = PropertiesService.getScriptProperties().getProperty('ADMIN_PASSWORD_OVERRIDE');
-  return v || ADMIN_PASSWORD;
+  var props = PropertiesService.getScriptProperties();
+  return props.getProperty('ADMIN_PASSWORD_OVERRIDE')
+      || props.getProperty('ADMIN_PASSWORD_INITIAL')
+      || '';
 }
 
 /* Đổi mật khẩu quản trị — phải đúng mật khẩu HIỆN TẠI mới đổi được. Lưu vào

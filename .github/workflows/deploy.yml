@@ -1,0 +1,80 @@
+name: Deploy
+
+# Auto-bump APP_BUILD + version.json bằng timestamp UTC khi push vào main —
+# chống lỗi hay xảy ra: quên bump 1 chỗ, làm auto-update trên máy user
+# không bao giờ kích hoạt.
+#
+# Job `pages` bên dưới (COMMENTED OUT sẵn) là để deploy tự động lên GitHub
+# Pages — user tự uncomment sau khi vào repo Settings → Pages → Source =
+# "GitHub Actions" để enable. Nếu deploy chỗ khác (Cloudflare Pages, Netlify)
+# thì cứ để nguyên comment, chỗ đó bắt push riêng của họ.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bump-build:
+    runs-on: ubuntu-latest
+    # `[skip ci]` trong message commit auto-bump ngăn workflow loop.
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      - name: Compute new build stamp
+        id: stamp
+        run: |
+          STAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "build=$STAMP" >> "$GITHUB_OUTPUT"
+          echo "New APP_BUILD = $STAMP"
+      - name: Bump APP_BUILD in index.html + version.json
+        run: |
+          STAMP='${{ steps.stamp.outputs.build }}'
+          sed -i -E "s|const APP_BUILD='[^']*';|const APP_BUILD='$STAMP';|" index.html
+          echo "{\"build\":\"$STAMP\"}" > version.json
+          git diff --stat
+      - name: Commit if changed
+        run: |
+          if git diff --quiet; then
+            echo "Không có gì để bump."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html version.json
+          git commit -m "chore: auto-bump APP_BUILD ${{ steps.stamp.outputs.build }} [skip ci]"
+          git push
+
+# ============================================================================
+# TỰ ĐỘNG DEPLOY LÊN GITHUB PAGES — bỏ comment cụm dưới khi muốn dùng.
+# Trước khi enable:
+#   1. Repo Settings → Pages → Source = "GitHub Actions"
+#   2. Uncomment cụm `pages:` bên dưới
+#   3. Thêm 2 permissions này vào `permissions:` phía trên:
+#        pages: write
+#        id-token: write
+# ============================================================================
+#  pages:
+#    needs: bump-build
+#    runs-on: ubuntu-latest
+#    environment:
+#      name: github-pages
+#      url: ${{ steps.deploy.outputs.page_url }}
+#    steps:
+#      - uses: actions/checkout@v4
+#        with: { ref: main }
+#      - uses: actions/configure-pages@v5
+#      - uses: actions/upload-pages-artifact@v3
+#        with: { path: '.' }
+#      - id: deploy
+#        uses: actions/deploy-pages@v4
