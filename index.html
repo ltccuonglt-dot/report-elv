@@ -1942,7 +1942,7 @@ const CFG={get url(){return localStorage.getItem('kt_url')||DEFAULT_URL},get tok
    không bao giờ biết có bản mới. Nếu phát hiện khác nhau: nếu không có modal
    nào đang mở (không làm mất dữ liệu người dùng đang nhập dở) thì tự tải lại
    trang; nếu đang mở form thì chờ, kiểm tra lại mỗi 15s tới khi đóng form. */
-const APP_BUILD='2026-09-25T09:40:27Z';
+const APP_BUILD='2026-09-25T09:47:17Z';
 let appUpdatePending=false, appReloadScheduled=false;
 function appIsSafeToReload(){ return !document.querySelector('.modal.show'); }
 function appDoAutoReload(){
