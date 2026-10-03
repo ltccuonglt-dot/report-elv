@@ -58,7 +58,10 @@ document.getElementById('go').onclick = function(){
     if (w) { try{ w.opener = null; }catch(e){} }
     document.querySelector('.card').innerHTML = '<img src="icon-192.png" alt=""><h1>Đã mở bản mới</h1>'
       + '<p>Bản mới đã mở trong trình duyệt. Ở đó bấm <b>"Cài app bản mới"</b> để có biểu tượng mới.</p>'
-      + '<p>Sau đó có thể <b>gỡ app cũ</b> này.</p>';
+      + '<p>Sau đó <b>gỡ app cũ</b> này (trình duyệt không cho web tự gỡ app):</p>'
+      + '<p style="text-align:left;font-size:14px">💻 <b>Máy tính</b>: bấm <b>⋮</b> hoặc <b>Uninstall</b> trên thanh tiêu đề cửa sổ này → <b>Gỡ cài đặt</b>.<br>'
+      + '📱 <b>Android</b>: nhấn giữ biểu tượng app cũ → <b>Gỡ cài đặt</b>.<br>'
+      + '🍎 <b>iPhone</b>: nhấn giữ biểu tượng app cũ → <b>Xoá ứng dụng</b>.</p>';
     setTimeout(function(){ try{ window.close(); }catch(e){} }, 1500);
     if (!w) location.replace(url); // trình duyệt chặn cửa sổ mới thì mở ngay tại đây
   } else {
