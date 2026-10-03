@@ -1,0 +1,57 @@
+name: CI
+
+# Chạy trên MỌI PR + push nhánh main — bắt lỗi cú pháp JS + smoke test app
+# ngay trên GitHub, không phải mở tay trong browser mới biết bản deploy có
+# gãy hay không.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 1) Trích block <script> chính rồi node --check — bắt lỗi cú pháp JS
+      #    trước khi deploy tới người dùng.
+      - name: Extract main JS block
+        run: |
+          awk '/^<script>$/{flag=1;next} /^<\/script>$/{flag=0} flag' index.html > /tmp/main.js
+          wc -l /tmp/main.js
+      - name: Syntax check main JS
+        run: node --check /tmp/main.js
+
+      # 2) Check APP_BUILD trong index.html khớp version.json — chống lỗi
+      #    hay xảy ra: bump 1 chỗ mà quên chỗ kia, khiến auto-update mãi mãi
+      #    không nhận bản mới.
+      - name: APP_BUILD vs version.json in sync
+        run: |
+          BUILD_HTML=$(grep -oE "APP_BUILD='[^']+'" index.html | head -1 | sed -E "s/APP_BUILD='([^']+)'/\1/")
+          BUILD_JSON=$(python3 -c "import json;print(json.load(open('version.json'))['build'])")
+          echo "APP_BUILD (index.html): $BUILD_HTML"
+          echo "version.json:           $BUILD_JSON"
+          if [ "$BUILD_HTML" != "$BUILD_JSON" ]; then
+            echo "::error::APP_BUILD và version.json KHÔNG khớp — auto-update sẽ không hoạt động."
+            exit 1
+          fi
+
+      # 3) Smoke test: mở app bằng Playwright headless, đảm bảo tab mặc định
+      #    hiện đúng, không có PAGEERROR (lỗi cú pháp JS runtime).
+      - name: Install Playwright
+        run: |
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund playwright@1.46.0
+          npx playwright install chromium
+      - name: Serve and smoke test
+        run: |
+          python3 -m http.server 8765 --directory . > http.log 2>&1 &
+          echo $! > http.pid
+          sleep 1
+          node tests/smoke.mjs
+          kill "$(cat http.pid)" || true

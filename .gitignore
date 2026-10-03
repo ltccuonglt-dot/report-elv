@@ -1,0 +1,11 @@
+# CI/dev artifacts
+node_modules/
+package.json
+package-lock.json
+http.log
+http.pid
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
