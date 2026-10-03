@@ -48,7 +48,23 @@ function payload(){
   var b = btoa(unescape(encodeURIComponent(JSON.stringify(o))));
   return b.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
-document.getElementById('go').onclick = function(){ location.replace(NEW_URL + '#mig=' + payload()); };
+var inApp = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+document.getElementById('go').onclick = function(){
+  var url = NEW_URL + '#mig=' + payload();
+  if (inApp){
+    // Đang trong cửa sổ app CŨ: mở bản mới bằng trình duyệt (cài được app mới, không dính thanh
+    // địa chỉ của app cũ), rồi tự đóng cửa sổ app cũ.
+    var w = window.open(url, '_blank'); // không dùng 'noopener' vì khi đó window.open luôn trả null
+    if (w) { try{ w.opener = null; }catch(e){} }
+    document.querySelector('.card').innerHTML = '<img src="icon-192.png" alt=""><h1>Đã mở bản mới</h1>'
+      + '<p>Bản mới đã mở trong trình duyệt. Ở đó bấm <b>"Cài app bản mới"</b> để có biểu tượng mới.</p>'
+      + '<p>Sau đó có thể <b>gỡ app cũ</b> này.</p>';
+    setTimeout(function(){ try{ window.close(); }catch(e){} }, 1500);
+    if (!w) location.replace(url); // trình duyệt chặn cửa sổ mới thì mở ngay tại đây
+  } else {
+    location.replace(url);
+  }
+};
 </script>
 </body>
 </html>
